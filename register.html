@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BarangayConnect – Create Account</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body class="register-page">
+
+  <!-- ===================== -->
+  <!--      TOP NAVBAR       -->
+  <!-- ===================== -->
+  <nav class="register-nav">
+    <a href="index.html" class="register-nav__logo">
+      <div class="register-nav__logo-icon">
+        <img src="assets/images/logo.png" alt="BarangayConnect Logo" class="auth-logo__img" />
+      </div>
+      BarangayConnect
+    </a>
+    <p class="register-nav__signin">
+      Already have an account? <a href="index.html">Sign in</a>
+    </p>
+  </nav>
+
+
+  <!-- ===================== -->
+  <!--      MAIN BODY        -->
+  <!-- ===================== -->
+  <main class="register-body">
+
+    <!-- ---- STEP 1, 2, 3 FORMS (shown one at a time via JS) ---- -->
+
+    <!-- STEP HEADER (title + badge) -->
+    <div class="register-header">
+      <h1 class="register-header__title">Create your account</h1>
+      <div class="register-header__badge">
+        <i data-lucide="shield-check"></i>
+        <span>Register</span>
+      </div>
+    </div>
+
+    <!-- STEP INDICATOR -->
+    <div class="step-indicator" id="stepIndicator">
+
+      <div class="step-item active" id="stepDot1">
+        <div class="step-item__circle">1</div>
+        <span class="step-item__label">Account Info</span>
+      </div>
+
+      <div class="step-connector" id="connector1"></div>
+
+      <div class="step-item pending" id="stepDot2">
+        <div class="step-item__circle">2</div>
+        <span class="step-item__label">Location</span>
+      </div>
+
+      <div class="step-connector" id="connector2"></div>
+
+      <div class="step-item pending" id="stepDot3">
+        <div class="step-item__circle">3</div>
+        <span class="step-item__label">Government ID</span>
+      </div>
+
+    </div><!-- /step-indicator -->
+
+
+    <!-- ======================== -->
+    <!--  STEP 1 — ACCOUNT INFO  -->
+    <!-- ======================== -->
+    <div class="register-card page-transition" id="step1">
+
+      <h2 class="register-card__section-title">Personal Information</h2>
+
+      <form class="register-form" id="step1Form" novalidate>
+
+        <!-- First Name + Last Name -->
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="firstName">First Name</label>
+            <input
+              class="form-input"
+              type="text"
+              id="firstName"
+              placeholder="Juan"
+              autocomplete="given-name"
+            />
+            <span class="form-error" id="firstNameError"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="lastName">Last Name</label>
+            <input
+              class="form-input"
+              type="text"
+              id="lastName"
+              placeholder="Dela Cruz"
+              autocomplete="family-name"
+            />
+            <span class="form-error" id="lastNameError"></span>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label" for="regEmail">Email Address</label>
+          <input
+            class="form-input"
+            type="email"
+            id="regEmail"
+            placeholder="juan@email.com"
+            autocomplete="email"
+          />
+          <span class="form-error" id="regEmailError"></span>
+        </div>
+
+        <!-- Phone + Date of Birth -->
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label class="form-label" for="phone">Phone Number</label>
+            <input
+              class="form-input"
+              type="tel"
+              id="phone"
+              placeholder="09XX XXX XXXX"
+              maxlength="11"
+            />
+            <span class="form-error" id="phoneError"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="dob">Date of Birth</label>
+            <input
+              class="form-input"
+              type="date"
+              id="dob"
+            />
+            <span class="form-error" id="dobError"></span>
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label" for="regPassword">Password</label>
+          <div class="form-input-wrap form-input-wrap--icon">
+            <input
+              class="form-input"
+              type="password"
+              id="regPassword"
+              placeholder="Min. 8 characters"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="form-input__eye"
+              id="toggleRegPassword"
+              aria-label="Toggle password visibility"
+            >
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+          <span class="form-error" id="regPasswordError"></span>
+        </div>
+
+        <!-- Actions -->
+        <div class="register-actions register-actions--end">
+          <button type="submit" class="btn btn--primary" id="step1Btn">
+            Continue
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+
+      </form>
+    </div><!-- /step1 -->
+
+
+    <!-- ======================== -->
+    <!--  STEP 2 — LOCATION      -->
+    <!-- ======================== -->
+    <div class="register-card page-transition" id="step2" hidden>
+
+      <h2 class="register-card__section-title">Barangay Location</h2>
+
+      <form class="register-form" id="step2Form" novalidate>
+
+        <!-- Barangay -->
+        <div class="form-group">
+          <label class="form-label" for="barangay">Barangay</label>
+          <select class="form-select" id="barangay">
+            <option value="" disabled selected>Select your barangay</option>
+            <!-- 
+              TODO: Add your actual barangay list here.
+              These are just examples — replace with the real list.
+            -->
+            <option value="Bancod">Bancod</option>
+            <option value="Indang">Indang Proper</option>
+            <option value="Daine">Daine</option>
+            <option value="Guyam Malaki">Guyam Malaki</option>
+            <option value="Guyam Munti">Guyam Munti</option>
+            <option value="Harasan">Harasan</option>
+            <option value="Kayquit I">Kayquit I</option>
+            <option value="Kayquit II">Kayquit II</option>
+            <option value="Kayquit III">Kayquit III</option>
+            <option value="Limbon">Limbon</option>
+          </select>
+          <span class="form-error" id="barangayError"></span>
+        </div>
+
+        <!-- Purok / Zone -->
+        <div class="form-group">
+          <label class="form-label" for="purok">Purok / Zone</label>
+          <select class="form-select" id="purok">
+            <option value="" disabled selected>Select your purok</option>
+            <option value="Purok 1">Purok 1</option>
+            <option value="Purok 2">Purok 2</option>
+            <option value="Purok 3">Purok 3</option>
+            <option value="Purok 4">Purok 4</option>
+            <option value="Purok 5">Purok 5</option>
+            <option value="Purok 6">Purok 6</option>
+          </select>
+          <span class="form-error" id="purokError"></span>
+        </div>
+
+        <!-- Years of Residency -->
+        <div class="form-group">
+          <label class="form-label" for="yearsResident">Years of Residency</label>
+          <input
+            class="form-input"
+            type="number"
+            id="yearsResident"
+            placeholder="e.g. 5"
+            min="0"
+            max="100"
+          />
+          <span class="form-error" id="yearsError"></span>
+        </div>
+
+        <!-- Actions -->
+        <div class="register-actions">
+          <button type="button" class="btn btn--outline" id="step2Back">
+            <i data-lucide="chevron-left"></i>
+            Back
+          </button>
+          <button type="submit" class="btn btn--primary" id="step2Btn">
+            Continue
+            <i data-lucide="chevron-right"></i>
+          </button>
+        </div>
+
+      </form>
+    </div><!-- /step2 -->
+
+
+    <!-- ======================== -->
+    <!--  STEP 3 — GOVERNMENT ID -->
+    <!-- ======================== -->
+    <div class="register-card page-transition" id="step3" hidden>
+
+      <h2 class="register-card__section-title">Government ID Verification</h2>
+
+      <form class="register-form" id="step3Form" novalidate>
+
+        <!-- ID Type -->
+        <div class="form-group">
+          <label class="form-label" for="idType">ID Type</label>
+          <select class="form-select" id="idType">
+            <option value="" disabled selected>Select ID type</option>
+            <option value="PhilSys">PhilSys (National ID)</option>
+            <option value="Passport">Passport</option>
+            <option value="Drivers License">Driver's License</option>
+            <option value="SSS">SSS ID</option>
+            <option value="UMID">UMID</option>
+            <option value="Voters ID">Voter's ID</option>
+            <option value="PRC">PRC ID</option>
+            <option value="Postal ID">Postal ID</option>
+            <option value="Senior Citizen ID">Senior Citizen ID</option>
+            <option value="PWD ID">PWD ID</option>
+          </select>
+          <span class="form-error" id="idTypeError"></span>
+        </div>
+
+        <!-- ID Number -->
+        <div class="form-group">
+          <label class="form-label" for="idNumber">ID Number</label>
+          <input
+            class="form-input"
+            type="text"
+            id="idNumber"
+            placeholder="Enter your ID number"
+          />
+          <span class="form-error" id="idNumberError"></span>
+        </div>
+
+        <!-- ID Photo Upload — FRONT -->
+        <div class="form-group">
+          * Images are deleted after admin approval
+          <label class="form-label">Upload ID Photo (Front)</label>
+          <div class="upload-area" id="uploadFrontArea">
+            <input
+              type="file"
+              id="idPhotoFront"
+              accept="image/jpeg, image/png, image/webp"
+            />
+            <i data-lucide="upload"></i>
+            <span class="upload-area__label">Click to upload front of ID</span>
+            <span class="upload-area__hint">JPG, PNG or WEBP · Max 5MB</span>
+            <!-- Preview shown after file selected -->
+            <img class="upload-preview" id="previewFront" alt="Front ID preview" />
+          </div>
+          <span class="form-error" id="idFrontError"></span>
+        </div>
+
+        <!-- ID Photo Upload — BACK -->
+        <div class="form-group">
+          <label class="form-label">Upload ID Photo (Back)</label>
+          <div class="upload-area" id="uploadBackArea">
+            <input
+              type="file"
+              id="idPhotoBack"
+              accept="image/jpeg, image/png, image/webp"
+            />
+            <i data-lucide="upload"></i>
+            <span class="upload-area__label">Click to upload back of ID</span>
+            <span class="upload-area__hint">JPG, PNG or WEBP · Max 5MB</span>
+            <img class="upload-preview" id="previewBack" alt="Back ID preview" />
+          </div>
+          <span class="form-error" id="idBackError"></span>
+        </div>
+
+        <!-- General submit error -->
+        <p class="form-error form-error--center" id="submitError"></p>
+
+        <!-- Actions -->
+        <div class="register-actions">
+          <button type="button" class="btn btn--outline" id="step3Back">
+            <i data-lucide="chevron-left"></i>
+            Back
+          </button>
+          <button type="submit" class="btn btn--orange" id="step3Btn">
+            <i data-lucide="clock"></i>
+            <span>Submit Registration</span>
+            <span class="btn__spinner" id="submitSpinner" hidden>
+              <i data-lucide="loader-circle"></i>
+            </span>
+          </button>
+        </div>
+
+      </form>
+    </div><!-- /step3 -->
+
+
+    <!-- ======================== -->
+    <!--  SUCCESS SCREEN          -->
+    <!-- ======================== -->
+    <div class="register-success" id="successScreen" hidden>
+      <div class="register-success__icon">
+        <i data-lucide="circle-check"></i>
+      </div>
+      <h2 class="register-success__title">Registration Submitted!</h2>
+      <p class="register-success__sub">
+        Your account is now pending review by a barangay admin.
+        You'll be able to log in once your account is approved.
+        This usually takes 1–2 business days.
+      </p>
+      <a href="index.html" class="btn btn--primary">
+        <i data-lucide="log-in"></i>
+        Back to Sign In
+      </a>
+    </div><!-- /successScreen -->
+
+  </main><!-- /register-body -->
+
+
+  <script>lucide.createIcons();</script>
+  <script type="module" src="js/register.js"></script>
+</body>
+</html>
