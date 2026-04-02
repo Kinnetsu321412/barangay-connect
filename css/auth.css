@@ -1,0 +1,619 @@
+/* ================================================
+   auth.css — Login & Register Page Styles
+   Imports main.css — don't duplicate variables here
+
+   UNFINISHED, IGNORE THIS FOR NOW
+   ================================================ */
+
+/* ---- Two-panel layout ---- */
+.login-page {
+  display: flex;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ===================== */
+/*   LEFT PANEL (Green)  */
+/* ===================== */
+.auth-left {
+  width: 46%;
+  background: var(--green-dark);
+  padding: var(--space-xl) var(--space-2xl);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+/* Decorative large circles */
+.auth-left__circle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--green-muted);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.auth-left__circle--top {
+  width: 360px;
+  height: 360px;
+  top: -80px;
+  right: -60px;
+}
+
+.auth-left__circle--bottom {
+  width: 440px;
+  height: 440px;
+  bottom: -120px;
+  left: -100px;
+}
+
+/* Logo */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  position: relative;
+  z-index: 2;
+  margin-bottom: var(--space-3xl);
+}
+
+.auth-logo__icon {
+  width: 38px;
+  height: 38px;
+  background: rgba(255,255,255,0.15);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.auth-logo__icon [data-lucide] {
+  width: 20px;
+  height: 20px;
+}
+
+.auth-logo__text {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--white);
+  letter-spacing: -0.3px;
+}
+
+/* Sign In pill badge */
+.auth-left__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: var(--white);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+  width: fit-content;
+  position: relative;
+  z-index: 2;
+  margin-bottom: var(--space-lg);
+}
+
+.auth-left__badge [data-lucide] {
+  width: 14px;
+  height: 14px;
+  color: var(--orange);
+}
+
+/* Hero heading */
+.auth-left__hero {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-left__heading {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(2rem, 3.5vw, 2.8rem);
+  color: var(--white);
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  margin-bottom: var(--space-md);
+}
+
+.auth-left__subtext {
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.7;
+  max-width: 380px;
+}
+
+/* Stats row */
+.auth-left__stats {
+  display: flex;
+  gap: var(--space-2xl);
+  position: relative;
+  z-index: 2;
+  padding-top: var(--space-2xl);
+  border-top: 1px solid rgba(255,255,255,0.12);
+  margin-top: var(--space-2xl);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-item__number {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.8rem;
+  color: var(--white);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.stat-item__label {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.55);
+  font-weight: 500;
+}
+
+/* ===================== */
+/*  RIGHT PANEL (White)  */
+/* ===================== */
+.auth-right {
+  flex: 1;
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl) var(--space-xl);
+}
+
+.auth-form-wrapper {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.auth-form__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 2rem;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+}
+
+/* Demo notice banner */
+.auth-notice {
+  background: #fff8ed;
+  border: 1.5px solid #f5d6a0;
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+}
+
+.auth-notice p {
+  font-size: 0.85rem;
+  color: #92400e;
+  line-height: 1.6;
+}
+
+/* Form spacing */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.form-forgot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+
+.form-forgot .form-link {
+  font-size: 0.85rem;
+}
+
+/* Switch to register */
+.auth-switch {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--gray-500);
+}
+
+/* ======================== */
+/*  REGISTER PAGE VARIANTS  */
+/* ======================== */
+
+/* Register uses a top navbar instead of split layout */
+.register-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--off-white);
+}
+
+/* Register nav */
+.register-nav {
+  background: var(--green-dark);
+  padding: 0 var(--space-2xl);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+/* Decorative blob behind register nav */
+.register-nav::after {
+  content: '';
+  position: absolute;
+  right: 80px;
+  top: -30px;
+  width: 160px;
+  height: 120px;
+  background: var(--green-mid);
+  border-radius: 50%;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.register-nav__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--white);
+  font-size: 1.05rem;
+  position: relative;
+  z-index: 2;
+}
+
+.register-nav__logo-icon {
+  width: 34px;
+  height: 34px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.register-nav__signin {
+  font-size: 0.875rem;
+  color: rgba(255,255,255,0.7);
+  position: relative;
+  z-index: 2;
+}
+
+.register-nav__signin a {
+  color: var(--orange);
+  font-weight: 700;
+}
+
+/* Register page body */
+.register-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2xl) var(--space-xl);
+}
+
+/* Register header */
+.register-header {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xl);
+}
+
+.register-header__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.9rem;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+}
+
+/* Step indicator */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  width: 100%;
+  max-width: 520px;
+  margin-bottom: var(--space-xl);
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.step-item__circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  transition: background var(--transition), color var(--transition);
+}
+
+/* Pending step */
+.step-item.pending .step-item__circle {
+  background: var(--gray-200);
+  color: var(--gray-400);
+}
+
+/* Active step */
+.step-item.active .step-item__circle {
+  background: var(--green-dark);
+  color: var(--white);
+}
+
+/* Completed step */
+.step-item.completed .step-item__circle {
+  background: var(--green-dark);
+  color: var(--white);
+}
+
+.step-item__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+  white-space: nowrap;
+}
+
+.step-item.pending  .step-item__label { color: var(--gray-400); }
+.step-item.active   .step-item__label { color: var(--green-dark); font-weight: 700; }
+.step-item.completed .step-item__label { color: var(--green-dark); }
+
+/* Connector line between steps */
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: var(--gray-200);
+  margin-bottom: 22px; /* align with circles not labels */
+  transition: background var(--transition-slow);
+}
+
+.step-connector.active {
+  background: var(--green-dark);
+}
+
+/* Register form card */
+.register-card {
+  width: 100%;
+  max-width: 520px;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-xl) var(--space-2xl);
+  border: 1px solid var(--gray-100);
+}
+
+.register-card__section-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text-dark);
+  margin-bottom: var(--space-lg);
+}
+
+/* Form grid for two-column inputs */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+/* Register form */
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Register card actions */
+.register-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-md);
+  gap: var(--space-md);
+}
+
+.register-actions--end {
+  justify-content: flex-end;
+}
+
+/* Upload area (for ID photo) */
+.upload-area {
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-2xl) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.upload-area:hover {
+  border-color: var(--green-light);
+  background: #f0faf4;
+}
+
+.upload-area [data-lucide] {
+  width: 28px;
+  height: 28px;
+  color: var(--gray-400);
+}
+
+.upload-area__label {
+  font-size: 0.9rem;
+  color: var(--gray-500);
+  font-weight: 500;
+  text-align: center;
+}
+
+.upload-area__hint {
+  font-size: 0.78rem;
+  color: var(--gray-400);
+}
+
+/* Hidden file input */
+.upload-area input[type="file"] {
+  display: none;
+}
+
+/* Preview image inside upload area */
+.upload-preview {
+  max-width: 100%;
+  max-height: 160px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  display: none;
+}
+
+/* Dropdown select */
+.form-select {
+  width: 100%;
+  padding: 13px 16px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  color: var(--text-dark);
+  background: var(--white);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+  cursor: pointer;
+}
+
+.form-select:focus {
+  border-color: var(--green-light);
+  box-shadow: 0 0 0 3px rgba(74, 140, 92, 0.12);
+}
+
+/* Success page */
+.register-success {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  text-align: center;
+  padding: var(--space-2xl);
+}
+
+.register-success__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2.5px solid var(--green-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green-dark);
+}
+
+.register-success__icon [data-lucide] {
+  width: 30px;
+  height: 30px;
+}
+
+.register-success__title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.6rem;
+  color: var(--text-dark);
+}
+
+.register-success__sub {
+  font-size: 0.9rem;
+  color: var(--gray-500);
+  max-width: 360px;
+  line-height: 1.7;
+}
+
+/* ======================== */
+/*  PAGE TRANSITIONS        */
+/* ======================== */
+/* Wrap pages in .page-transition for GSAP entrance */
+.page-transition {
+  animation: fadeUp 0.4s ease both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ======================== */
+/*  RESPONSIVE              */
+/* ======================== */
+@media (max-width: 768px) {
+  .login-page {
+    flex-direction: column;
+  }
+
+  .auth-left {
+    width: 100%;
+    min-height: auto;
+    padding: var(--space-xl) var(--space-lg);
+  }
+
+  .auth-left__hero {
+    flex: none;
+  }
+
+  .auth-left__stats {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+  }
+
+  .auth-right {
+    padding: var(--space-xl) var(--space-lg);
+  }
+
+  .register-card {
+    padding: var(--space-lg);
+  }
+
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

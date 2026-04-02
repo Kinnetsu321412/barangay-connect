@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BarangayConnect — Buttons</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Nunito:wght@600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/buttons.css" />
+
+  <style>
+    body {
+      background: #f0f2ee;
+      padding: 0;
+    }
+
+    .showcase-header {
+      background: #1B4B27;
+      color: white;
+      padding: 40px 48px 36px;
+      position: relative;
+      overflow: hidden;
+    }
+    .showcase-header::after {
+      content: '';
+      position: absolute;
+      right: -60px;
+      top: -60px;
+      width: 300px;
+      height: 300px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 50%;
+    }
+    .showcase-header h1 {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 1.8rem;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+    }
+    .showcase-header p {
+      font-size: 0.9rem;
+      color: rgba(255,255,255,0.6);
+      position: relative;
+      z-index: 1;
+    }
+    .import-block {
+      margin-top: 20px;
+      background: rgba(0,0,0,0.25);
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #a8e6b8;
+      line-height: 1.8;
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+    }
+    .import-block span { color: rgba(255,255,255,0.4); }
+
+    .showcase-layout {
+      display: flex;
+      min-height: calc(100vh - 180px);
+    }
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      padding: 24px 16px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: #e8ede9;
+      border-right: 1px solid rgba(0,0,0,0.07);
+    }
+    .sidebar h3 {
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: #5a7262;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      margin-top: 20px;
+      padding-left: 10px;
+    }
+    .sidebar h3:first-child { margin-top: 0; }
+    .sidebar a {
+      display: block;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #374151;
+      text-decoration: none;
+      transition: all 0.15s;
+      font-family: 'Nunito', sans-serif;
+    }
+
+    .showcase-main {
+      flex: 1;
+      padding: 32px 40px 80px;
+      max-width: 900px;
+    }
+
+    .section { margin-bottom: 56px; }
+    .section-title {
+      font-family: 'Nunito', sans-serif;
+      font-weight: 900;
+      font-size: 1.1rem;
+      color: #1B4B27;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-desc {
+      font-size: 0.84rem;
+      color: #6b7280;
+      margin-bottom: 20px;
+      line-height: 1.6;
+      max-width: 580px;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .dark-preview {
+      background: #1B4B27;
+      padding: 28px 24px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+    .dark-preview .row { margin-bottom: 0; }
+
+    .snippet-block {
+      background: #1e2820;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    .snippet-body {
+      position: relative;
+      padding: 16px 18px;
+    }
+    .snippet-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      color: #c8d8d0;
+      line-height: 1.8;
+      white-space: pre;
+      overflow-x: auto;
+      margin: 0;
+    }
+    .snippet-code .attr { color: #7ec8a0; }
+    .snippet-code .val  { color: #f9d67a; }
+    .snippet-code .tag  { color: #79b8ff; }
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.55);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 5px 11px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+    .copy-btn.copied { background: rgba(74,200,120,0.2); color: #7ec8a0; border-color: rgba(74,200,120,0.3); }
+    .copy-btn svg { width: 12px; height: 12px; }
+
+    .class-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #e0e7e2;
+      color: #1B4B27;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 3px 9px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.12s;
+      border: 1px solid rgba(27,75,39,0.15);
+    }
+    .class-tag:hover { background: #1B4B27; color: white; }
+    .class-tag.copied { background: #7ec8a0; color: #0a1a10; }
+
+    .col-label {
+      font-size: 0.73rem;
+      color: #9ca3af;
+      font-family: 'JetBrains Mono', monospace;
+      text-align: center;
+      display: block;
+    }
+    .compare-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-hr {
+      height: 1px;
+      background: rgba(0,0,0,0.08);
+      margin: 48px 0;
+    }
+
+    .widget-preview {
+      background: linear-gradient(135deg, #2d5a3d 0%, #1B4B27 60%, #0f2e18 100%);
+      padding: 28px 24px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="showcase-header">
+  <h1>BarangayConnect — Buttons</h1>
+  <p>Front end reference. Click any class tag or snippet to copy.</p>
+  <div class="import-block">
+    <span>&lt;-- Required on every page, in this order --&gt;</span><br>
+    &lt;link rel="stylesheet" href="<span>css/</span>main.css" /&gt;<br>
+    &lt;link rel="stylesheet" href="<span>css/</span>buttons.css" /&gt;
+  </div>
+</div>
+
+<div class="showcase-layout">
+
+<nav class="sidebar">
+  <h3>Core</h3>
+  <a href="#category">Tab / Category Pills</a>
+  <a href="#widget">Widget Buttons</a>
+  <a href="#solid">Solid Buttons</a>
+  <a href="#outline">Outline & Ghost</a>
+  <a href="#hero">Hero</a>
+
+  <h3>State</h3>
+  <a href="#located">Location Reported</a>
+  <a href="#close">Close / Dismiss</a>
+  <a href="#loading">Loading State</a>
+
+  <h3>Communication</h3>
+  <a href="#call">Call Buttons</a>
+  <a href="#toggle">Toggle Switch</a>
+
+  <h3>Navigation</h3>
+  <a href="#filter">Filter Pills</a>
+
+  <h3>Complex</h3>
+  <a href="#icon">Icon-Only</a>
+  <a href="#fab">FAB</a>
+  <a href="#selector">Selector Cards</a>
+  <a href="#dashboard">Dashboard Actions</a>
+
+  <h3>Reference</h3>
+  <a href="#sizes">Size Variants</a>
+  <a href="#patterns">Common Combos</a>
+</nav>
+
+<main class="showcase-main">
+
+
+<!-- ============================= -->
+<!--  CATEGORY / TAB PILLS         -->
+<!-- ============================= -->
+<div class="section" id="category">
+  <div class="section-title">Tab / Category Pills</div>
+  <p class="section-desc">
+    dashboard tab strips, community section tabs, quick-action bars.
+    Both <code style="font-size:0.8em;background:#e5e7eb;padding:1px 6px;border-radius:4px">.is-active</code> and
+    <code style="font-size:0.8em;background:#e5e7eb;padding:1px 6px;border-radius:4px">.is-selected</code> trigger the orange active state — pick one and be consistent per page.
+    Wrap them in <code style="font-size:0.8em;background:#e5e7eb;padding:1px 6px;border-radius:4px">.btn-tab-bar</code> for correct spacing.
+  </p>
+
+  <div class="dark-preview">
+    <div class="btn-tab-bar">
+      <button class="btn btn--category is-active">
+        <i data-lucide="flag"></i> Report a Concern
+      </button>
+      <button class="btn btn--category">
+        <i data-lucide="file-text"></i> Document Requests
+      </button>
+      <button class="btn btn--category">
+        <i data-lucide="calendar"></i> Book Appointment
+      </button>
+      <button class="btn btn--category">
+        <i data-lucide="phone"></i> Emergency &amp; Directory
+      </button>
+    </div>
+  </div>
+
+  <div class="dark-preview" style="margin-top:12px">
+    <div class="btn-tab-bar">
+      <button class="btn btn--category is-active">
+        <i data-lucide="message-square"></i> Bulletin
+      </button>
+      <button class="btn btn--category">
+        <i data-lucide="bar-chart-2"></i> Polls
+      </button>
+      <button class="btn btn--category">
+        <i data-lucide="calendar"></i> Calendar
+      </button>
+      <button class="btn btn--category">
+        <i data-lucide="paw-print"></i> Pet Board
+      </button>
+      <button class="btn btn--category">
+        <i data-lucide="users"></i> Youth Zone
+      </button>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <span class="class-tag" data-copy="btn btn--category is-active">.btn--category.is-active</span>
+    <span class="class-tag" data-copy="btn btn--category">.btn--category</span>
+    <span class="class-tag" data-copy="btn-tab-bar">.btn-tab-bar (wrapper)</span>
+  </div>
+
+  <div class="snippet-block">
+    <div class="snippet-body">
+      <button class="copy-btn" data-copy-block="category-snippet">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+      <pre class="snippet-code" id="category-snippet"><span class="tag">&lt;div</span> <span class="attr">class</span>=<span class="val">"btn-tab-bar"</span><span class="tag">&gt;</span>
+
+  <span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--category is-active"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;i</span> <span class="attr">data-lucide</span>=<span class="val">"flag"</span><span class="tag">&gt;&lt;/i&gt;</span> Report a Concern
+  <span class="tag">&lt;/button&gt;</span>
+
+  <span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--category"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;i</span> <span class="attr">data-lucide</span>=<span class="val">"file-text"</span><span class="tag">&gt;&lt;/i&gt;</span> Document Requests
+  <span class="tag">&lt;/button&gt;</span>
+
+  <span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--category"</span><span class="tag">&gt;</span>
+    <span class="tag">&lt;i</span> <span class="attr">data-lucide</span>=<span class="val">"calendar"</span><span class="tag">&gt;&lt;/i&gt;</span> Book Appointment
+  <span class="tag">&lt;/button&gt;</span>
+
+<span class="tag">&lt;/div&gt;</span>
+
+<span class="tag">&lt;script&gt;</span>
+  document.querySelectorAll('.btn--category').forEach(btn =&gt; {
+    btn.addEventListener('click', function() {
+      this.closest('.btn-tab-bar').querySelectorAll('.btn--category')
+        .forEach(b =&gt; b.classList.remove('is-active'));
+      this.classList.add('is-active');
+    });
+  });
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  WIDGET BUTTONS               -->
+<!-- ============================= -->
+<div class="section" id="widget">
+  <div class="section-title">Widget Buttons</div>
+  <p class="section-desc">
+    Glass-style icon+label tiles for the time/alert widget overlay (dashboard home).
+    Always used on dark/photo backgrounds. Icon stacks above the label.
+  </p>
+
+  <div class="widget-preview">
+    <div class="row">
+      <button class="btn btn--widget">
+        <i data-lucide="shield"></i>
+        <span>Docs</span>
+      </button>
+      <button class="btn btn--widget">
+        <i data-lucide="calendar"></i>
+        <span>Events</span>
+      </button>
+      <button class="btn btn--widget">
+        <i data-lucide="alert-triangle"></i>
+        <span>Alerts</span>
+      </button>
+      <button class="btn btn--widget">
+        <i data-lucide="phone"></i>
+        <span>Hotline</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--widget">.btn--widget</span>
+  </div>
+
+  <div class="snippet-block">
+    <div class="snippet-body">
+      <button class="copy-btn" data-copy-block="widget-snippet">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+      <pre class="snippet-code" id="widget-snippet"><span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--widget"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;i</span> <span class="attr">data-lucide</span>=<span class="val">"shield"</span><span class="tag">&gt;&lt;/i&gt;</span>
+  <span class="tag">&lt;span&gt;</span>Docs<span class="tag">&lt;/span&gt;</span>
+<span class="tag">&lt;/button&gt;</span></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  SOLID BUTTONS                -->
+<!-- ============================= -->
+<div class="section" id="solid">
+  <div class="section-title">Solid Buttons</div>
+  <p class="section-desc">Primary actions on white or light backgrounds. Green = confirm/register/official. Orange = submit/RSVP/report. Red = destructive/urgent.</p>
+
+  <div class="row">
+    <button class="btn btn--green">Register</button>
+    <button class="btn btn--green"><i data-lucide="phone"></i> Contact Owner</button>
+    <button class="btn btn--orange">RSVP Now</button>
+    <button class="btn btn--orange"><i data-lucide="paw-print"></i> Post a Pet Report</button>
+    <button class="btn btn--red">Report Now</button>
+    <button class="btn btn--green btn--sm"><i data-lucide="eye"></i> Publish</button>
+    <button class="btn btn--green" disabled>Disabled</button>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--green">.btn--green</span>
+    <span class="class-tag" data-copy="btn btn--orange">.btn--orange</span>
+    <span class="class-tag" data-copy="btn btn--red">.btn--red</span>
+  </div>
+
+  <div class="snippet-block">
+    <div class="snippet-body">
+      <button class="copy-btn" data-copy-block="solid-snippet">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+      <pre class="snippet-code" id="solid-snippet"><span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--green"</span><span class="tag">&gt;</span>Register<span class="tag">&lt;/button&gt;</span>
+<span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--orange"</span><span class="tag">&gt;</span>RSVP Now<span class="tag">&lt;/button&gt;</span>
+<span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--red"</span><span class="tag">&gt;</span>Report Now<span class="tag">&lt;/button&gt;</span>
+<span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--green"</span> <span class="attr">disabled</span><span class="tag">&gt;</span>Disabled<span class="tag">&lt;/button&gt;</span></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  OUTLINE & GHOST              -->
+<!-- ============================= -->
+<div class="section" id="outline">
+  <div class="section-title">Outline &amp; Ghost</div>
+  <p class="section-desc">Secondary actions. Back/cancel with .btn--outline. Subtle actions with .btn--ghost. Invite-to-add with .btn--dashed.</p>
+
+  <div class="row">
+    <button class="btn btn--outline"><i data-lucide="chevron-left"></i> Back</button>
+    <button class="btn btn--outline">Cancel</button>
+    <button class="btn btn--ghost btn--sm"><i data-lucide="info"></i> About</button>
+    <button class="btn btn--dashed" style="min-width:200px"><i data-lucide="file-text"></i> Request New Document</button>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--outline">.btn--outline</span>
+    <span class="class-tag" data-copy="btn btn--ghost">.btn--ghost</span>
+    <span class="class-tag" data-copy="btn btn--dashed">.btn--dashed</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  HERO             -->
+<!-- ============================= -->
+<div class="section" id="hero">
+  <div class="section-title">Hero Buttons</div>
+  <p class="section-desc">.btn--outline-hero is a white-bordered ghost. .btn--white is a solid white pill. .btn--orange works great on dark sections too.</p>
+
+  <div class="dark-preview">
+    <div class="row">
+      <button class="btn btn--outline-hero btn--lg btn--rounded">Get Started <i data-lucide="arrow-right"></i></button>
+      <button class="btn btn--white btn--lg">Browse Community</button>
+      <button class="btn btn--orange btn--lg btn--rounded"><i data-lucide="calendar"></i> Book Now <i data-lucide="arrow-right"></i></button>
+      <button class="btn btn--orange btn--full" style="max-width:220px"><i data-lucide="upload"></i> Submit Concern</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--outline-hero btn--lg btn--rounded">.btn--outline-hero</span>
+    <span class="class-tag" data-copy="btn btn--white btn--lg">.btn--white</span>
+    <span class="class-tag" data-copy="btn--rounded">.btn--rounded (modifier)</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  LOCATION REPORTED            -->
+<!-- ============================= -->
+<div class="section" id="located">
+  <div class="section-title">Location Reported</div>
+  <p class="section-desc">Replaces "Contact Owner" when a pet's location has been confirmed. Non-interactive — always add <code style="font-size:0.8em;background:#e5e7eb;padding:1px 6px;border-radius:4px">disabled</code>.</p>
+
+  <div class="row" style="align-items:center;gap:20px">
+    <div class="compare-col">
+      <span class="col-label">Before (unknown)</span>
+      <button class="btn btn--green"><i data-lucide="phone"></i> Contact Owner</button>
+    </div>
+    <span style="color:#9ca3af;font-size:1.4rem">→</span>
+    <div class="compare-col">
+      <span class="col-label">After (located)</span>
+      <button class="btn btn--located" disabled><i data-lucide="map-pin"></i> Location Reported</button>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <span class="class-tag" data-copy="btn btn--located">.btn--located</span>
+    <span style="font-size:0.8rem;color:#9ca3af">+ always add <code>disabled</code> attr</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  CLOSE                        -->
+<!-- ============================= -->
+<div class="section" id="close">
+  <div class="section-title">Close / Dismiss</div>
+  <p class="section-desc">Use on modals, image lightboxes, alert overlays, dismissible chips.</p>
+
+  <div class="row">
+    <button class="btn btn--close" aria-label="Close"><i data-lucide="x"></i></button>
+    <button class="btn btn--close btn--sm" aria-label="Remove tag"><i data-lucide="x"></i></button>
+    <span style="font-size:0.8rem;color:#9ca3af">← default &nbsp;&nbsp; small →</span>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--close">.btn--close</span>
+    <span class="class-tag" data-copy="btn btn--close btn--sm">.btn--close.btn--sm</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  LOADING STATE                -->
+<!-- ============================= -->
+<div class="section" id="loading">
+  <div class="section-title">Loading State</div>
+  <p class="section-desc">Add .is-loading to any .btn to show the spinner. Use JS to toggle it. Works on all variants.</p>
+
+  <div class="row">
+    <button class="btn btn--orange is-loading">
+      <span class="btn__spinner"></span> Submitting...
+    </button>
+    <button class="btn btn--green is-loading">
+      <span class="btn__spinner"></span> Saving...
+    </button>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="is-loading">+.is-loading</span>
+    <span class="class-tag" data-copy='<span class="btn__spinner"></span>'>.btn__spinner</span>
+  </div>
+
+  <div class="snippet-block">
+    <div class="snippet-body">
+      <button class="copy-btn" data-copy-block="loading-snippet">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+      <pre class="snippet-code" id="loading-snippet"><span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--orange is-loading"</span><span class="tag">&gt;</span>
+  <span class="tag">&lt;span</span> <span class="attr">class</span>=<span class="val">"btn__spinner"</span><span class="tag">&gt;&lt;/span&gt;</span>
+  Submitting...
+<span class="tag">&lt;/button&gt;</span>
+
+<span class="tag">&lt;!-- Toggle with JS --&gt;</span>
+btn.classList.add('is-loading');
+btn.classList.remove('is-loading');</pre>
+    </div>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  CALL BUTTONS                 -->
+<!-- ============================= -->
+<div class="section" id="call">
+  <div class="section-title">Call Buttons</div>
+  <p class="section-desc">Two variants: circle icon-only for pet board/directory cards, pill with label for inline use.</p>
+
+  <div class="row" style="align-items:center">
+    <div class="compare-col">
+      <span class="col-label">Circle (pet/directory card)</span>
+      <button class="btn btn--call-circle" aria-label="Call owner"><i data-lucide="phone-call"></i></button>
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Pill small</span>
+      <button class="btn btn--call btn--sm"><i data-lucide="phone"></i> Call</button>
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Pill default</span>
+      <button class="btn btn--call"><i data-lucide="phone"></i> Call</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--call-circle">.btn--call-circle</span>
+    <span class="class-tag" data-copy="btn btn--call btn--sm">.btn--call.btn--sm</span>
+    <span class="class-tag" data-copy="btn btn--call">.btn--call</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  TOGGLE                       -->
+<!-- ============================= -->
+<div class="section" id="toggle">
+  <div class="section-title">Toggle Switch</div>
+  <p class="section-desc">Pure CSS — no JS needed for visuals. Use toggle-track--orange for alerts/featured.</p>
+
+  <div class="row" style="gap:28px;flex-wrap:wrap">
+    <div class="compare-col">
+      <span class="col-label">OFF</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" class="toggle-input" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">Inactive</span>
+      </label>
+    </div>
+    <div class="compare-col">
+      <span class="col-label">ON (green)</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" class="toggle-input" checked />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">Active</span>
+      </label>
+    </div>
+    <div class="compare-col">
+      <span class="col-label">ON (orange)</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" class="toggle-input" checked />
+        <span class="toggle-track toggle-track--orange"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">Featured</span>
+      </label>
+    </div>
+    <div class="compare-col">
+      <span class="col-label">Disabled</span>
+      <label class="toggle-wrap">
+        <input type="checkbox" class="toggle-input" disabled />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">Disabled</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="row" style="margin-top:12px">
+    <span class="class-tag" data-copy="toggle-wrap">.toggle-wrap</span>
+    <span class="class-tag" data-copy="toggle-track--orange">.toggle-track--orange</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  FILTER PILLS                 -->
+<!-- ============================= -->
+<div class="section" id="filter">
+  <div class="section-title">Filter Pills</div>
+  <p class="section-desc">Used to filter content lists on <strong>light backgrounds</strong>. Inactive = gray. Active = green. Not to be confused with .btn--category which is for dark backgrounds.</p>
+
+  <div class="row">
+    <button class="btn btn--filter is-active">All</button>
+    <button class="btn btn--filter">Announcements</button>
+    <button class="btn btn--filter">Reports</button>
+    <button class="btn btn--filter">Events</button>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--filter is-active">.btn--filter.is-active</span>
+    <span class="class-tag" data-copy="btn btn--filter">.btn--filter</span>
+  </div>
+
+  <div class="snippet-block">
+    <div class="snippet-body">
+      <button class="copy-btn" data-copy-block="filter-snippet">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+      </button>
+      <pre class="snippet-code" id="filter-snippet"><span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--filter is-active"</span><span class="tag">&gt;</span>All<span class="tag">&lt;/button&gt;</span>
+<span class="tag">&lt;button</span> <span class="attr">class</span>=<span class="val">"btn btn--filter"</span><span class="tag">&gt;</span>Announcements<span class="tag">&lt;/button&gt;</span>
+
+<span class="tag">&lt;script&gt;</span>
+  document.querySelectorAll('.btn--filter').forEach(btn =&gt; {
+    btn.addEventListener('click', function() {
+      this.closest('div').querySelectorAll('.btn--filter')
+        .forEach(b =&gt; b.classList.remove('is-active'));
+      this.classList.add('is-active');
+    });
+  });
+<span class="tag">&lt;/script&gt;</span></pre>
+    </div>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  ICON ONLY                    -->
+<!-- ============================= -->
+<div class="section" id="icon">
+  <div class="section-title">Icon-Only Buttons</div>
+  <p class="section-desc">Table rows, card actions. ALWAYS add aria-label — these have no visible text.</p>
+
+  <div class="row">
+    <button class="btn btn--icon btn--icon-edit" aria-label="Edit"><i data-lucide="pencil"></i></button>
+    <button class="btn btn--icon btn--icon-delete" aria-label="Delete"><i data-lucide="trash-2"></i></button>
+    <button class="btn btn--icon btn--icon-edit btn--sm" aria-label="Edit small"><i data-lucide="pencil"></i></button>
+    <button class="btn btn--icon btn--icon-delete btn--sm" aria-label="Delete small"><i data-lucide="trash-2"></i></button>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--icon btn--icon-edit">.btn--icon-edit</span>
+    <span class="class-tag" data-copy="btn btn--icon btn--icon-delete">.btn--icon-delete</span>
+    <span class="class-tag" data-copy="btn--sm">+.btn--sm</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  FAB                          -->
+<!-- ============================= -->
+<div class="section" id="fab">
+  <div class="section-title">Floating Action Button (FAB)</div>
+  <p class="section-desc">Fixed bottom-right. One per page max. Uses position:fixed in real pages (static here for demo).</p>
+
+  <div class="row" style="height:80px;align-items:center">
+    <button class="btn btn--fab" aria-label="Create new post" style="position:static"><i data-lucide="plus"></i></button>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--fab">.btn--fab</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  SELECTOR CARDS               -->
+<!-- ============================= -->
+<div class="section" id="selector">
+  <div class="section-title">Selector Cards</div>
+  <p class="section-desc">Multi-step forms — concern type, document type, ID type. Toggle .is-selected. Can multi-select.</p>
+
+  <div class="row">
+    <button class="btn btn--selector"><i data-lucide="droplets"></i> Flooding</button>
+    <button class="btn btn--selector"><i data-lucide="trash-2"></i> Garbage</button>
+    <button class="btn btn--selector is-selected"><i data-lucide="shield-alert"></i> Safety Hazard</button>
+    <button class="btn btn--selector"><i data-lucide="help-circle"></i> Other</button>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn btn--selector">.btn--selector</span>
+    <span class="class-tag" data-copy="btn btn--selector is-selected">.btn--selector.is-selected</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  DASHBOARD ACTIONS            -->
+<!-- ============================= -->
+<div class="section" id="dashboard">
+  <div class="section-title">Dashboard Action Buttons</div>
+  <p class="section-desc">Official/admin panels for document &amp; report management.</p>
+
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:280px">
+    <button class="btn btn--action-orange"><i data-lucide="clock"></i> Mark as In Progress</button>
+    <button class="btn btn--action-green"><i data-lucide="check"></i> Mark Ready</button>
+    <button class="btn btn--action-orange"><i data-lucide="package-check"></i> Claimed</button>
+    <button class="btn btn--status-resolved"><i data-lucide="check-circle"></i> Resolved</button>
+  </div>
+
+  <div class="row" style="margin-top:14px">
+    <span class="class-tag" data-copy="btn btn--action-orange">.btn--action-orange</span>
+    <span class="class-tag" data-copy="btn btn--action-green">.btn--action-green</span>
+    <span class="class-tag" data-copy="btn btn--status-resolved">.btn--status-resolved</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  SIZES                        -->
+<!-- ============================= -->
+<div class="section" id="sizes">
+  <div class="section-title">Size Variants</div>
+  <p class="section-desc">Works on any solid variant.</p>
+
+  <div class="row" style="align-items:center">
+    <button class="btn btn--green btn--sm">Small</button>
+    <button class="btn btn--green">Default</button>
+    <button class="btn btn--green btn--lg">Large</button>
+    <button class="btn btn--orange btn--full" style="max-width:180px">Full Width</button>
+  </div>
+
+  <div class="row">
+    <span class="class-tag" data-copy="btn--sm">.btn--sm</span>
+    <span class="class-tag" data-copy="btn--lg">.btn--lg</span>
+    <span class="class-tag" data-copy="btn--full">.btn--full</span>
+    <span class="class-tag" data-copy="btn--rounded">.btn--rounded</span>
+  </div>
+</div>
+
+<div class="section-hr"></div>
+
+
+<!-- ============================= -->
+<!--  COMMON PATTERNS              -->
+<!-- ============================= -->
+<div class="section" id="patterns">
+  <div class="section-title">Common Patterns</div>
+  <p class="section-desc">Copy-ready combos for the most common page situations.</p>
+
+  <div style="display:flex;flex-direction:column;gap:28px;max-width:560px">
+
+    <div>
+      <p style="font-size:0.8rem;color:#9ca3af;margin-bottom:10px;font-family:'JetBrains Mono',monospace">Back / Continue</p>
+      <div class="row">
+        <button class="btn btn--outline"><i data-lucide="chevron-left"></i> Back</button>
+        <button class="btn btn--orange">Continue <i data-lucide="chevron-right"></i></button>
+      </div>
+    </div>
+
+    <div>
+      <p style="font-size:0.8rem;color:#9ca3af;margin-bottom:10px;font-family:'JetBrains Mono',monospace">Cancel / Submit form</p>
+      <div class="row">
+        <button class="btn btn--outline">Cancel</button>
+        <button class="btn btn--orange btn--full"><i data-lucide="shield"></i> Submit Report</button>
+      </div>
+    </div>
+
+    <div>
+      <p style="font-size:0.8rem;color:#9ca3af;margin-bottom:10px;font-family:'JetBrains Mono',monospace">Pet board card (bottom of card)</p>
+      <div class="row">
+        <button class="btn btn--green"><i data-lucide="phone"></i> Contact Owner</button>
+        <button class="btn btn--located" disabled><i data-lucide="map-pin"></i> Location Reported</button>
+        <button class="btn btn--call-circle" aria-label="Call"><i data-lucide="phone-call"></i></button>
+      </div>
+    </div>
+
+    <div>
+      <p style="font-size:0.8rem;color:#9ca3af;margin-bottom:10px;font-family:'JetBrains Mono',monospace">Admin table row actions</p>
+      <div class="row">
+        <button class="btn btn--action-green btn--sm"><i data-lucide="eye"></i> Publish</button>
+        <button class="btn btn--icon btn--icon-edit btn--sm" aria-label="Edit"><i data-lucide="pencil"></i></button>
+        <button class="btn btn--icon btn--icon-delete btn--sm" aria-label="Delete"><i data-lucide="trash-2"></i></button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+</main>
+</div>
+
+
+<script>
+  lucide.createIcons();
+
+  // Filter pills
+  document.querySelectorAll('.btn--filter').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.closest('.row').querySelectorAll('.btn--filter').forEach(b => b.classList.remove('is-active'));
+      this.classList.add('is-active');
+    });
+  });
+
+  // Category / tab pills — toggle .is-active within same .btn-tab-bar
+  document.querySelectorAll('.btn-tab-bar').forEach(bar => {
+    bar.querySelectorAll('.btn--category').forEach(btn => {
+      btn.addEventListener('click', function() {
+        bar.querySelectorAll('.btn--category').forEach(b => b.classList.remove('is-active', 'is-selected'));
+        this.classList.add('is-active');
+      });
+    });
+  });
+
+  // Selector cards — multi-select toggle
+  document.querySelectorAll('.btn--selector').forEach(btn => {
+    btn.addEventListener('click', () => btn.classList.toggle('is-selected'));
+  });
+
+  // Copy class tags
+  document.querySelectorAll('.class-tag[data-copy]').forEach(tag => {
+    tag.addEventListener('click', function() {
+      const text = this.dataset.copy;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        this.classList.add('copied');
+        const orig = this.textContent;
+        this.textContent = '✓ copied';
+        setTimeout(() => { this.classList.remove('copied'); this.textContent = orig; }, 1400);
+      });
+    });
+  });
+
+  // Copy code blocks
+  document.querySelectorAll('.copy-btn[data-copy-block]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const pre = document.getElementById(this.dataset.copyBlock);
+      if (!pre) return;
+      navigator.clipboard.writeText(pre.innerText).then(() => {
+        this.classList.add('copied');
+        const orig = this.innerHTML;
+        this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+        setTimeout(() => { this.classList.remove('copied'); this.innerHTML = orig; }, 2000);
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

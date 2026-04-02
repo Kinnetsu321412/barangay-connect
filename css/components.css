@@ -1,0 +1,730 @@
+/* ================================================================
+   components.css  |  BarangayConnect
+   Import AFTER main.css on every page.
+   Color tokens live in main.css — do NOT redeclare :root here.
+
+   These are display / status components (non-interactive labels).
+   For clickable elements → use buttons.css instead.
+
+   IMPORT ORDER (every page):
+     <link rel="stylesheet" href="css/main.css" />
+     <link rel="stylesheet" href="css/buttons.css" />
+     <link rel="stylesheet" href="css/components.css" />
+
+   QUICK REFERENCE:
+     Status badges    → .badge .badge--published / --draft / --pending …
+     Priority badges  → .badge .badge--high / --medium / --low
+     Role badges      → .badge .badge--role-full / --role-partial / --role-admin / --role-officer
+     Category tags    → .tag .tag--amber / --green / --blue / --gray
+     Pet overlays     → .pet-status .pet-status--missing / --adoption / --found
+     Compound badge   → .badge-featured
+     Location pill    → .location-pill
+     Slots info       → .badge-slots
+     Inline alert     → .alert-notice
+     Alert widget     → .alert-widget
+     Step progress    → .step-progress (doc tracking, icon-based)
+     Stepper          → .stepper (registration flow, number-based)
+   ================================================================ */
+
+
+/* ================================================================
+   1. BASE BADGE
+   ----------------------------------------------------------------
+   Small inline status/label pill.
+   Always pair the base class with a variant:
+     <span class="badge badge--published">Published</span>
+   ================================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  border: 1.5px solid transparent;
+}
+
+.badge [data-lucide],
+.badge svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  stroke-width: 2.5;
+}
+
+
+/* ================================================================
+   2. STATUS BADGES
+   ----------------------------------------------------------------
+   Use on announcement cards, report rows, document lists.
+   ================================================================ */
+.badge--published  { background: #d1fae5; color: #065f46; }
+.badge--draft      { background: var(--gray-100); color: var(--gray-500); }
+.badge--pending    { background: #fef3c7; color: #92400e; }
+.badge--inprogress { background: #dbeafe; color: #1e40af; }
+.badge--resolved   { background: #d1fae5; color: #065f46; }
+.badge--rejected   { background: #fee2e2; color: #991b1b; }
+.badge--cancelled  { background: var(--gray-100); color: var(--gray-400); }
+
+
+/* ================================================================
+   3. DOCUMENT STATUS BADGES
+   ----------------------------------------------------------------
+   Outlined style used in document request cards.
+   "Processing" is text-only (no border, no bg).
+
+   Usage:
+     <span class="badge badge--doc-ready">Ready</span>
+     <span class="badge badge--doc-processing">Processing</span>
+     <span class="badge badge--doc-completed">Completed</span>
+     <a href="#" class="doc-download">
+       <i data-lucide="download"></i> Download
+     </a>
+   ================================================================ */
+.badge--doc-ready {
+  background: transparent;
+  color: #065f46;
+  border-color: #6ee7b7;
+}
+
+.badge--doc-processing {
+  background: transparent;
+  color: var(--orange-dark);
+  border-color: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.badge--doc-completed {
+  background: transparent;
+  color: var(--gray-400);
+  border-color: var(--gray-200);
+}
+
+/* Download link that appears alongside badge--doc-ready */
+.doc-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--green-dark);
+  text-decoration: none;
+  transition: color var(--transition);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+}
+.doc-download [data-lucide],
+.doc-download svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.2;
+}
+.doc-download:hover { color: var(--green-hover); text-decoration: underline; }
+
+
+/* ================================================================
+   4. PRIORITY BADGES
+   ================================================================ */
+.badge--high   { background: #fee2e2; color: #991b1b; }
+.badge--medium { background: #ffedd5; color: #9a3412; }
+.badge--low    { background: #dcfce7; color: #166534; }
+
+
+/* ================================================================
+   5. ROLE BADGES
+   ----------------------------------------------------------------
+   Full Control  → dark maroon solid, all-caps
+   Partial Control → dark orange solid, all-caps
+   Admin         → light salmon
+   Officer       → light orange outlined
+   ================================================================ */
+
+/* Full Control — dark maroon, solid, uppercase */
+.badge--role-full {
+  background: var(--red-admin);
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 0.7rem;
+  padding: 5px 14px;
+  border-color: transparent;
+}
+
+/* Partial Control — dark orange, solid, uppercase */
+.badge--role-partial {
+  background: var(--orange-dark);
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 0.7rem;
+  padding: 5px 14px;
+  border-color: transparent;
+}
+
+/* Admin — light salmon */
+.badge--role-admin {
+  background: #fee2e2;
+  color: var(--red-admin);
+  border-color: var(--red-admin);
+}
+
+/* Officer — light orange, outlined */
+.badge--role-officer {
+  background: transparent;
+  color: var(--orange-dark);
+  border-color: var(--orange-dark);
+}
+
+
+/* ================================================================
+   6. CATEGORY TAGS
+   ----------------------------------------------------------------
+   Slightly larger than badges. Used for topic/category labels
+   on announcements, bulletin posts, events.
+
+   Usage:
+     <span class="tag tag--amber">Infrastructure</span>
+     <span class="tag tag--green">Health</span>
+   ================================================================ */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.tag [data-lucide],
+.tag svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  stroke-width: 2;
+}
+
+.tag--amber { background: #fef3c7; color: #92400e; }   /* Infrastructure, Flood… */
+.tag--green { background: #d1fae5; color: #065f46; }   /* Health, Environment… */
+.tag--blue  { background: #dbeafe; color: #1e40af; }   /* Education, Safety… */
+.tag--red   { background: #fee2e2; color: #991b1b; }   /* Urgent, Emergency… */
+.tag--gray  { background: var(--gray-100); color: var(--gray-700); } /* General */
+
+/* ================================================================
+   8. FEATURED COMPOUND BADGE
+   ----------------------------------------------------------------
+   Single pill with a bold label, separator dot, and a category.
+
+   Usage:
+     <span class="badge-featured">
+       <span class="badge-featured__label">FEATURED</span>
+       <span class="badge-featured__sep">·</span>
+       <span class="badge-featured__category">Health</span>
+     </span>
+   ================================================================ */
+.badge-featured {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green-dark);
+  color: var(--white);
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.badge-featured__label {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.badge-featured__sep {
+  opacity: 0.40;
+  font-weight: 400;
+}
+
+.badge-featured__category {
+  font-weight: 600;
+}
+
+
+/* ================================================================
+   9. LOCATION PILL
+   ----------------------------------------------------------------
+   Dark green pill with a pulsing green dot. Used in headers,
+   announcement cards, event pages.
+
+   Usage:
+     <span class="location-pill">
+       <span class="location-pill__dot"></span>
+       Barangay Bancod, Indang, Cavite
+     </span>
+   ================================================================ */
+.location-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--green-dark);
+  color: var(--white);
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.location-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.22);
+  animation: location-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes location-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.22); }
+  50%       { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0.08); }
+}
+
+
+/* ================================================================
+   10. SLOTS / INFO BADGE
+   ----------------------------------------------------------------
+   Warm cream pill for capacity / event slot info.
+
+   Usage:
+     <span class="badge-slots">
+       <i data-lucide="users"></i> 6 slots remaining
+     </span>
+   ================================================================ */
+.badge-slots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fef9c3;
+  color: #854d0e;
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-slots [data-lucide],
+.badge-slots svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+
+/* ================================================================
+   11. INLINE ALERT NOTICE
+   ----------------------------------------------------------------
+   Warning triangle + colored text. Not a full card — just an
+   inline notice line used inside panels or below form fields.
+
+   Usage:
+     <p class="alert-notice">
+       <i data-lucide="alert-triangle"></i>
+       2 officer roles awaiting approval
+     </p>
+     <p class="alert-notice alert-notice--orange">
+       <i data-lucide="alert-triangle"></i>
+       Flood advisory in effect
+     </p>
+   ================================================================ */
+.alert-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--red);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.alert-notice [data-lucide],
+.alert-notice svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  stroke-width: 2.2;
+}
+
+.alert-notice--orange       { color: var(--orange-dark); }
+.alert-notice--orange [data-lucide],
+.alert-notice--orange svg   { color: var(--orange-dark); }
+
+.alert-notice--green        { color: var(--green-dark); }
+.alert-notice--green [data-lucide],
+.alert-notice--green svg    { color: var(--green-dark); }
+
+
+/* ================================================================
+   12. ACTIVE ALERTS WIDGET CARD
+   ----------------------------------------------------------------
+   Two stacked cards: glass time display + orange alert card.
+   Sits over the dashboard hero background image.
+
+   Usage:
+     <div class="alert-widget">
+       <div class="alert-widget__time">
+         <span class="alert-widget__time-label">LOCAL TIME</span>
+         <span class="alert-widget__time-value">02:37 PM</span>
+         <span class="alert-widget__time-date">Saturday, March 28</span>
+       </div>
+       <div class="alert-widget__alert">
+         <div class="alert-widget__alert-header">
+           <span class="alert-widget__dot"></span>Active Alerts
+         </div>
+         <p class="alert-widget__alert-title">Flood Alert</p>
+         <p class="alert-widget__alert-sub">Signal No. 1 in effect.</p>
+       </div>
+     </div>
+   ================================================================ */
+.alert-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 220px;
+}
+
+/* Glass time card */
+.alert-widget__time {
+  background: rgba(20, 56, 32, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  color: var(--white);
+}
+
+.alert-widget__time-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 4px;
+}
+
+.alert-widget__time-value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.alert-widget__time-date {
+  display: block;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.50);
+  margin-top: 3px;
+}
+
+/* Orange alert card */
+.alert-widget__alert {
+  background: var(--orange);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+  color: var(--black);
+}
+
+.alert-widget__alert-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 0.70rem;
+  font-weight: 700;
+  color: rgba(44, 40, 40, 0.65);
+  margin-bottom: 5px;
+}
+
+.alert-widget__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--black);
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+.alert-widget__alert-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1.2;
+  color: var(--black);
+}
+
+.alert-widget__alert-sub {
+  font-size: 0.78rem;
+  color: rgba(44, 40, 40, 0.60);
+  margin-top: 2px;
+}
+
+
+/* ================================================================
+   13. STEP PROGRESS TRACKER
+   ----------------------------------------------------------------
+   Horizontal tracker for document request status.
+   Uses check icons for done steps, colored circle for active.
+
+   States:  (none) = pending   .is-done = completed   .is-active = current
+
+   Usage:
+     <div class="step-progress">
+       <div class="step-progress__item is-done">
+         <div class="step-progress__circle"><i data-lucide="check"></i></div>
+         <span class="step-progress__label">Submitted</span>
+       </div>
+       <div class="step-progress__item is-done">
+         <div class="step-progress__circle"><i data-lucide="check"></i></div>
+         <span class="step-progress__label">Under Review</span>
+       </div>
+       <div class="step-progress__item is-active">
+         <div class="step-progress__circle"></div>
+         <span class="step-progress__label">In Progress</span>
+       </div>
+       <div class="step-progress__item">
+         <div class="step-progress__circle"></div>
+         <span class="step-progress__label">Completed</span>
+       </div>
+     </div>
+   ================================================================ */
+.step-progress {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.step-progress__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.step-progress__item:last-child {
+  flex: 0 0 auto;
+}
+
+/* Connector line drawn as ::after — goes from center outward to next item */
+.step-progress__item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 13px; /* half of 26px circle */
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--gray-200);
+  z-index: 0;
+  transition: background 0.3s ease;
+}
+
+.step-progress__item.is-done:not(:last-child)::after {
+  background: var(--green-dark);
+}
+
+/* The line BEFORE active step is green, AFTER is orange */
+.step-progress__item.is-active:not(:last-child)::after {
+  background: rgba(255, 161, 53, 0.35);
+}
+
+/* Circle */
+.step-progress__circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.step-progress__circle [data-lucide],
+.step-progress__circle svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 3;
+  color: var(--white);
+}
+
+.step-progress__item.is-done .step-progress__circle {
+  background: var(--green-dark);
+}
+
+.step-progress__item.is-active .step-progress__circle {
+  background: var(--orange);
+  box-shadow: 0 0 0 4px rgba(255, 161, 53, 0.18);
+}
+
+/* Label */
+.step-progress__label {
+  margin-top: 8px;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.step-progress__item.is-done .step-progress__label {
+  color: var(--gray-700);
+}
+
+.step-progress__item.is-active .step-progress__label {
+  color: var(--orange-dark);
+  font-weight: 800;
+}
+
+
+/* ================================================================
+   14. NUMBERED STEPPER
+   ----------------------------------------------------------------
+   Multi-step form flow. Uses numbered circles instead of check
+   icons. Used on registration, document request wizard.
+
+   States: (none) = upcoming   .is-done = completed   .is-active = current
+
+   Usage:
+     <div class="stepper">
+       <div class="stepper__step is-active">
+         <div class="stepper__circle">1</div>
+         <span class="stepper__label">Account Info</span>
+       </div>
+       <div class="stepper__step">
+         <div class="stepper__circle">2</div>
+         <span class="stepper__label">Location</span>
+       </div>
+       <div class="stepper__step">
+         <div class="stepper__circle">3</div>
+         <span class="stepper__label">Government ID</span>
+       </div>
+     </div>
+   ================================================================ */
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.stepper__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.stepper__step:last-child {
+  flex: 0 0 auto;
+}
+
+/* Connector line */
+.stepper__step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 20px; /* half of 40px circle */
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--gray-200);
+  z-index: 0;
+  transition: background 0.3s ease;
+}
+
+.stepper__step.is-done:not(:last-child)::after {
+  background: var(--green-dark);
+}
+
+/* Circle */
+.stepper__circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.stepper__circle [data-lucide],
+.stepper__circle svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.8;
+  color: var(--white);
+}
+
+.stepper__step.is-done .stepper__circle {
+  background: var(--green-dark);
+  color: var(--white);
+}
+
+.stepper__step.is-active .stepper__circle {
+  background: var(--green-dark);
+  color: var(--white);
+  box-shadow: 0 0 0 5px rgba(27, 75, 39, 0.14);
+}
+
+/* Label */
+.stepper__label {
+  margin-top: 10px;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stepper__step.is-active .stepper__label {
+  color: var(--green-dark);
+  font-weight: 800;
+}
+
+.stepper__step.is-done .stepper__label {
+  color: var(--gray-700);
+}

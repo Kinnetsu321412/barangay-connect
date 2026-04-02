@@ -1,0 +1,264 @@
+/* ================================================
+   BarangayConnect Global Styles — main.css
+   Shared across ALL pages.
+
+   IMPORTANT: Buttons are in buttons.css — import both:
+     <link rel="stylesheet" href="css/main.css" />
+     <link rel="stylesheet" href="css/buttons.css" />
+
+     LINES BELOW 133 CORRESPOND TO REGISTER/LOGIN (WIP, LEAVE THOSE FOR NOW)
+   ================================================ */
+
+/* ---- CSS Variables (Design Tokens) ---- */
+:root {
+  /* Brand Colors */
+  --green-dark:    #1B4B27;   /* primary green — matches buttons */
+  --green-hover:   #12361B;   /* green :hover state */
+  --green-active:  #102A16;   /* green :active state */
+  --green-mid:     #2d5a3d;
+  --green-light:   #4a8c5c;
+  --green-muted:   #2a4a38;
+
+  --orange:        #FFA135;   /* primary orange — matches buttons */
+  --orange-dark:   #DB8B2F;   /* orange :hover state */
+  --orange-active: #92400E;   /* orange :active state */
+
+  --red:           #DC2626;   /* urgent */
+  --red-hover:     #821414;
+  --red-admin:     #7A1A1A;   /* admin UI accent (darker) */
+  --red-admin-mid: #a02020;
+
+  --black:         #2C2828;   /* near-black for text on orange */
+
+  /* Neutrals */
+  --white:         #ffffff;
+  --off-white:     #f9fafb;
+  --gray-50:       #f3f4f6;
+  --gray-100:      #e5e7eb;
+  --gray-200:      #d1d5db;
+  --gray-400:      #9ca3af;
+  --gray-500:      #6b7280;
+  --gray-700:      #374151;
+  --gray-900:      #111827;
+  --text-dark:     #1a1a1a;
+  --text-muted:    #6b7280;
+
+  /* Muted / Located state */
+  --muted-bg:      #E8EDE9;
+  --muted-text:    #3a5c42;
+  --muted-icon:    #5a8a68;
+
+  /* Status Colors */
+  --status-pending:     #f59e0b;
+  --status-inprogress:  #3b82f6;
+  --status-resolved:    #10b981;
+  --status-draft:       #9ca3af;
+  --priority-high:      #ef4444;
+  --priority-medium:    #f97316;
+  --priority-low:       #22c55e;
+
+  /* Spacing */
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Border Radius */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg:  0 10px 30px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.06);
+
+  /* Typography */
+  --font-display: 'Nunito', sans-serif; /* TEMPORARY FONTS */
+  --font-body:    'Inter', sans-serif;  /* TEMPORARY FONTS */
+
+  /* Transitions */
+  --transition:      0.2s ease;
+  --transition-slow: 0.4s ease;
+}
+
+/* ---- Reset & Base ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--text-dark);
+  background: var(--off-white);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* ANYTHING BELOW HERE IS TEMPORARY. THESE ARE USED FOR REGISTER/LOGIN (WIP)*/
+
+/* ---- Utility Classes ---- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- Badge / Status Pills ---- */
+/* NOTE: These are non-interactive labels — different from buttons */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-display);
+}
+
+.badge--published  { background: #d1fae5; color: #065f46; }
+.badge--draft      { background: var(--gray-100); color: var(--gray-500); }
+.badge--pending    { background: #fef3c7; color: #92400e; }
+.badge--inprogress { background: #dbeafe; color: #1e40af; }
+.badge--resolved   { background: #d1fae5; color: #065f46; }
+.badge--high       { background: #fee2e2; color: #991b1b; }
+.badge--medium     { background: #ffedd5; color: #9a3412; }
+.badge--low        { background: #dcfce7; color: #166534; }
+
+/* ---- Shared Card ---- */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--gray-100);
+}
+
+/* ---- Form Shared Styles ---- */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  font-family: var(--font-display);
+}
+
+.form-input {
+  width: 100%;
+  padding: 13px 16px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  color: var(--text-dark);
+  background: var(--white);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  outline: none;
+}
+
+.form-input::placeholder { color: var(--gray-400); }
+
+.form-input:focus {
+  border-color: var(--green-light);
+  box-shadow: 0 0 0 3px rgba(74, 140, 92, 0.12);
+}
+
+.form-input.is-error {
+  border-color: var(--priority-high);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.10);
+}
+
+.form-input-wrap { position: relative; }
+
+.form-input-wrap--icon .form-input { padding-right: 48px; }
+
+.form-input__eye {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-400);
+  display: flex;
+  align-items: center;
+  transition: color var(--transition);
+  padding: 4px;
+}
+.form-input__eye:hover { color: var(--gray-700); }
+
+.form-error {
+  font-size: 0.8rem;
+  color: var(--priority-high);
+  min-height: 18px;
+  font-weight: 500;
+}
+.form-error--center { text-align: center; }
+
+.form-link {
+  color: var(--green-light);
+  font-weight: 600;
+  transition: color var(--transition);
+}
+.form-link:hover { color: var(--green-dark); text-decoration: underline; }
+
+.form-link--bold { font-weight: 800; color: var(--orange); }
+.form-link--bold:hover { color: var(--orange-dark); }
+
+/* ---- Divider ---- */
+.divider {
+  height: 1px;
+  background: var(--gray-100);
+  margin: var(--space-lg) 0;
+}
+
+/* ---- Lucide icon sizing ---- */
+[data-lucide] {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+  flex-shrink: 0;
+}

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BarangayConnect – Sign In</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons (lightweight icon set) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body class="login-page">
+
+  <!-- ===================== -->
+  <!--   LEFT PANEL (Green)  -->
+  <!-- ===================== -->
+  <div class="auth-left">
+
+    <!-- Logo -->
+    <div class="auth-logo">
+      <img src="assets/images/logo.png"
+      alt="BarangayConnect"
+      class="auth-logo__img" />
+    </div>
+
+    <!-- Decorative Circles (pure CSS, no images needed) -->
+    <div class="auth-left__circle auth-left__circle--top"></div>
+    <div class="auth-left__circle auth-left__circle--bottom"></div>
+
+    <!-- Sign In pill badge -->
+    <div class="auth-left__badge">
+      <i data-lucide="circle-dot"></i>
+      <span>Sign In</span>
+    </div>
+
+    <!-- Hero Text -->
+    <div class="auth-left__hero">
+      <h1 class="auth-left__heading">
+        Welcome back to<br />your community
+      </h1>
+      <p class="auth-left__subtext">
+        Access services, report concerns, and stay connected with your
+        barangay — all in one place.
+      </p>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="auth-left__stats">
+      <div class="stat-item">
+        <span class="stat-item__number" data-target="2418">0</span>
+        <span class="stat-item__label">Residents</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__number" data-suffix="%">98</span>
+        <span class="stat-item__label">Satisfaction</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__number" data-suffix="h">24</span>
+        <span class="stat-item__label">Response Time</span>
+      </div>
+    </div>
+
+  </div><!-- /auth-left -->
+
+
+  <!-- ===================== -->
+  <!--  RIGHT PANEL (White)  -->
+  <!-- ===================== -->
+  <div class="auth-right">
+
+    <div class="auth-form-wrapper">
+
+      <h2 class="auth-form__title">Sign in</h2>
+
+      <!-- Demo Notice Banner -->
+      <div class="auth-notice" role="alert">
+        <p>
+          This is a demo. Fields are pre-filled. Use the role switcher in
+          the profile dropdown after logging in to test Officer and Admin views.
+        </p>
+      </div>
+
+      <!-- Login Form -->
+      <form class="auth-form" id="loginForm" novalidate>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">Email address</label>
+          <div class="form-input-wrap">
+            <input
+              class="form-input"
+              type="email"
+              id="loginEmail"
+              name="email"
+              placeholder="juan@barangay.ph"
+              autocomplete="email"
+              value="juan@barangay.ph"
+            />
+          </div>
+          <!-- Validation error (hidden by default) -->
+          <span class="form-error" id="emailError" aria-live="polite"></span>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <div class="form-input-wrap form-input-wrap--icon">
+            <input
+              class="form-input"
+              type="password"
+              id="loginPassword"
+              name="password"
+              placeholder="password123"
+              autocomplete="current-password"
+              value="password123"
+            />
+            <!-- Toggle password visibility -->
+            <button
+              type="button"
+              class="form-input__eye"
+              id="togglePassword"
+              aria-label="Toggle password visibility"
+            >
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+          <span class="form-error" id="passwordError" aria-live="polite"></span>
+        </div>
+
+        <!-- Forgot password link -->
+        <div class="form-forgot">
+          <a href="#" class="form-link">Forgot password?</a>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn--primary btn--full" id="loginBtn">
+          <i data-lucide="log-in"></i>
+          <span>Sign In</span>
+          <!-- Loading spinner (hidden by default) -->
+          <span class="btn__spinner" id="loginSpinner" hidden>
+            <i data-lucide="loader-circle"></i>
+          </span>
+        </button>
+
+        <!-- General error (e.g. wrong credentials) -->
+        <p class="form-error form-error--center" id="loginError" aria-live="polite"></p>
+
+      </form><!-- /auth-form -->
+
+      <!-- Register link -->
+      <p class="auth-switch">
+        Don't have an account?
+        <a href="register.html" class="form-link form-link--bold">Register here</a>
+      </p>
+
+    </div><!-- /auth-form-wrapper -->
+
+  </div><!-- /auth-right -->
+
+
+  <!-- Lucide icon init -->
+  <script>lucide.createIcons();</script>
+
+  <!-- JS files (load order matters) -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
