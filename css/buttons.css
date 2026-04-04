@@ -1,18 +1,69 @@
 /* ================================================================
-   buttons.css  |  BarangayConnect
-   Import AFTER main.css on every page.
-   Color tokens live in main.css — do NOT redeclare :root here.
+   buttons.css — BarangayConnect
+   All interactive clickable elements. Import AFTER main.css.
+   CSS custom properties live in main.css — do NOT redeclare :root here.
 
-   HOW TO USE:
-   Always start with the base class: class="btn"
-   Then add a variant:  btn--green  btn--orange  btn--red  etc.
-   Then add a size (optional):  btn--sm  btn--lg
-   Then add a modifier if needed:  btn--full  btn--rounded  etc.
+   WHAT IS IN HERE:
+     Every element the user can click to trigger an action —
+     buttons, icon buttons, toggles, filter pills, FAB, selectors.
+     If it's clickable and causes something, it belongs here.
 
-   EXAMPLE:
-     <button class="btn btn--orange">RSVP Now</button>
-     <button class="btn btn--green btn--sm">Register</button>
-     <button class="btn btn--outline-hero btn--lg">Get Started →</button>
+   WHAT IS NOT IN HERE:
+     · Non-interactive labels/pills   → components.css
+     · Modal / drawer layout          → frames.css
+     · Form inputs                    → main.css
+
+   REQUIRED IMPORT ORDER (every page using buttons):
+     <link rel="stylesheet" href="css/main.css" />
+     <link rel="stylesheet" href="css/buttons.css" />
+
+   ── HOW TO USE ───────────────────────────────────────────────────
+     Always start with the base class, then layer modifiers:
+       class="btn"                         ← required base
+       class="btn btn--green"              ← solid green
+       class="btn btn--orange btn--sm"     ← orange, small
+       class="btn btn--outline btn--full"  ← outline, full-width
+       class="btn btn--orange is-loading"  ← loading state
+
+   QUICK REFERENCE:
+     Base             → .btn
+     Sizes            → .btn--sm / .btn--lg / .btn--full / .btn--rounded
+     ── Solid ──────────────────────────────────────────────────────
+     Green            → .btn--green         (register, confirm, official)
+     Orange           → .btn--orange        (submit, RSVP, CTA)
+     Red              → .btn--red           (destructive, urgent)
+     ── Outline / Ghost ────────────────────────────────────────────
+     Outline          → .btn--outline       (back, cancel — light bg)
+     Outline hero     → .btn--outline-hero  (ghost on dark hero bg)
+     White solid      → .btn--white         (solid white on dark bg)
+     Ghost            → .btn--ghost         (subtle secondary)
+     Dashed           → .btn--dashed        (invite / add actions)
+     ── State ───────────────────────────────────────────────────────
+     Located          → .btn--located       (pet board location confirmed)
+     Loading          → .is-loading + .btn__spinner inside
+     ── Tab Strips ──────────────────────────────────────────────────
+     Tab bar wrap     → .btn-tab-bar        (flex row container)
+     Tab pill         → .btn--category      (for dark backgrounds)
+     Active tab       → .btn--category.is-active / .is-selected
+     Filter pill      → .btn--filter        (for light backgrounds)
+     Active filter    → .btn--filter.is-active
+     ── Icon-Only ───────────────────────────────────────────────────
+     Icon circle      → .btn--icon  (+ .btn--icon-edit or --icon-delete)
+     Close / dismiss  → .btn--close (+ .btn--sm)
+     Call circle      → .btn--call-circle
+     Call pill        → .btn--call
+     FAB              → .btn--fab (fixed bottom-right)
+     ── Special ──────────────────────────────────────────────────────
+     Widget tile      → .btn--widget     (glass tile, icon + label)
+     Selector card    → .btn--selector   (multi-step form choice)
+     Dashboard action → .btn--action-orange / .btn--action-green
+     Status resolved  → .btn--status-resolved
+     ── Toggle Switch ────────────────────────────────────────────────
+     Wrapper          → .toggle-wrap
+     Input (hidden)   → .toggle-input
+     Track            → .toggle-track (+ .toggle-track--orange / --dark)
+     Thumb            → .toggle-thumb
+     Label            → .toggle-label
    ================================================================ */
 
 
@@ -26,10 +77,10 @@
   gap: 8px;
   padding: 13px 24px;
   border-radius: var(--radius-full);
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.95rem;
-  line-height: 1;
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--text-base);
+  line-height: var(--lh-none);
   cursor: pointer;
   border: none;
   outline: none;
@@ -68,20 +119,20 @@
    ================================================================ */
 .btn--sm {
   padding: 8px 16px;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   gap: 6px;
 }
 .btn--sm [data-lucide], .btn--sm svg { width: 14px; height: 14px; }
 
 .btn--lg {
   padding: 16px 32px;
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   gap: 10px;
 }
 .btn--lg [data-lucide], .btn--lg svg { width: 20px; height: 20px; }
 
 .btn--full    { width: 100%; }
-.btn--rounded { border-radius: 12px; }
+.btn--rounded { border-radius: var(--radius-md); }
 
 
 /* ================================================================
@@ -92,11 +143,11 @@
 .btn--green {
   background: var(--green-dark);
   color: var(--white);
-  box-shadow: 0 2px 8px rgba(27, 75, 39, 0.20);
+  box-shadow: 0 2px 8px rgba(27,75,39,0.20);
 }
 .btn--green:hover:not(:disabled) {
   background: var(--green-hover);
-  box-shadow: 0 4px 16px rgba(27, 75, 39, 0.28);
+  box-shadow: 0 4px 16px rgba(27,75,39,0.28);
 }
 .btn--green:active:not(:disabled) { background: var(--green-active); }
 
@@ -104,11 +155,11 @@
 .btn--orange {
   background: var(--orange);
   color: var(--black);
-  box-shadow: 0 2px 8px rgba(255, 161, 53, 0.28);
+  box-shadow: 0 2px 8px rgba(255,161,53,0.28);
 }
 .btn--orange:hover:not(:disabled) {
-  background: var(--orange-dark);
-  box-shadow: 0 4px 16px rgba(255, 161, 53, 0.35);
+  background: var(--orange-hover);
+  box-shadow: 0 4px 16px var(--alpha-orange-35);
 }
 .btn--orange:active:not(:disabled) {
   background: var(--orange-active);
@@ -119,11 +170,11 @@
 .btn--red {
   background: var(--red);
   color: var(--white);
-  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.22);
+  box-shadow: 0 2px 8px rgba(220,38,38,0.22);
 }
 .btn--red:hover:not(:disabled) {
   background: var(--red-hover);
-  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.30);
+  box-shadow: 0 4px 16px rgba(220,38,38,0.30);
 }
 
 
@@ -153,30 +204,30 @@
 .btn--outline {
   background: transparent;
   color: var(--black);
-  border: 1.5px solid rgba(44, 40, 40, 0.22);
+  border: 1.5px solid rgba(44,40,40,0.22);
 }
 .btn--outline:hover:not(:disabled) {
-  background: rgba(44, 40, 40, 0.06);
-  border-color: rgba(44, 40, 40, 0.40);
+  background: var(--alpha-ink-06);
+  border-color: rgba(44,40,40,0.40);
 }
 
 /* Dark hero bg — "Get Started →" */
 .btn--outline-hero {
   background: transparent;
   color: var(--white);
-  border: 1.5px solid rgba(255, 255, 255, 0.70);
+  border: 1.5px solid var(--overlay-white-70);
 }
 .btn--outline-hero:hover:not(:disabled) {
   background: var(--white);
   color: var(--black);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 8px var(--overlay-black-10);
 }
 
 /* White solid on dark bg */
 .btn--white {
   background: var(--white);
   color: var(--black);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: 0 2px 8px var(--overlay-black-10);
 }
 .btn--white:hover:not(:disabled) {
   background: #f0f0f0;
@@ -187,11 +238,11 @@
 .btn--dashed {
   background: transparent;
   color: var(--green-dark);
-  border: 1.5px dashed rgba(27, 75, 39, 0.45);
-  font-weight: 600;
+  border: 1.5px dashed rgba(27,75,39,0.45);
+  font-weight: var(--fw-semibold);
 }
 .btn--dashed:hover:not(:disabled) {
-  background: rgba(27, 75, 39, 0.06);
+  background: var(--alpha-green-06);
   border-color: var(--green-dark);
 }
 
@@ -199,10 +250,10 @@
 .btn--ghost {
   background: transparent;
   color: var(--black);
-  border: 1.5px solid rgba(44, 40, 40, 0.15);
-  font-weight: 600;
+  border: 1.5px solid rgba(44,40,40,0.15);
+  font-weight: var(--fw-semibold);
 }
-.btn--ghost:hover:not(:disabled) { background: rgba(44, 40, 40, 0.05); }
+.btn--ghost:hover:not(:disabled) { background: var(--alpha-ink-05); }
 
 
 /* ================================================================
@@ -211,16 +262,16 @@
 
 /* Filter pills — gray → green on active. Used on light backgrounds. */
 .btn--filter {
-  background: rgba(44, 40, 40, 0.07);
-  color: rgba(44, 40, 40, 0.60);
+  background: var(--alpha-ink-07);
+  color: rgba(44,40,40,0.60);
   border: 1.5px solid transparent;
   padding: 9px 18px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--text-base-sm);
+  font-weight: var(--fw-semibold);
   border-radius: var(--radius-full);
   transition: all var(--transition);
 }
-.btn--filter:hover { background: rgba(27, 75, 39, 0.10); color: var(--green-dark); }
+.btn--filter:hover { background: var(--alpha-green-10); color: var(--green-dark); }
 .btn--filter.is-active { background: var(--green-dark); color: var(--white); }
 
 
@@ -250,13 +301,13 @@
 }
 
 .btn--category {
-  background: rgba(255, 255, 255, 0.10);
-  color: rgba(255, 255, 255, 0.68);
-  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  background: var(--overlay-white-10);
+  color: rgba(255,255,255,0.68);
+  border: 1.5px solid rgba(255,255,255,0.14);
   border-radius: var(--radius-full);
   padding: 11px 20px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--text-base-sm);
+  font-weight: var(--fw-semibold);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -271,9 +322,9 @@
 }
 
 .btn--category:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--overlay-white-18);
   color: var(--white);
-  border-color: rgba(255, 255, 255, 0.28);
+  border-color: var(--overlay-white-28);
 }
 
 /* Both .is-active and .is-selected work — pick one and be consistent per page */
@@ -283,7 +334,7 @@
   background: var(--orange);
   color: var(--black);
   border-color: transparent;
-  box-shadow: 0 3px 12px rgba(255, 161, 53, 0.38);
+  box-shadow: 0 3px 12px rgba(255,161,53,0.38);
 }
 
 
@@ -304,21 +355,21 @@
 .btn--icon-edit {
   background: var(--white);
   color: var(--black);
-  border: 1.5px solid rgba(44, 40, 40, 0.15);
+  border: 1.5px solid rgba(44,40,40,0.15);
 }
 .btn--icon-edit:hover:not(:disabled) {
-  border-color: rgba(44, 40, 40, 0.35);
+  border-color: rgba(44,40,40,0.35);
   background: #f5f5f5;
 }
 
 .btn--icon-delete {
-  background: rgba(220, 38, 38, 0.08);
+  background: var(--alpha-red-08);
   color: var(--red);
-  border: 1.5px solid rgba(220, 38, 38, 0.15);
+  border: 1.5px solid rgba(220,38,38,0.15);
 }
 .btn--icon-delete:hover:not(:disabled) {
-  background: rgba(220, 38, 38, 0.16);
-  border-color: rgba(220, 38, 38, 0.35);
+  background: var(--alpha-red-16);
+  border-color: rgba(220,38,38,0.35);
 }
 
 
@@ -334,14 +385,14 @@
   border-radius: 50%;
   background: var(--orange);
   color: var(--black);
-  box-shadow: 0 3px 10px rgba(255, 161, 53, 0.35);
+  box-shadow: 0 3px 10px var(--alpha-orange-35);
   flex-shrink: 0;
   border: none;
 }
 .btn--call-circle [data-lucide], .btn--call-circle svg { width: 20px; height: 20px; stroke-width: 2.2; }
 .btn--call-circle:hover:not(:disabled) {
-  background: var(--orange-dark);
-  box-shadow: 0 4px 14px rgba(255, 161, 53, 0.45);
+  background: var(--orange-hover);
+  box-shadow: 0 4px 14px rgba(255,161,53,0.45);
   transform: scale(1.06);
 }
 
@@ -349,10 +400,10 @@
 .btn--call {
   background: var(--orange);
   color: var(--black);
-  box-shadow: 0 2px 8px rgba(255, 161, 53, 0.25);
+  box-shadow: 0 2px 8px rgba(255,161,53,0.25);
   border-radius: var(--radius-full);
 }
-.btn--call:hover:not(:disabled) { background: var(--orange-dark); }
+.btn--call:hover:not(:disabled) { background: var(--orange-hover); }
 
 
 /* ================================================================
@@ -367,13 +418,13 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--red-admin);
+  background: var(--red-dark);
   color: var(--white);
   flex-shrink: 0;
   border: none;
 }
 .btn--close [data-lucide], .btn--close svg { width: 18px; height: 18px; stroke-width: 2.5; }
-.btn--close:hover:not(:disabled) { background: #5e1414; transform: scale(1.06); }
+.btn--close:hover:not(:disabled) { background: var(--red-dark-hover); transform: scale(1.06); }
 .btn--close:active:not(:disabled) { transform: scale(0.95); }
 
 .btn--close.btn--sm { width: 28px; height: 28px; }
@@ -413,8 +464,8 @@
   align-items: center;
   width: 48px;
   height: 27px;
-  border-radius: 9999px;
-  background: rgba(44, 40, 40, 0.20);
+  border-radius: var(--radius-full);
+  background: var(--alpha-ink-20);
   transition: background 0.22s ease, box-shadow 0.22s ease;
   flex-shrink: 0;
 }
@@ -432,11 +483,11 @@
 
 .toggle-input:checked + .toggle-track {
   background: var(--green-dark);
-  box-shadow: 0 0 0 3px rgba(27, 75, 39, 0.12);
+  box-shadow: 0 0 0 3px var(--alpha-green-12);
 }
 .toggle-input:checked + .toggle-track .toggle-thumb {
   transform: translateX(21px);
-  box-shadow: 0 2px 6px rgba(27, 75, 39, 0.25);
+  box-shadow: 0 2px 6px rgba(27,75,39,0.25);
 }
 
 .toggle-input:focus-visible + .toggle-track {
@@ -447,24 +498,24 @@
 .toggle-wrap:has(.toggle-input:disabled) { cursor: not-allowed; opacity: 0.45; }
 
 .toggle-label {
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: var(--fw-semibold);
   color: var(--gray-700);
 }
 
 .toggle-input:checked + .toggle-track--orange {
   background: var(--orange);
-  box-shadow: 0 0 0 3px rgba(255, 161, 53, 0.15);
+  box-shadow: 0 0 0 3px var(--alpha-orange-15);
 }
 .toggle-input:checked + .toggle-track--orange .toggle-thumb {
-  box-shadow: 0 2px 6px rgba(255, 161, 53, 0.30);
+  box-shadow: 0 2px 6px rgba(255,161,53,0.30);
 }
 
-.toggle-track--dark { background: rgba(0,0,0,0.25); }
+.toggle-track--dark { background: var(--overlay-black-25); }
 .toggle-input:checked + .toggle-track--dark {
-  background: var(--red-admin);
-  box-shadow: 0 0 0 3px rgba(122, 26, 26, 0.12);
+  background: var(--red-dark);
+  box-shadow: 0 0 0 3px var(--alpha-red-dark-12);
 }
 
 
@@ -480,13 +531,13 @@
   border-radius: 50%;
   background: var(--orange);
   color: var(--black);
-  box-shadow: 0 6px 20px rgba(255, 161, 53, 0.40);
+  box-shadow: 0 6px 20px rgba(255,161,53,0.40);
   z-index: 200;
   padding: 0;
   border: none;
 }
 .btn--fab [data-lucide], .btn--fab svg { width: 24px; height: 24px; stroke-width: 2.5; }
-.btn--fab:hover { background: var(--orange-dark); box-shadow: 0 8px 28px rgba(255, 161, 53, 0.50); transform: scale(1.06); }
+.btn--fab:hover { background: var(--orange-hover); box-shadow: 0 8px 28px rgba(255,161,53,0.50); transform: scale(1.06); }
 .btn--fab:active { transform: scale(0.96); }
 
 
@@ -500,19 +551,19 @@
   border-radius: var(--radius-lg);
   background: var(--white);
   color: var(--black);
-  border: 1.5px solid rgba(44, 40, 40, 0.15);
-  font-size: 0.9rem;
-  font-weight: 600;
+  border: 1.5px solid rgba(44,40,40,0.15);
+  font-size: var(--text-base);
+  font-weight: var(--fw-semibold);
   min-width: 120px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 1px 4px var(--overlay-black-06);
 }
 .btn--selector [data-lucide], .btn--selector svg { width: 28px; height: 28px; color: var(--green-dark); }
-.btn--selector:hover { border-color: var(--green-dark); background: rgba(27, 75, 39, 0.04); }
+.btn--selector:hover { border-color: var(--green-dark); background: var(--alpha-green-04); }
 .btn--selector.is-selected, .btn--selector[aria-pressed="true"] {
   background: var(--green-dark);
   color: var(--white);
   border-color: var(--green-dark);
-  box-shadow: 0 4px 14px rgba(27, 75, 39, 0.28);
+  box-shadow: 0 4px 14px rgba(27,75,39,0.28);
 }
 .btn--selector.is-selected [data-lucide], .btn--selector.is-selected svg { color: var(--white); }
 
@@ -524,15 +575,15 @@
   background: var(--orange);
   color: var(--black);
   padding: 10px 20px;
-  font-size: 0.88rem;
+  font-size: var(--text-base-sm);
 }
-.btn--action-orange:hover:not(:disabled) { background: var(--orange-dark); }
+.btn--action-orange:hover:not(:disabled) { background: var(--orange-hover); }
 
 .btn--action-green {
   background: var(--green-dark);
   color: var(--white);
   padding: 10px 20px;
-  font-size: 0.88rem;
+  font-size: var(--text-base-sm);
 }
 .btn--action-green:hover:not(:disabled) { background: var(--green-hover); }
 
@@ -541,12 +592,12 @@
   color: #166534;
   border: none;
   padding: 8px 12px;
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: var(--text-base-sm);
+  font-weight: var(--fw-bold);
   gap: 6px;
 }
 .btn--status-resolved [data-lucide], .btn--status-resolved svg { color: #10b981; width: 16px; height: 16px; }
-.btn--status-resolved:hover { background: rgba(16, 185, 129, 0.10); }
+.btn--status-resolved:hover { background: var(--alpha-success-10); }
 
 
 /* ================================================================
@@ -583,12 +634,12 @@
   flex-direction: column;
   gap: 7px;
   padding: 16px 18px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--overlay-white-12);
   color: var(--white);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 18px;
-  font-size: 0.78rem;
-  font-weight: 700;
+  border: 1px solid var(--overlay-white-18);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-bold);
   min-width: 72px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -600,15 +651,15 @@
   stroke-width: 1.8;
 }
 .btn--widget span {
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.72rem;
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
 }
 .btn--widget:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.30);
+  background: var(--overlay-white-22);
+  border-color: rgba(255,255,255,0.30);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  box-shadow: 0 6px 20px var(--overlay-black-18);
 }
 .btn--widget:active:not(:disabled) { transform: translateY(0); }
