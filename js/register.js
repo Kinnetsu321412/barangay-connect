@@ -1,48 +1,47 @@
 // js/register.js
 // =====================================================
 // Handles: 3-step registration form
-// Uploads: ID photos to Firebase Storage
-// Saves:   User data to Firestore as status: "pending"
+// Uploads: ID photos to Firebase Storage (barangay-scoped)
+// Saves:   User data to Firestore barangay subcollection
+//          + lightweight userIndex entry for auth routing
 // =====================================================
 
 import { auth, db } from './firebase-config.js';
-import { uploadIdPhotos } from './storage.js';          // ← replaces cloudinary.js
+import { uploadIdPhotos } from './storage.js';
+import { userDoc, userIndexDoc, barangayId as toBid } from './db-paths.js';
+import { initLocationDropdowns } from './location.js';
 import {
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  doc, setDoc, serverTimestamp
+  setDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 
 // =====================================================
-// STATE — collected across all 3 steps
+// STATE
 // =====================================================
 const formData = {
-  // Step 1
-  firstName:    '',
-  lastName:     '',
-  email:        '',
-  phone:        '',
-  dob:          '',
-  password:     '',
-  // Step 2
-  barangay:     '',
-  purok:        '',
-  yearsResident:'',
-  // Step 3
-  idType:       '',
-  idNumber:     '',
-  idFrontURL:   '',  // Firebase Storage URL after upload
-  idBackURL:    '',  // Firebase Storage URL after upload
+  firstName:     '',
+  lastName:      '',
+  email:         '',
+  phone:         '',
+  dob:           '',
+  password:      '',
+  province:      '',
+  municipality:  '',
+  barangay:      '',
+  yearsResident: '',
+  idType:        '',
+  idNumber:      '',
+  idFrontURL:    '',
+  idBackURL:     '',
 };
 
-// Track which step we're on
-let currentStep = 1;
-
-// Raw File objects (before upload)
-let idFrontFile = null;
-let idBackFile  = null;
+let currentStep  = 1;
+let idFrontFile  = null;
+let idBackFile   = null;
 
 
 // =====================================================
@@ -57,27 +56,22 @@ const successScreen  = document.getElementById('successScreen');
 const registerHeader = document.querySelector('.register-header');
 const stepIndicator  = document.getElementById('stepIndicator');
 
-// Step dots and connectors
 const stepDots   = [null, document.getElementById('stepDot1'), document.getElementById('stepDot2'), document.getElementById('stepDot3')];
 const connectors = [null, document.getElementById('connector1'), document.getElementById('connector2')];
 
-// Step 1 elements
-const step1Form   = document.getElementById('step1Form');
-const toggleRegPw = document.getElementById('toggleRegPassword');
-const regPassword = document.getElementById('regPassword');
+const step1Form      = document.getElementById('step1Form');
+const toggleRegPw    = document.getElementById('toggleRegPassword');
+const regPassword    = document.getElementById('regPassword');
 
-// Step 2 elements
-const step2Form = document.getElementById('step2Form');
-const step2Back = document.getElementById('step2Back');
+const step2Form      = document.getElementById('step2Form');
+const step2Back      = document.getElementById('step2Back');
 
-// Step 3 elements
 const step3Form      = document.getElementById('step3Form');
 const step3Back      = document.getElementById('step3Back');
 const step3Btn       = document.getElementById('step3Btn');
 const submitSpinner  = document.getElementById('submitSpinner');
 const submitError    = document.getElementById('submitError');
 
-// Upload areas
 const uploadFrontArea = document.getElementById('uploadFrontArea');
 const uploadBackArea  = document.getElementById('uploadBackArea');
 const idPhotoFront    = document.getElementById('idPhotoFront');
@@ -138,10 +132,14 @@ if (step1Form) {
     formData.password  = document.getElementById('regPassword').value;
 
     goToStep(2);
+
+    if (!window._locationInit) {
+      initLocationDropdowns();
+      window._locationInit = true;
+    }
   });
 }
 
-// Password toggle on step 1
 if (toggleRegPw) {
   toggleRegPw.addEventListener('click', () => {
     const isPassword = regPassword.type === 'password';
@@ -164,8 +162,9 @@ if (step2Form) {
     e.preventDefault();
     if (!validateStep2()) return;
 
+    formData.province      = document.getElementById('province').value;
+    formData.municipality  = document.getElementById('municipality').value;
     formData.barangay      = document.getElementById('barangay').value;
-    formData.purok         = document.getElementById('purok').value;
     formData.yearsResident = document.getElementById('yearsResident').value;
 
     goToStep(3);
@@ -176,17 +175,13 @@ if (step2Form) {
 // =====================================================
 // STEP 3 — FILE UPLOAD PREVIEWS
 // =====================================================
-
 uploadFrontArea.addEventListener('click', () => idPhotoFront.click());
 uploadBackArea.addEventListener('click',  () => idPhotoBack.click());
 
 idPhotoFront.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  if (!isValidImage(file)) {
-    showFieldError('idFrontError', 'File must be JPG, PNG, or WEBP under 5MB.');
-    return;
-  }
+  if (!isValidImage(file)) { showFieldError('idFrontError', 'File must be JPG, PNG, or WEBP under 5MB.'); return; }
   idFrontFile = file;
   showImagePreview(previewFront, uploadFrontArea, file);
   clearFieldError('idFrontError');
@@ -195,19 +190,14 @@ idPhotoFront.addEventListener('change', (e) => {
 idPhotoBack.addEventListener('change', (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  if (!isValidImage(file)) {
-    showFieldError('idBackError', 'File must be JPG, PNG, or WEBP under 5MB.');
-    return;
-  }
+  if (!isValidImage(file)) { showFieldError('idBackError', 'File must be JPG, PNG, or WEBP under 5MB.'); return; }
   idBackFile = file;
   showImagePreview(previewBack, uploadBackArea, file);
   clearFieldError('idBackError');
 });
 
 function isValidImage(file) {
-  const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-  const maxSize = 5 * 1024 * 1024;
-  return allowed.includes(file.type) && file.size <= maxSize;
+  return ['image/jpeg','image/png','image/webp'].includes(file.type) && file.size <= 5 * 1024 * 1024;
 }
 
 function showImagePreview(imgEl, areaEl, file) {
@@ -229,7 +219,7 @@ if (step3Back) step3Back.addEventListener('click', () => goToStep(2));
 
 
 // =====================================================
-// STEP 3 — SUBMIT (Main registration)
+// STEP 3 — SUBMIT
 // =====================================================
 if (step3Form) {
   step3Form.addEventListener('submit', async (e) => {
@@ -242,27 +232,31 @@ if (step3Form) {
     setSubmitLoading(true);
     submitError.textContent = '';
 
+    let createdUser = null;
+
     try {
-      // ---- 1. Create Firebase Auth account (we need the UID for storage paths) ----
+      // 1. Create Firebase Auth account
       const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        formData.email,
-        formData.password
+        auth, formData.email, formData.password
       );
+      createdUser = userCredential.user;
       const uid = userCredential.user.uid;
 
-      // ---- 2. Upload ID photos to Firebase Storage ----
-      // Files are compressed to WebP automatically inside uploadIdPhotos()
-      // Stored at: id-photos/{uid}/front.webp and id-photos/{uid}/back.webp
-      const { frontURL, backURL } = await uploadIdPhotos(uid, idFrontFile, idBackFile);
+      // 2. Upload ID photos — barangay-scoped path
+      //    Storage: id-photos/{barangayId}/{uid}/front.webp
+      const { frontURL, backURL } = await uploadIdPhotos(
+        formData.barangay,   // ← barangay now included
+        uid,
+        idFrontFile,
+        idBackFile
+      );
 
       formData.idFrontURL = frontURL;
       formData.idBackURL  = backURL;
 
-      // ---- 3. Save user profile to Firestore ----
-      // status: "pending" — admin must approve before user can access the app
-      // idFrontURL / idBackURL will be cleared by Cloud Function after approval
-      await setDoc(doc(db, 'users', uid), {
+      // 3a. Save full user profile to barangay subcollection
+      //     Firestore: barangays/{barangayId}/users/{uid}
+      await setDoc(userDoc(formData.barangay, uid), {
         uid,
         firstName:     formData.firstName,
         lastName:      formData.lastName,
@@ -270,8 +264,9 @@ if (step3Form) {
         email:         formData.email,
         phone:         formData.phone,
         dob:           formData.dob,
+        province:      formData.province,
+        municipality:  formData.municipality,
         barangay:      formData.barangay,
-        purok:         formData.purok,
         yearsResident: Number(formData.yearsResident),
         idType:        formData.idType,
         idNumber:      formData.idNumber,
@@ -282,10 +277,28 @@ if (step3Form) {
         createdAt:     serverTimestamp(),
       });
 
-      // ---- 4. Show success screen ----
+      // 3b. Write lightweight index for fast auth routing
+      //     Firestore: userIndex/{uid}
+      await setDoc(userIndexDoc(uid), {
+        barangay:   formData.barangay,           // display name
+        barangayId: toBid(formData.barangay),    // sanitized path segment
+        role:       'resident',
+        status:     'pending',
+      });
+
+      // 4. Sign out and show success
+      await signOut(auth);
       showSuccess();
 
     } catch (error) {
+      // Rollback: delete the Auth account if anything after it failed,
+      // so the email is freed and the user can try again.
+      if (createdUser) {
+        try { await createdUser.delete(); } catch (e) {
+          console.warn('Could not roll back auth account:', e.message);
+        }
+      }
+
       setSubmitLoading(false);
       submitError.textContent = getRegisterErrorMessage(error.code, error.message);
     }
@@ -300,12 +313,12 @@ function showSuccess() {
   Object.values(steps).forEach(el => { if (el) el.hidden = true; });
   registerHeader.hidden = true;
   stepIndicator.hidden  = true;
-  successScreen.hidden  = false;
+  successScreen.classList.add('show');
 }
 
 
 // =====================================================
-// VALIDATION — Step 1
+// VALIDATION
 // =====================================================
 function validateStep1() {
   clearAllErrors(['firstNameError','lastNameError','regEmailError','phoneError','dobError','regPasswordError']);
@@ -322,80 +335,70 @@ function validateStep1() {
   if (!lastName)  { showFieldError('lastNameError',  'Last name is required.');  valid = false; }
 
   if (!email) {
-    showFieldError('regEmailError', 'Email is required.');
-    valid = false;
+    showFieldError('regEmailError', 'Email is required.'); valid = false;
   } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    showFieldError('regEmailError', 'Enter a valid email address.');
-    valid = false;
+    showFieldError('regEmailError', 'Enter a valid email address.'); valid = false;
   }
 
   if (!phone) {
-    showFieldError('phoneError', 'Phone number is required.');
-    valid = false;
+    showFieldError('phoneError', 'Phone number is required.'); valid = false;
   } else if (!/^09\d{9}$/.test(phone)) {
-    showFieldError('phoneError', 'Enter a valid PH number (e.g. 09XX XXX XXXX).');
-    valid = false;
+    showFieldError('phoneError', 'Enter a valid PH number (e.g. 09XX XXX XXXX).'); valid = false;
   }
 
   if (!dob) {
-    showFieldError('dobError', 'Date of birth is required.');
-    valid = false;
-  } else {
-    const age = getAge(dob);
-    if (age < 15) {
-      showFieldError('dobError', 'You must be at least 15 years old to register.');
-      valid = false;
-    }
+    showFieldError('dobError', 'Date of birth is required.'); valid = false;
+  } else if (getAge(dob) < 15) {
+    showFieldError('dobError', 'You must be at least 15 years old to register.'); valid = false;
   }
 
   if (!password) {
-    showFieldError('regPasswordError', 'Password is required.');
-    valid = false;
+    showFieldError('regPasswordError', 'Password is required.'); valid = false;
   } else if (password.length < 8) {
-    showFieldError('regPasswordError', 'Password must be at least 8 characters.');
-    valid = false;
+    showFieldError('regPasswordError', 'Password must be at least 8 characters.'); valid = false;
   }
 
   return valid;
 }
 
-
-// =====================================================
-// VALIDATION — Step 2
-// =====================================================
 function validateStep2() {
-  clearAllErrors(['barangayError','purokError','yearsError']);
+  clearAllErrors(['provinceError','municipalityError','barangayError','yearsError']);
   let valid = true;
 
-  const barangay      = document.getElementById('barangay').value;
-  const purok         = document.getElementById('purok').value;
-  const yearsResident = document.getElementById('yearsResident').value;
-
-  if (!barangay)      { showFieldError('barangayError', 'Please select your barangay.'); valid = false; }
-  if (!purok)         { showFieldError('purokError',    'Please select your purok.');    valid = false; }
-  if (!yearsResident || yearsResident < 0) {
-    showFieldError('yearsError', 'Enter how many years you have been a resident.');
-    valid = false;
-  }
+  if (!document.getElementById('province').value)
+    { showFieldError('provinceError', 'Please select your province.'); valid = false; }
+  if (!document.getElementById('municipality').value)
+    { showFieldError('municipalityError', 'Please select your municipality.'); valid = false; }
+  if (!document.getElementById('barangay').value)
+    { showFieldError('barangayError', 'Please select your barangay.'); valid = false; }
+  if (!document.getElementById('yearsResident').value || document.getElementById('yearsResident').value < 0)
+    { showFieldError('yearsError', 'Enter how many years you have been a resident.'); valid = false; }
 
   return valid;
 }
 
-
-// =====================================================
-// VALIDATION — Step 3
-// =====================================================
 function validateStep3() {
   clearAllErrors(['idTypeError','idNumberError','idFrontError','idBackError']);
   let valid = true;
 
-  const idType   = document.getElementById('idType').value;
-  const idNumber = document.getElementById('idNumber').value.trim();
+  if (!document.getElementById('idType').value)
+    { showFieldError('idTypeError', 'Please select your ID type.'); valid = false; }
+  if (!document.getElementById('idNumber').value.trim())
+    { showFieldError('idNumberError', 'ID number is required.'); valid = false; }
+  if (!idFrontFile)
+    { showFieldError('idFrontError', 'Please upload the front of your ID.'); valid = false; }
+  if (!idBackFile)
+    { showFieldError('idBackError', 'Please upload the back of your ID.'); valid = false; }
 
-  if (!idType)      { showFieldError('idTypeError',   'Please select your ID type.');          valid = false; }
-  if (!idNumber)    { showFieldError('idNumberError', 'ID number is required.');               valid = false; }
-  if (!idFrontFile) { showFieldError('idFrontError',  'Please upload the front of your ID.'); valid = false; }
-  if (!idBackFile)  { showFieldError('idBackError',   'Please upload the back of your ID.');  valid = false; }
+  const tosCheckbox = document.getElementById('tosAgree');
+  const tosError    = document.getElementById('tosError');
+  if (!tosCheckbox.checked) {
+    tosError.textContent = 'You must agree to the terms before submitting.';
+    tosCheckbox.focus();
+    valid = false;
+  } else {
+    tosError.textContent = '';
+  }
 
   return valid;
 }
@@ -414,9 +417,7 @@ function clearFieldError(id) {
   if (el) el.textContent = '';
 }
 
-function clearAllErrors(ids) {
-  ids.forEach(id => clearFieldError(id));
-}
+function clearAllErrors(ids) { ids.forEach(clearFieldError); }
 
 function getAge(dobString) {
   const today = new Date();
@@ -431,7 +432,7 @@ function setSubmitLoading(isLoading) {
   step3Btn.disabled    = isLoading;
   submitSpinner.hidden = !isLoading;
   step3Btn.querySelector('span:first-of-type').textContent = isLoading
-    ? 'Submitting...'
+    ? 'Submitting…'
     : 'Submit Registration';
 }
 

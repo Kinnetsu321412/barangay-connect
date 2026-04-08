@@ -5,12 +5,14 @@
 // =====================================================
 
 import { auth, db } from './firebase-config.js';
+import { userDoc, userIndexDoc } from './db-paths.js';
 import {
   signInWithEmailAndPassword,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  doc, getDoc
+  getDoc, updateDoc, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 
@@ -28,15 +30,27 @@ const togglePwBtn   = document.getElementById('togglePassword');
 
 // =====================================================
 // 1. REDIRECT IF ALREADY LOGGED IN
-//    When user visits login page but is already signed in,
-//    redirect them to the dashboard automatically.
 // =====================================================
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    // User is logged in — fetch their role and redirect
-    const role = await getUserRole(user.uid);
-    redirectByRole(role);
+  if (!user) return;
+
+  const indexSnap = await getDoc(userIndexDoc(user.uid));
+  if (!indexSnap.exists()) return;
+
+  const { barangay, status, role } = indexSnap.data(); // add barangay here
+
+  if (status !== 'active') return;
+
+  // ↓ add this before redirectByRole
+  try {
+    await updateDoc(userDoc(barangay, user.uid), {
+      lastSeen: serverTimestamp(),
+    });
+  } catch (e) {
+    console.warn('Could not write lastSeen:', e.message);
   }
+
+  redirectByRole(role || 'resident');
 });
 
 
@@ -47,7 +61,6 @@ if (togglePwBtn) {
   togglePwBtn.addEventListener('click', () => {
     const isPassword = loginPassword.type === 'password';
     loginPassword.type = isPassword ? 'text' : 'password';
-    // Swap icon (Lucide)
     togglePwBtn.innerHTML = isPassword
       ? '<i data-lucide="eye-off"></i>'
       : '<i data-lucide="eye"></i>';
@@ -57,7 +70,7 @@ if (togglePwBtn) {
 
 
 // =====================================================
-// 3. FORM VALIDATION (runs before Firebase call)
+// 3. FORM VALIDATION
 // =====================================================
 function validateLoginForm() {
   let valid = true;
@@ -107,41 +120,53 @@ function clearErrors() {
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
     if (!validateLoginForm()) return;
 
-    // Show loading state
     setLoading(true);
 
     const email    = loginEmail.value.trim();
     const password = loginPassword.value;
 
     try {
-      // ---- FIREBASE: Sign in ----
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // ---- FIREBASE: Get user role from Firestore ----
-      const role = await getUserRole(user.uid);
-
-      // ---- Check if account is pending ----
-      const userSnap = await getDoc(doc(db, 'users', user.uid));
-      if (userSnap.exists()) {
-        const userData = userSnap.data();
-        if (userData.status === 'pending') {
-          setLoading(false);
-          loginError.textContent = 'Your account is pending admin approval. Please wait.';
-          return;
-        }
-        if (userData.status === 'inactive') {
-          setLoading(false);
-          loginError.textContent = 'Your account has been deactivated. Contact the barangay office.';
-          return;
-        }
+      // Step 1: fast index lookup — gets barangay, role, status
+      const indexSnap = await getDoc(userIndexDoc(user.uid));
+      if (!indexSnap.exists()) {
+        await signOut(auth);
+        setLoading(false);
+        loginError.textContent = 'Account not found. Contact the barangay office.';
+        return;
       }
 
-      // ---- Success: redirect based on role ----
-      redirectByRole(role);
+      const { barangay, role, status } = indexSnap.data();
+
+      if (status === 'pending') {
+        await signOut(auth);
+        setLoading(false);
+        loginError.textContent = 'Your account is pending barangay approval. Please check back in 1–2 business days.';
+        return;
+      }
+
+      if (status === 'inactive') {
+        await signOut(auth);
+        setLoading(false);
+        loginError.textContent = 'Your account has been deactivated. Please contact the barangay office.';
+        return;
+      }
+
+      // Step 2: write lastSeen to the full user doc (barangay-scoped path)
+      try {
+        await updateDoc(userDoc(barangay, user.uid), {
+          lastSeen: serverTimestamp(),
+        });
+      // In auth.js — change the catch block
+      } catch (e) {
+        console.error('lastSeen FAILED:', e.code, e.message); // was console.warn
+      }
+
+      redirectByRole(role || 'resident');
 
     } catch (error) {
       setLoading(false);
@@ -152,59 +177,30 @@ if (loginForm) {
 
 
 // =====================================================
-// 5. HELPER: Get user role from Firestore
-// =====================================================
-async function getUserRole(uid) {
-  try {
-    const userSnap = await getDoc(doc(db, 'users', uid));
-    if (userSnap.exists()) {
-      return userSnap.data().role || 'resident';
-    }
-    return 'resident';
-  } catch {
-    return 'resident';
-  }
-}
-
-
-// =====================================================
-// 6. HELPER: Redirect based on role
+// 5. HELPERS
 // =====================================================
 function redirectByRole(role) {
   switch (role) {
-    case 'admin':
-      window.location.href = 'admin.html';
-      break;
-    case 'officer':
-      window.location.href = 'dashboard.html'; // officers use main dashboard
-      break;
-    default:
-      window.location.href = 'dashboard.html';
+    case 'admin':   window.location.href = 'admin.html';     break;
+    case 'officer': window.location.href = 'dashboard.html'; break;
+    default:        window.location.href = 'dashboard.html'; break;
   }
 }
 
-
-// =====================================================
-// 7. HELPER: Loading state toggle
-// =====================================================
 function setLoading(isLoading) {
   loginBtn.disabled = isLoading;
   loginSpinner.hidden = !isLoading;
-  loginBtn.querySelector('span:first-of-type').textContent = isLoading ? 'Signing in...' : 'Sign In';
+  loginBtn.querySelector('span:first-of-type').textContent = isLoading ? 'Signing in…' : 'Sign In';
 }
 
-
-// =====================================================
-// 8. HELPER: Friendly Firebase error messages
-// =====================================================
 function getFirebaseErrorMessage(code) {
   const messages = {
-    'auth/user-not-found':       'No account found with that email address.',
-    'auth/wrong-password':       'Incorrect password. Please try again.',
-    'auth/invalid-email':        'That email address doesn\'t look right.',
-    'auth/too-many-requests':    'Too many failed attempts. Please wait a moment.',
+    'auth/user-not-found':         'No account found with that email address.',
+    'auth/wrong-password':         'Incorrect password. Please try again.',
+    'auth/invalid-email':          "That email address doesn't look right.",
+    'auth/too-many-requests':      'Too many failed attempts. Please wait a moment.',
     'auth/network-request-failed': 'Network error. Check your connection.',
-    'auth/invalid-credential':   'Invalid email or password.',
+    'auth/invalid-credential':     'Invalid email or password.',
   };
   return messages[code] || 'Something went wrong. Please try again.';
 }

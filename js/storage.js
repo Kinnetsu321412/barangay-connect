@@ -2,9 +2,15 @@
 // =====================================================
 // Handles all Firebase Storage uploads for the project.
 // Import this in any file that needs image uploading.
+//
+// Storage paths now include barangay for organisation:
+//   id-photos/{barangayId}/{uid}/front.webp
+//   id-photos/{barangayId}/{uid}/back.webp
+//   avatars/{barangayId}/{uid}.webp
 // =====================================================
 
 import { storage } from './firebase-config.js';
+import { idPhotoFrontPath, idPhotoBackPath } from './db-paths.js';
 import {
   ref,
   uploadBytes,
@@ -14,37 +20,7 @@ import {
 
 
 // =====================================================
-// FOLDER STRUCTURE
-// Keep these consistent across the whole project.
-//
-// Firebase Storage layout:
-//   id-photos/{uid}/front.webp
-//   id-photos/{uid}/back.webp
-//   reports/{uid}/{reportId}.webp
-//   announcements/{announcementId}.webp
-//   posts/{uid}/{postId}.webp
-//   avatars/{uid}.webp
-// =====================================================
-export const FOLDERS = {
-  idPhotos:      'id-photos',
-  reports:       'reports',
-  announcements: 'announcements',
-  posts:         'posts',
-  avatars:       'avatars',
-};
-
-// =====================================================
 // compressImage(file, maxWidthPx, qualityPercent)
-//
-// Shrinks and compresses an image client-side before
-// uploading. Uses a canvas to resize, then converts
-// to WebP for smallest file size.
-//
-// Returns a Blob (treat it like a File for uploading).
-//
-// Defaults:
-//   maxWidth  = 1200px  
-//   quality   = 0.82    
 // =====================================================
 export function compressImage(file, maxWidth = 1200, quality = 0.82) {
   return new Promise((resolve, reject) => {
@@ -52,9 +28,8 @@ export function compressImage(file, maxWidth = 1200, quality = 0.82) {
     const url = URL.createObjectURL(file);
 
     img.onload = () => {
-      URL.revokeObjectURL(url); // cleanup memory
+      URL.revokeObjectURL(url);
 
-      // Calculate new dimensions keeping aspect ratio
       let width  = img.width;
       let height = img.height;
 
@@ -63,22 +38,15 @@ export function compressImage(file, maxWidth = 1200, quality = 0.82) {
         width  = maxWidth;
       }
 
-      // Draw onto canvas
       const canvas = document.createElement('canvas');
       canvas.width  = width;
       canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
 
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Export as WebP
       canvas.toBlob(
         (blob) => {
-          if (!blob) {
-            reject(new Error('Image compression failed.'));
-            return;
-          }
-          resolve(blob);
+          if (!blob) { reject(new Error('Image compression failed.')); return; }
+          resolve(new File([blob], 'compressed.webp', { type: 'image/webp' }));
         },
         'image/webp',
         quality
@@ -97,15 +65,7 @@ export function compressImage(file, maxWidth = 1200, quality = 0.82) {
 
 // =====================================================
 // uploadImage(file, storagePath)
-//
-// Compresses then uploads a single image to Firebase
-// Storage. Returns the public download URL.
-//
-// storagePath — full path inside your Storage bucket
-//   e.g. "id-photos/uid123/front.webp"
-//
-// Usage:
-//   const url = await uploadImage(file, `${FOLDERS.idPhotos}/${uid}/front.webp`);
+// Compresses then uploads. Returns public download URL.
 // =====================================================
 export async function uploadImage(file, storagePath) {
   if (!file)        throw new Error('No file provided.');
@@ -113,42 +73,35 @@ export async function uploadImage(file, storagePath) {
 
   validateImageFile(file);
 
-  // Compress before uploading
   const compressed = await compressImage(file);
-
-  // Upload to Firebase Storage
   const storageRef = ref(storage, storagePath);
-  const snapshot   = await uploadBytes(storageRef, compressed, {
+
+  const snapshot = await uploadBytes(storageRef, compressed, {
     contentType: 'image/webp',
-    // Custom metadata — useful for admin tools and debugging
     customMetadata: {
       originalName: file.name,
       uploadedAt:   new Date().toISOString(),
     },
   });
 
-  // Return the public download URL
   return await getDownloadURL(snapshot.ref);
 }
 
 
 // =====================================================
-// uploadIdPhotos(uid, frontFile, backFile)
+// uploadIdPhotos(barangay, uid, frontFile, backFile)
 //
-// Convenience wrapper specifically for registration.
-// Uploads both ID photos and returns their URLs.
-//
-// Storage paths:
-//   id-photos/{uid}/front.webp
-//   id-photos/{uid}/back.webp
+// Uploads both ID photos scoped to the user's barangay.
+// Paths: id-photos/{barangayId}/{uid}/front.webp
+//        id-photos/{barangayId}/{uid}/back.webp
 //
 // Usage:
-//   const { frontURL, backURL } = await uploadIdPhotos(uid, frontFile, backFile);
+//   const { frontURL, backURL } = await uploadIdPhotos(barangay, uid, front, back);
 // =====================================================
-export async function uploadIdPhotos(uid, frontFile, backFile) {
+export async function uploadIdPhotos(barangay, uid, frontFile, backFile) {
   const [frontURL, backURL] = await Promise.all([
-    uploadImage(frontFile, `${FOLDERS.idPhotos}/${uid}/front.webp`),
-    uploadImage(backFile,  `${FOLDERS.idPhotos}/${uid}/back.webp`),
+    uploadImage(frontFile, idPhotoFrontPath(barangay, uid)),
+    uploadImage(backFile,  idPhotoBackPath(barangay, uid)),
   ]);
 
   return { frontURL, backURL };
@@ -156,24 +109,19 @@ export async function uploadIdPhotos(uid, frontFile, backFile) {
 
 
 // =====================================================
-// deleteIdPhotos(uid)
+// deleteIdPhotos(barangay, uid)
 //
-// Deletes both ID photos for a user from Firebase
-// Storage. Call this from the admin panel after
-// approving a registration.
-//
-// NOTE: This is also called automatically by the
-// Cloud Function (functions/index.js) when admin
-// sets user status to "active" in Firestore.
-// This frontend version is a fallback / manual option.
+// Deletes both ID photos for a user.
+// Called on rejection (client-side) and on approval
+// (Cloud Function). Both now use barangay-scoped paths.
 //
 // Usage:
-//   await deleteIdPhotos(uid);
+//   await deleteIdPhotos(barangay, uid);
 // =====================================================
-export async function deleteIdPhotos(uid) {
+export async function deleteIdPhotos(barangay, uid) {
   const paths = [
-    `${FOLDERS.idPhotos}/${uid}/front.webp`,
-    `${FOLDERS.idPhotos}/${uid}/back.webp`,
+    idPhotoFrontPath(barangay, uid),
+    idPhotoBackPath(barangay, uid),
   ];
 
   await Promise.all(
@@ -181,7 +129,6 @@ export async function deleteIdPhotos(uid) {
       try {
         await deleteObject(ref(storage, path));
       } catch (err) {
-        // If file doesn't exist (already deleted), ignore silently
         if (err.code !== 'storage/object-not-found') {
           console.warn(`Could not delete ${path}:`, err.message);
         }
@@ -193,34 +140,18 @@ export async function deleteIdPhotos(uid) {
 
 // =====================================================
 // validateImageFile(file)
-//
-// Throws a descriptive error if the file is the
-// wrong type or too large. Reuse this anywhere.
 // =====================================================
 export function validateImageFile(file) {
-  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-  const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
+  const ALLOWED = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX     = 5 * 1024 * 1024;
 
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new Error('Only JPG, PNG, or WEBP images are allowed.');
-  }
-  if (file.size > MAX_SIZE_BYTES) {
-    throw new Error('Image must be under 5MB.');
-  }
+  if (!ALLOWED.includes(file.type)) throw new Error('Only JPG, PNG, or WEBP images are allowed.');
+  if (file.size > MAX)              throw new Error('Image must be under 5MB.');
 }
 
 
 // =====================================================
 // previewImage(file, imgElement)
-//
-// Show a local preview before uploading.
-// Reuse on any page with image uploads.
-//
-// Usage:
-//   import { previewImage } from './storage.js';
-//   fileInput.addEventListener('change', (e) => {
-//     previewImage(e.target.files[0], document.getElementById('myPreview'));
-//   });
 // =====================================================
 export function previewImage(file, imgElement) {
   if (!file || !imgElement) return;

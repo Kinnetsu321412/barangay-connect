@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BarangayConnect – Create Account</title>
+  <title>Register</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -180,82 +180,70 @@
       </form>
     </div><!-- /step1 -->
 
-
-    <!-- ======================== -->
-    <!--  STEP 2 — LOCATION      -->
-    <!-- ======================== -->
+  <!-- ======================== -->
+  <!--  STEP 2 — LOCATION      -->
+  <!-- ======================== -->
     <div class="register-card page-transition" id="step2" hidden>
 
       <h2 class="register-card__section-title">Barangay Location</h2>
 
       <form class="register-form" id="step2Form" novalidate>
 
-        <!-- Barangay -->
-        <div class="form-group">
-          <label class="form-label" for="barangay">Barangay</label>
-          <select class="form-select" id="barangay">
-            <option value="" disabled selected>Select your barangay</option>
-            <!-- 
-              TODO: Add your actual barangay list here.
-              These are just examples — replace with the real list.
-            -->
-            <option value="Bancod">Bancod</option>
-            <option value="Indang">Indang Proper</option>
-            <option value="Daine">Daine</option>
-            <option value="Guyam Malaki">Guyam Malaki</option>
-            <option value="Guyam Munti">Guyam Munti</option>
-            <option value="Harasan">Harasan</option>
-            <option value="Kayquit I">Kayquit I</option>
-            <option value="Kayquit II">Kayquit II</option>
-            <option value="Kayquit III">Kayquit III</option>
-            <option value="Limbon">Limbon</option>
-          </select>
-          <span class="form-error" id="barangayError"></span>
-        </div>
+      <!-- Province -->
+      <div class="form-group">
+        <label class="form-label" for="province">Province</label>
+        <select class="form-select" id="province" disabled>
+          <option value="" disabled selected>Loading provinces...</option>
+        </select>
+        <span class="form-error" id="provinceError"></span>
+      </div>
 
-        <!-- Purok / Zone -->
-        <div class="form-group">
-          <label class="form-label" for="purok">Purok / Zone</label>
-          <select class="form-select" id="purok">
-            <option value="" disabled selected>Select your purok</option>
-            <option value="Purok 1">Purok 1</option>
-            <option value="Purok 2">Purok 2</option>
-            <option value="Purok 3">Purok 3</option>
-            <option value="Purok 4">Purok 4</option>
-            <option value="Purok 5">Purok 5</option>
-            <option value="Purok 6">Purok 6</option>
-          </select>
-          <span class="form-error" id="purokError"></span>
-        </div>
+      <!-- Municipality / City (unlocks after province) -->
+      <div class="form-group">
+        <label class="form-label" for="municipality">Municipality / City</label>
+        <select class="form-select" id="municipality" disabled>
+          <option value="" disabled selected>Select your municipality / city</option>
+        </select>
+        <span class="form-error" id="municipalityError"></span>
+      </div>
 
-        <!-- Years of Residency -->
-        <div class="form-group">
-          <label class="form-label" for="yearsResident">Years of Residency</label>
-          <input
-            class="form-input"
-            type="number"
-            id="yearsResident"
-            placeholder="e.g. 5"
-            min="0"
-            max="100"
-          />
-          <span class="form-error" id="yearsError"></span>
-        </div>
+      <!-- Barangay (unlocks after municipality) -->
+      <div class="form-group">
+        <label class="form-label" for="barangay">Barangay</label>
+        <select class="form-select" id="barangay" disabled>
+          <option value="" disabled selected>Select your barangay</option>
+        </select>
+        <span class="form-error" id="barangayError"></span>
+      </div>
 
-        <!-- Actions -->
-        <div class="register-actions">
-          <button type="button" class="btn btn--outline" id="step2Back">
-            <i data-lucide="chevron-left"></i>
-            Back
-          </button>
-          <button type="submit" class="btn btn--primary" id="step2Btn">
-            Continue
-            <i data-lucide="chevron-right"></i>
-          </button>
-        </div>
+      <!-- Years of Residency -->
+      <div class="form-group">
+        <label class="form-label" for="yearsResident">Years of Residency</label>
+        <input
+          class="form-input"
+          type="number"
+          id="yearsResident"
+          placeholder="e.g. 5"
+          min="0"
+          max="100"
+        />
+        <span class="form-error" id="yearsError"></span>
+      </div>
 
-      </form>
-    </div><!-- /step2 -->
+      <!-- Actions -->
+      <div class="register-actions">
+        <button type="button" class="btn btn--outline" id="step2Back">
+          <i data-lucide="chevron-left"></i>
+          Back
+        </button>
+        <button type="submit" class="btn btn--primary" id="step2Btn">
+          Continue
+          <i data-lucide="chevron-right"></i>
+        </button>
+      </div>
+
+    </form>
+  </div><!-- /step2 -->
 
 
     <!-- ======================== -->
@@ -336,6 +324,21 @@
 
         <!-- General submit error -->
         <p class="form-error form-error--center" id="submitError"></p>
+        
+        <!--- TOS -->
+        <div class="tos-block">
+          <label class="tos-label">
+            <input type="checkbox" id="tosAgree" required />
+            <span>
+              I understand that my uploaded ID photos will be used solely to verify 
+              my identity and will be <strong>permanently deleted</strong> from our 
+              servers once my application is approved or rejected. 
+              <a href="privacy.html" target="_blank"><strong>Read our Privacy Policy</a>.</strong>
+            </span>
+          </label>
+          <p class="field-error" id="tosError"></p>
+        </div>
+
 
         <!-- Actions -->
         <div class="register-actions">

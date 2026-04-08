@@ -3,12 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BarangayConnect – Sign In</title>
-
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <title>Sign In</title>
 
   <!-- Lucide Icons (lightweight icon set) -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
@@ -17,9 +12,9 @@
   <link rel="stylesheet" href="css/auth.css" />
 </head>
 <body class="login-page">
-
+  
   <!-- ===================== -->
-  <!--   LEFT PANEL (Green)  -->
+  <!--      LEFT PANEL       -->
   <!-- ===================== -->
   <div class="auth-left">
 
@@ -79,14 +74,6 @@
 
       <h2 class="auth-form__title">Sign in</h2>
 
-      <!-- Demo Notice Banner -->
-      <div class="auth-notice" role="alert">
-        <p>
-          This is a demo. Fields are pre-filled. Use the role switcher in
-          the profile dropdown after logging in to test Officer and Admin views.
-        </p>
-      </div>
-
       <!-- Login Form -->
       <form class="auth-form" id="loginForm" novalidate>
 
@@ -101,10 +88,8 @@
               name="email"
               placeholder="juan@barangay.ph"
               autocomplete="email"
-              value="juan@barangay.ph"
             />
           </div>
-          <!-- Validation error (hidden by default) -->
           <span class="form-error" id="emailError" aria-live="polite"></span>
         </div>
 
@@ -117,9 +102,8 @@
               type="password"
               id="loginPassword"
               name="password"
-              placeholder="password123"
+              placeholder="Your password"
               autocomplete="current-password"
-              value="password123"
             />
             <!-- Toggle password visibility -->
             <button
@@ -168,8 +152,7 @@
   <!-- Lucide icon init -->
   <script>lucide.createIcons();</script>
 
-  <!-- JS files (load order matters) -->
-  <script src="js/firebase-config.js"></script>
-  <script src="js/auth.js"></script>
+  <script type="module" src="js/auth.js"></script>
+
 </body>
 </html>
