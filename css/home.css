@@ -1,0 +1,292 @@
+/* ================================================================
+   home.css — BarangayConnect
+   PAGE-SPECIFIC styles for the HOME PAGE ONLY.
+   Import last, after the four shared libraries.
+
+   WHAT GOES HERE:
+     · Hero section layout, background image, dark overlay
+     · Hero clock card, widget panel positioning
+     · Scroll indicator styling
+     · Section spacing (.section-quick-actions, .section-updates, etc.)
+     · Shared eyebrow / heading text styles used across home sections
+     · Community stats section wrapper
+     · CTA section (dark green, curved top)
+
+   WHAT DOES NOT GO HERE:
+     · .btn, .badge, .tag, .alert-banner   → in libraries
+     · .navbar, .site-footer               → in main.css
+     · .post-featured, .post-row           → in frames.css
+     · .stat-grid                          → in components.css
+     · .marquee-banner                     → in frames.css
+     · .alert-widget                       → in components.css
+     · .btn--widget, .btn--selector        → in buttons.css
+
+   ── DESIGN TOKENS (use these, DO NOT HARDCODE hex) ───────────────
+     --green-dark   #1B4B27   (hero overlay, CTA bg)
+     --orange       #FFA135   (accents, headline, CTA button)
+     --white        #ffffff
+     --black        #2C2828
+     --font-display 'Circular Std' (headings)
+     --font-body    'Poppins'      (body text)
+     All spacing, radius, shadow tokens are in main.css :root.
+   ================================================================ */
+
+
+/* ================================================================
+   SHARED SECTION HELPERS
+   Used by multiple sections on this page.
+   ================================================================ */
+
+/* Eyebrow label — small caps, tracked, muted
+   e.g. "QUICK ACTIONS", "RECENT UPDATES" */
+.section-eyebrow {
+  /* Uppercase, bold, wide letter-spacing.
+     Use --gray-400 for the muted color.
+     Refer to .community-hero__eyebrow for the inverted (light) version. */
+}
+
+/* Center-aligned variant (used in Community Overview) */
+.section-eyebrow--center {
+  /* One property needed. */
+}
+
+/* Section headings (e.g. "What do you need today?") */
+.section-heading {
+  /* Large, black-weight, dark. Use clamp() for fluid sizing between
+     mobile and desktop. Refer to .community-hero__title for scale reference. */
+}
+
+.section-heading--center {
+  /* One property needed. */
+}
+
+/* "View all ›" link in section headers */
+.section-view-all {
+  /* Inline-flex with the chevron icon. Inherits --black by default,
+     transitions to --orange on hover. The icon is a data-lucide chevron-right. */
+}
+
+
+/* ================================================================
+   HERO SECTION
+   ─────────────────────────────────────────────────────────────────
+   Full-viewport-height section with a cover photo background.
+   A dark green overlay sits on top of the image for readability —
+   implement this with a ::before pseudo-element so the overlay
+   doesn't interfere with child element stacking.
+   Content is centered vertically via flex.
+   ================================================================ */
+.hero {
+  /* Full-height, background image set to cover + centered.
+     Flex column so the scroll indicator can anchor to the bottom. */
+}
+
+
+.hero::before {
+  /* The dark overlay — inset: 0 covers the full hero area.
+     Use the --alpha-glass-green token for the rgba value.
+     Needs a z-index below the hero's children. */
+}
+
+.hero > * {
+  /* Lift children above the ::before overlay. */
+}
+
+/* Inner layout: left content + right widget panel side by side */
+.hero__content {
+  /* Centered max-width column (1280px).
+     Flex row, space-between, with top padding that clears the navbar.
+     Use --navbar-h token for the offset. */
+}
+
+/* ── Left column ── */
+.hero__left {
+  /* Constrained width, flex column with gap between children. */
+}
+
+/* Big headline — "Your Barangay," */
+.hero__headline {
+  /* Very large, black-weight, white. Same fluid clamp approach
+     as .community-hero__title but bigger since this is the main hero. */
+}
+
+/* "Connected." — the orange second line */
+.hero__headline--accent {
+  /* One property — pulls from the token. */
+}
+
+/* Description paragraph */
+.hero__desc {
+  /* Body font, relaxed line-height, slightly transparent white
+     so it reads as secondary to the headline. */
+}
+
+/* CTA buttons row */
+.hero__cta {
+  /* Flex row with wrap — the two .btn elements from buttons.css
+     handle their own sizing; just control gap and wrapping here. */
+}
+
+/* ── Right column (widget panel) ── */
+.hero__right {
+  /* Fixed-width flex column. Flex-shrink: 0 prevents it from
+     collapsing when the left side is wide. */
+}
+
+/* Clock card — frosted glass tile */
+.hero__clock-card {
+  /* Frosted glass: semi-transparent white background + blur.
+     Refer to how modal overlays use backdrop-filter in frames.css
+     for a similar translucent treatment. */
+}
+
+.hero__clock-label {
+  /* Tiny, tracked, uppercase — same pattern as .section-eyebrow
+     but on a dark background, so use muted-white opacity. */
+}
+
+.hero__clock-time {
+  /* The large time digits — display font, very large, tight line-height. */
+}
+
+.hero__clock-date {
+  /* Small, secondary opacity — sits below the time. */
+}
+
+/* Widget buttons row (Docs + Events side by side) */
+.hero__widget-btns {
+  /* Two .btn--widget tiles side by side from buttons.css.
+     Just flex + gap here. */
+}
+
+/* Scroll indicator (bottom center of hero) */
+.hero__scroll-indicator {
+  /* Absolutely positioned at the bottom-center of .hero.
+     Flex column, centered, with a small gap between text and line. */
+}
+
+.hero__scroll-text {
+  /* Tiny, very tracked, low-opacity white — purely decorative. */
+}
+
+.hero__scroll-line {
+  /* A thin 1px vertical line that acts as a visual downward cue. */
+}
+
+
+/* ================================================================
+   QUICK ACTIONS SECTION
+   ─────────────────────────────────────────────────────────────────
+   White background that transitions up from the hero with a
+   curved top edge — use the same border-radius wave technique
+   as .section-cta below, applied to the hero's bottom corners
+   or this section's top corners.
+   Content is centered; the grid holds 6 .btn--selector tiles.
+   ================================================================ */
+.section-quick-actions {
+  /* White bg, generous vertical padding, centered text.
+     The wave transition from the hero is the main design detail here. */
+}
+
+.quick-actions__grid {
+  /* Flex row, centered, wrapping. The .btn--selector tiles in buttons.css
+     handle their own sizing — control gap and alignment here. */
+}
+
+
+/* ================================================================
+   RECENT UPDATES SECTION
+   ─────────────────────────────────────────────────────────────────
+   White background. Two-column layout below the section header:
+   the featured post on the left takes the majority of the width,
+   stacked post rows fill the right column.
+   ================================================================ */
+.section-updates {
+  /* Centered max-width column with vertical padding.
+     Mirrors the same container pattern as .community-panel-inner. */
+}
+
+.section-updates__header {
+  /* Flex row: eyebrow + heading group on the left,
+     .section-view-all link on the right, aligned to the baseline. */
+}
+
+.section-updates__grid {
+  /* Two-column grid. The left column (featured post) is wider.
+     Use grid-template-columns with a roughly 55/45 split. */
+}
+
+.section-updates__rows {
+  /* Flex column holding the stacked .post-row cards from frames.css.
+     Just a gap between items. */
+}
+
+
+/* ================================================================
+   COMMUNITY OVERVIEW (STATS) SECTION
+   ─────────────────────────────────────────────────────────────────
+   White background. Centered eyebrow + heading above the stat grid.
+   The .stat-grid layout is handled entirely by components.css —
+   no grid styles needed here, just the section wrapper spacing.
+   ================================================================ */
+.section-stats {
+  /* Vertical padding, centered text, white bg.
+     The heading and eyebrow use the --center modifier variants above. */
+}
+
+
+/* ================================================================
+   CTA SECTION  ("Ready to connect with your community?")
+   ─────────────────────────────────────────────────────────────────
+   Dark green background, fully centered content.
+   The curved top edge (wave up into the white section above)
+   uses the same border-radius technique as .section-quick-actions —
+   apply it to the top-left and top-right corners only.
+   ================================================================ */
+.section-cta {
+  /* Dark green bg, centered flex column, generous padding.
+     Border-radius on top corners creates the wave transition. */
+}
+
+.section-cta__icon {
+  /* The Lucide icon above the heading — use --orange and a light stroke-width. */
+}
+
+.section-cta__heading {
+  /* Large, black-weight, white. Fluid sizing with clamp().
+     Tighter than .hero__headline since it's a shorter string. */
+}
+
+.section-cta__desc {
+  /* Body font, muted white opacity, constrained max-width
+     so the line length stays readable. */
+}
+
+.report-step {
+  display: none;
+}
+.report-step.is-active {
+  display: block;
+}
+
+
+/* ================================================================
+   RESPONSIVE — MOBILE ADJUSTMENTS
+   ─────────────────────────────────────────────────────────────────
+   Breakpoints to handle:
+     ≤ 900px  → hero: stack left and right columns vertically;
+                       hide or reposition the widget panel
+     ≤ 768px  → quick actions: reduce to 3 columns
+     ≤ 640px  → updates grid: single column
+                section padding: reduce
+     ≤ 480px  → hero headline: scale down font size
+   ================================================================ */
+
+@media (max-width: 900px) {
+}
+
+@media (max-width: 768px) {
+}
+
+@media (max-width: 640px) {
+}
