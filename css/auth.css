@@ -535,6 +535,28 @@
 /* Success page */
 .register-success {
   flex: 1;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  text-align: center;
+  padding: var(--space-2xl);
+}
+
+.register-success[hidden] {
+  flex: 1;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  text-align: center;
+  padding: var(--space-2xl);
+}
+
+.register-success.show {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -543,6 +565,7 @@
   text-align: center;
   padding: var(--space-2xl);
 }
+
 
 .register-success__icon {
   width: 64px;
