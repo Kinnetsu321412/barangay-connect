@@ -1,0 +1,323 @@
+/* ================================================================
+   community.css — BarangayConnect
+   PAGE-SPECIFIC styles for the COMMUNITY PAGE ONLY.
+   Import last, after the four shared libraries.
+
+   WHAT GOES HERE:
+     · Community hero section (solid dark green, shorter than home's)
+     · Tab panel show/hide behavior
+     · Panel content wrappers and section spacing
+     · Calendar two-column layout
+     · Gallery masonry grid
+     · Youth programs grid
+     · Pet board toolbar and card grid
+     · Bulletin post list spacing
+     · Poll card structure
+     · Responsive adjustments for this page
+
+   WHAT DOES NOT GO HERE:
+     · .btn, .badge, .tag, .poll-option   → in libraries
+     · .pet-card, .post-row, .cal         → in frames.css
+     · .notice-banner, .badge-slots       → in components.css
+     · .navbar, .site-footer              → in main.css
+
+  ── DESIGN TOKENS (use these, DO NOT HARDCODE hex, font, color or spacing)
+     --green-dark     (hero overlay, CTA bg)
+     --orange         (accents, headline, CTA button)
+     --white     
+     --black        
+     --font-display 'Circular Std' (headings)
+     --font-body    'Poppins'      (body text)
+     All spacing, radius, shadow tokens are in main.css :root.
+   ================================================================ */
+
+
+/* ================================================================
+   COMMUNITY HERO
+   ─────────────────────────────────────────────────────────────────
+   Solid dark green header — no photo, unlike home's hero.
+   Sits behind the transparent navbar so it needs top padding
+   that accounts for the navbar height (--navbar-h token).
+   The bottom curves down into the white content area below —
+   that wave shape is the same border-radius trick used in home.css.
+   A decorative circle blob lives in the top-right corner via
+   a ::before pseudo-element, like the modal headers in frames.css.
+   ================================================================ */
+
+.community-hero {
+   background: var(--green-dark);
+     position: relative;
+     overflow: hidden;
+}
+
+.community-hero::before {
+  /* Decorative blob — see how modal__header uses overlay-white tokens
+     for a similar translucent circle effect */
+}
+
+.community-hero__inner {
+  /* Content column: max-width centered, padded.
+     Aligns with the navbar's max-width (1280px). */
+}
+
+.community-hero__eyebrow {
+  /* Small tracking label above the title.
+     Same visual treatment as .section-eyebrow in home.css,
+     but inverted — white/muted-white text on the dark green bg. */
+}
+
+.community-hero__title {
+  /* The big page heading — "Community Hub".
+     Large, black-weight, white. Refer to home's .hero__headline
+     for scale; this one is shorter/smaller since there's no subtext. */
+}
+
+.community-tabs {
+  /* The .btn-tab-bar wrapper from buttons.css handles the flex row.
+     You just need margin-top here to push it away from the title. */
+}
+
+
+/* ================================================================
+   TAB PANEL SYSTEM
+   ─────────────────────────────────────────────────────────────────
+   All .tab-panel elements are hidden by default.
+   Only the one with .is-active is visible.
+   JS toggles this class on click — the CSS just needs to express
+   the hidden vs. visible states cleanly.
+   ================================================================ */
+
+.tab-panel {
+  /* Hidden state — panels that aren't active shouldn't take up space */
+}
+
+.tab-panel.is-active {
+  /* Visible state */
+}
+
+.community-panel-inner {
+  /* Shared content wrapper for all panels.
+     Max-width + horizontal auto-margin to center content.
+     Vertical padding for breathing room below the hero wave.
+     This is the equivalent of the page's content column. */
+}
+
+
+/* ================================================================
+   BULLETIN PANEL
+   ─────────────────────────────────────────────────────────────────
+   Filter pills row sits above the post list.
+   The posts themselves are .post-row from frames.css —
+   you only need to manage the vertical spacing between them here.
+   ================================================================ */
+
+.bulletin-filters {
+  /* Flex row of .btn--filter pills.
+     Add a bottom margin to separate it from the post list. */
+}
+
+.bulletin-list {
+  /* Vertical stack of post cards.
+     A small gap between each .post-row is all this needs. */
+}
+
+
+/* ================================================================
+   POLLS PANEL
+   ─────────────────────────────────────────────────────────────────
+   Stacked .card wrappers, each holding a poll question + options.
+   The poll internals (.poll-option, bars) are all in components.css.
+   ================================================================ */
+
+.polls-list {
+  /* Vertical stack of poll cards with consistent gap. */
+}
+
+.poll-card {
+  /* Inherits .card base styles for the white box + shadow.
+     Add padding inside and a gap between the question,
+     options list, and the meta line at the bottom. */
+}
+
+.poll-card__header {
+  /* Row that holds the question and the optional Closed status pill.
+     Flex, space-between, aligned center vertically. */
+}
+
+.poll-card__question {
+  /* The poll question text — bold, dark, slightly larger than body. */
+}
+
+.poll-card__meta {
+  /* "312 votes · Results shown" — small, muted, sits below the options. */
+}
+
+.polls-pagination {
+  /* Two arrow buttons centered below the poll list.
+     The buttons themselves are .btn--outline .btn--sm from buttons.css. */
+}
+
+.polls-pagination__btn {
+  /* Circular icon-only shape for the prev/next arrows.
+     Refer to how .btn--icon works in buttons.css for sizing. */
+}
+
+
+/* ================================================================
+   CALENDAR PANEL
+   ─────────────────────────────────────────────────────────────────
+   Two-column layout. Left holds the .cal widget, right holds
+   the event list. On narrow screens they stack vertically.
+   The .cal and .event-item components are fully styled in frames.css —
+   no overrides needed, just the grid shell here.
+   ================================================================ */
+
+.calendar-layout {
+  /* Two-column grid. Left column is wider (cal widget),
+     right column takes remaining space (events list). */
+}
+
+.calendar-layout__cal {
+  /* Constrains the calendar widget width so it doesn't stretch.
+     The .cal component will fill this column. */
+}
+
+.calendar-layout__events {
+  /* Holds the .cal__events-header label and the stacked .event-item cards.
+     Add a small gap between items. */
+}
+
+
+/* ================================================================
+   GALLERY PANEL
+   ─────────────────────────────────────────────────────────────────
+   The filter row and photo count share one flex line.
+   Below that, a 4-column CSS grid where one item (basketball)
+   spans 2 rows — giving the masonry feel from the screenshots.
+   ================================================================ */
+
+.gallery-filters-row {
+  /* Flex row: filters on the left, photo count on the right.
+     Vertically centered, bottom margin before the grid. */
+}
+
+.gallery-filters {
+  /* The filter pill group — just a flex row with gap.
+     Mirrors .bulletin-filters above. */
+}
+
+.gallery-photo-count {
+  /* "📷 8 photos" — small, muted color, flex with gap for the icon.
+     Sits right-aligned within .gallery-filters-row. */
+}
+
+.gallery-grid {
+  /* 4-column CSS grid.
+     Auto rows sized to a consistent image height.
+     The tall item uses grid-row: span 2 to create the masonry look. */
+}
+
+.gallery-item {
+  /* Individual photo tile — no extra styling needed beyond
+     what the grid defines. Just overflow: hidden and border-radius
+     so images don't bleed outside rounded corners. */
+}
+
+.gallery-item--tall {
+  /* Spans 2 grid rows to create the tall masonry column.
+     Only the basketball photo uses this in the current content. */
+}
+
+.gallery-item__img-wrap {
+  /* Position relative so the .tag pill can be overlaid absolutely.
+     Height set here or inherited from the grid row. */
+}
+
+.gallery-item__img {
+  /* Full-bleed cover image — same object-fit pattern as pet-card__img
+     and program-card__img in frames.css. */
+}
+
+.gallery-item__tag {
+  /* The category pill overlaid at the bottom-left of the photo.
+     Position absolute, bottom + left offset, z-index above the image.
+     Uses the existing .tag classes from components.css — no new styles needed
+     on the pill itself, just the positioning wrapper here. */
+}
+
+.gallery-item__caption {
+  /* Photo title below the image — small, semi-bold, dark text.
+     Small top padding to give space below the image. */
+}
+
+
+/* ================================================================
+   YOUTH ZONE PANEL
+   ─────────────────────────────────────────────────────────────────
+   Notice banner at the top, then a 3-column program card grid.
+   Both .notice-banner and .program-card are in the libraries —
+   just the layout shell is here.
+   ================================================================ */
+
+.youth-programs-grid {
+  /* 3-column grid of .program-card elements.
+     Top margin to separate from the notice banner above.
+     Cards stretch to equal height within their row. */
+}
+
+
+/* ================================================================
+   PET BOARD PANEL
+   ─────────────────────────────────────────────────────────────────
+   Toolbar row (filters + button) then a 4-column pet card grid.
+   ================================================================ */
+
+.pets-toolbar {
+  /* Flex row: filter pills on the left, orange CTA button on the right.
+     Vertically centered, bottom margin before the grid. */
+}
+
+.pets-filters {
+  /* Filter pill group — same pattern as .bulletin-filters. */
+}
+
+.pets-grid {
+  /* 4-column grid of .pet-card elements from frames.css.
+     Cards align to the same height within each row. */
+}
+
+.tab-panel {
+  display: none;
+}
+.tab-panel.is-active {
+  display: block;
+}
+
+.report-step {
+  display: none;
+}
+.report-step.is-active {
+  display: block;
+}
+
+
+/* ================================================================
+   RESPONSIVE
+   ─────────────────────────────────────────────────────────────────
+   Breakpoints to handle:
+     ≤ 1024px  → pet grid and gallery: 2 cols
+     ≤ 900px   → calendar: stack left and right vertically
+                 youth programs: 2 cols
+     ≤ 640px   → pet grid and gallery: 1 col
+                 hero tab strip: allow wrapping or horizontal scroll
+                 panel padding: reduce
+   ================================================================ */
+
+@media (max-width: 1024px) {
+}
+
+@media (max-width: 900px) {
+}
+
+@media (max-width: 640px) {
+}

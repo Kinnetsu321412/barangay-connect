@@ -593,7 +593,7 @@ input, textarea, select {
 
 /* Transparent hero variant */
 .navbar--transparent {
-  background: transparent;
+  background: var(--black);
   border-bottom-color: transparent;
   box-shadow: none;
 }
