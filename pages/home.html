@@ -1,39 +1,730 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <nav class="Con">
-            <ul class="Nect">
-                <li class="Tion"><a class="Connections" href="Barangay Connect.html">Home</a></li>
-                <li class="Tion"><a class="Connections" href="Community.html">Community</a></li>
-                <li class="Tion"><a class="Connections" href="services.html">Services</a></li>
-                <li class="Tion"><a class="Connections" href="My Barangay.html">My Barangay</a></li>
-            </ul>
-        </nav>
-        <link rel="stylesheet" href="Barangay-Connect.css">
-    </head>
+<html lang="en">
 
-    <body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Home</title>
 
-        <p class="Address">Barangay bancod, Indang, Cavite</p>
+  <!--
+    ═══════════════════════════════════════════════
+    CSS IMPORT ORDER — DO NOT CHANGE THIS ORDER
+    ═══════════════════════════════════════════════
+    main.css        → design tokens, reset, navbar, footer, form inputs
+    buttons.css     → all clickable elements (.btn and variants)
+    components.css  → badges, tags, banners, stat grid, alert widgets
+    frames.css      → post cards, marquee, modals, drawers
+    home.css        → THIS PAGE ONLY — hero bg, tab panels,
+                      gallery grid, section spacing.
+  -->
+  <link rel="stylesheet" href="../css/main.css" />
+  <link rel="stylesheet" href="../css/buttons.css" />
+  <link rel="stylesheet" href="../css/components.css" />
+  <link rel="stylesheet" href="../css/frames.css" />
+  <link rel="stylesheet" href="../css/home.css" />
 
-        <h1 class="Home">YOUR BARANGAY,<br> Connected </h1>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
 
-        <p class="Des">Your one-step digital hub for barangay services,<br>
-           Community updates, and real-time alerts - all in one places. 
+<!--
+  ─────────────────────────────────────────────
+  ROLE CLASS on <body> controls which navbar
+  items are visible. JS sets this after auth.
+  Values: role-resident | role-officer | role-admin
+  Default for this page: role-resident
+  ─────────────────────────────────────────────
+-->
+<body class="role-resident">
+
+    <!-- ═══════════════════════════════════════════════════════════════
+        ALERT BANNER
+        ───────────────────────────────────────────────────────────────
+        Sits above the navbar. Shows weather advisories or urgent alerts.
+        CLASS: .alert-banner from components.css
+        VARIANTS: .alert-banner--orange (weather/advisory) ← use this one
+                  .alert-banner--red    (emergency)
+                  .alert-banner--green  (info/resolved)
+                  .alert-banner--blue   (general notice)
+        The × close button uses: .btn .btn--close .btn--sm from buttons.css
+    ══════════════════════════════════════════════════════════════════ -->
+    <div class="alert-banner alert-banner--orange">
+      <i data-lucide="triangle-alert"></i>
+      <p><strong>Weather Advisory:</strong> Signal No. 1 in effect. Stay indoors and monitor official updates from PAGASA.</p>
+      <button class="btn btn--close btn--sm" aria-label="Dismiss alert">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════
+        NAVBAR
+        ───────────────────────────────────────────────────────────────
+        CLASS: .navbar from main.css
+        MODIFIER: .navbar--transparent ← ADD THIS because it sits over
+                  the dark hero image. It makes the bg transparent and
+                  turns text/icons white so they're readable on the photo.
+                  JS can toggle this off when the user scrolls down.
+        Full class reference is in main.css at the top comment block.
+        ══════════════════════════════════════════════════════════════════ -->
+    <nav class="navbar navbar--transparent">
+      <div class="navbar__inner">
+
+        <!-- Logo -->
+        <a href="home.html" class="navbar__logo">
+          <img src="../assets/images/logo.png" alt="BarangayConnect logo" class="navbar__logo-img" />
+          <span class="navbar__logo-text">BarangayConnect</span>
+        </a>
+
+        <!-- Desktop nav links -->
+        <!--
+          Active page gets .is-active on the link.
+          Role-gated items: wrap in .navbar__item--officer or .navbar__item--admin
+          and they'll auto-show/hide based on the <body> role class.
+        -->
+        <ul class="navbar__nav" style="list-style-type: none;">
+          <li><a href="home.html"       class="navbar__link is-active">Home</a></li>
+          <li><a href="community.html"  class="navbar__link">Community</a></li>
+          <li><a href="services.html"   class="navbar__link">Services</a></li>
+          <li><a href="profile.html" class="navbar__link">My Barangay</a></li>
+        </ul>
+
+        <!-- Right-side actions -->
+        <div class="navbar__actions">
+
+          <!-- Role pill — swap modifier to match logged-in user role:
+              .navbar__role--resident (green outline)
+              .navbar__role--officer  (orange outline)
+              .navbar__role--admin    (red outline)   -->
+          <span class="navbar__role navbar__role--resident">Resident</span>
+
+          <!-- Bell icon — remove .navbar__bell-dot when there are no notifications -->
+          <button class="navbar__bell" aria-label="Notifications">
+            <i data-lucide="bell"></i>
+            <span class="navbar__bell-dot"></span>
+          </button>
+
+          <!-- Avatar — replace the icon with an <img> when user has a photo -->
+          <button class="navbar__avatar" aria-label="My profile">
+            <i data-lucide="user"></i>
+          </button>
+
+          <!-- Mobile hamburger (auto-shows on small screens via CSS) -->
+          <button class="navbar__hamburger" aria-label="Open menu">
+            <i data-lucide="menu"></i>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Mobile drawer (toggled open by JS adding .is-open) -->
+      <div class="navbar__mobile-drawer">
+        <a href="home.html"        class="navbar__link is-active">Home</a>
+        <a href="community.html"   class="navbar__link">Community</a>
+        <a href="services.html"    class="navbar__link">Services</a>
+        <a href="profile.html" class="navbar__link">My Barangay</a>
+      </div>
+    </nav>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 1 — HERO
+       ───────────────────────────────────────────────────────────────
+       Full-viewport section with a dark-overlaid barangay photo.
+       The background image + dark green overlay is set in home.css.
+       CLASS: .hero (define in home.css)
+
+       LAYOUT inside hero:
+         Left side  → location pill, headline, description, CTA buttons
+         Right side → clock widget card, active alert card, widget buttons
+         Bottom     → "SCROLL" label + scroll indicator line
+
+       See wireframe screenshots (Home1.pngwireframe/Home/Home1.png) for the visual layout.
+      ══════════════════════════════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="hero__content">
+
+      <!-- LEFT COLUMN -->
+      <div class="hero__left">
+
+        <!--
+          Location pill
+          CLASS: .location-pill from components.css
+          Has a small orange dot before the text (handled by CSS).
+          VARIANT: .location-pill--light for use on white backgrounds
+        -->
+        <span class="location-pill">Barangay Bancod, Indang, Cavite</span>
+
+        <!--
+          Hero headline — styled in home.css
+          "Your Barangay," is white; "Connected." is orange (--orange).
+          Wrap the orange word in a <span> and color it in home.css.
+        -->
+        <h1 class="hero__headline">
+          Your Barangay,<br>
+          <span class="hero__headline--accent">Connected.</span>
+        </h1>
+
+        <!-- Hero description — styled in home.css -->
+        <p class="hero__desc">
+          Your one-stop digital hub for barangay services,
+          community updates, and real-time alerts — all in one place.
         </p>
 
-        <div class="container">
-            <div class="item">
-                <button class="text-Button">Get Started</button>
-            </div>
-
-            <div class="item">
-                <button class="text-Button">Browse Community</button>
-            </div>
+        <!--
+          CTA Buttons
+          Both are ghost/outline buttons designed for dark backgrounds.
+          CLASS: .btn .btn--outline-hero from buttons.css
+          "Get Started" has a right-arrow icon inside it.
+          On hover, they fill white with dark text (handled by CSS).
+        -->
+        <div class="hero__cta">
+          <a href="services.html" class="btn btn--outline-hero">
+            Get Started <i data-lucide="arrow-right"></i>
+          </a>
+          <a href="community.html" class="btn btn--outline-hero">
+            Browse Community
+          </a>
         </div>
-        
-        <br>
-        
 
-    </body>
+      </div><!-- /hero__left -->
+
+
+      <!-- RIGHT COLUMN — widget panel -->
+      <div class="hero__right">
+
+        <!--
+          Clock Card — shows local time and date
+          This is a custom card styled in home.css.
+          CLASS: .hero__clock-card (define in home.css)
+          Use a frosted-glass look: semi-transparent white bg + blur.
+          Dynamically update the time using JS.
+        -->
+        <div class="hero__clock-card">
+          <p class="hero__clock-label">LOCAL TIME</p>
+          <p class="hero__clock-time" id="live-clock">--:-- --</p>
+          <p class="hero__clock-date" id="live-date">Loading...</p>
+        </div>
+
+        <!--
+          Active Alert Card
+          CLASS: .alert-widget from components.css
+          This is the orange card showing the active emergency/alert.
+          It has a pulsing orange dot, a bold alert title, and a subtitle.
+          Reference alert-widget in components.css for full structure.
+        -->
+
+        <div class="alert-widget">
+          <div class="alert-widget__header">
+            <span class="alert-widget__dot"></span>
+            <span class="alert-widget__label">Active Alerts</span>
+          </div>
+          <p class="alert-widget__title">Flood Alert</p>
+          <p class="alert-widget__sub">Signal No. 1 in effect.</p>
+        </div>
+
+        <!--
+          Widget Buttons — Docs and Events quick-access tiles
+          CLASS: .btn .btn--widget from buttons.css
+          Square glass tiles with icon on top, label below.
+          Designed for dark/photo backgrounds.
+        -->
+
+        <div class="hero__widget-btns">
+          <button class="btn btn--widget">
+            <i data-lucide="shield"></i>
+            <span>Docs</span>
+          </button>
+          <button class="btn btn--widget">
+            <i data-lucide="triangle-alert"></i>
+            <span>Events</span>
+          </button>
+        </div>
+
+      </div><!-- /hero__right -->
+
+    </div><!-- /hero__content -->
+
+    <!--
+      Scroll indicator at the bottom center of the hero.
+      "SCROLL" text with a thin vertical line extending downward.
+      Style entirely in home.css.
+    -->
+
+    <div class="hero__scroll-indicator" aria-hidden="true">
+      <span class="hero__scroll-text">SCROLL</span>
+      <div class="hero__scroll-line"></div>
+    </div>
+
+  </section><!-- /hero -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 2 — QUICK ACTIONS
+       ───────────────────────────────────────────────────────────────
+       White background section below the hero wave transition.
+       Centered layout with an eyebrow label, heading, and 6 action tiles.
+
+       The wave/curved top comes from the hero section in home.css
+       (use a border-radius or SVG wave on the hero's bottom edge).
+
+       Eyebrow text "QUICK ACTIONS" — use small caps, letter-spacing,
+       muted color. Style in home.css.
+
+       Action tiles:
+       CLASS: .btn .btn--selector from buttons.css
+       Square-ish cards with a centered icon (top) and label (below).
+       Icon color is --green-dark. On hover, border turns green.
+       On .is-selected, fills solid green.
+      ══════════════════════════════════════════════════════════════════ -->
+
+  <section class="section-quick-actions">
+
+    <p class="section-eyebrow">QUICK ACTIONS</p>
+    <h2 class="section-heading">What do you need today?</h2>
+
+    <div class="quick-actions__grid">
+
+      <button class="btn btn--selector">
+        <i data-lucide="shield"></i>
+        Emergency
+      </button>
+
+      <button class="btn btn--selector">
+        <i data-lucide="triangle-alert"></i>
+        Report Issue
+      </button>
+
+      <button class="btn btn--selector">
+        <i data-lucide="file-text"></i>
+        Request Docs
+      </button>
+
+      <button class="btn btn--selector">
+        <i data-lucide="calendar"></i>
+        Events
+      </button>
+
+      <button class="btn btn--selector">
+        <i data-lucide="users"></i>
+        Community
+      </button>
+
+      <button class="btn btn--selector">
+        <i data-lucide="wrench"></i>
+        Services
+      </button>
+
+    </div>
+  </section><!-- /section-quick-actions -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 3 — RECENT UPDATES  ("What's happening?")
+       ───────────────────────────────────────────────────────────────
+       Two-column layout:
+         Left  → .post-featured  (large featured post card, dark green bg)
+         Right → two .post-row items stacked, + "View all" dashed button
+
+       EYEBROW: "RECENT UPDATES" (same small-caps style as Quick Actions)
+       HEADING: "What's happening?" — large, bold, black
+
+       ── LEFT: Featured Post Card ──────────────────────────────────
+       CLASS: .post-featured from frames.css
+       Dark green background card with:
+         - .badge-featured compound pill (e.g. "FEATURED · Health")
+         - Bold white title
+         - White body text
+         - Author avatar + name + timestamp at the bottom
+         - Comment count
+
+       ── RIGHT: Bulletin Rows ──────────────────────────────────────
+       CLASS: .post-row from frames.css
+       Each row is a list-style post summary with:
+         - A colored left border accent
+         - VARIANTS: .post-row--accented with .post-row--orange or .post-row--red
+         - Category tag (.tag from components.css), timestamp, title, preview text
+         - Author avatar + name on the bottom left, comment count on right
+
+       After the rows: a full-width "View all announcements" button
+       CLASS: .btn .btn--dashed .btn--full from buttons.css
+      ══════════════════════════════════════════════════════════════════ -->
+
+  <section class="section-updates">
+
+    <div class="section-updates__header">
+      <div>
+        <p class="section-eyebrow">RECENT UPDATES</p>
+        <h2 class="section-heading">What's happening?</h2>
+      </div>
+      <a href="community.html" class="section-view-all">
+        View all <i data-lucide="chevron-right"></i>
+      </a>
+    </div>
+
+    <div class="section-updates__grid">
+
+      <!-- Featured post (left, large, dark green card) -->
+      <!--
+        CLASS: .post-featured from frames.css
+        Check frames.css for the exact internal structure needed.
+        The .badge-featured pill inside uses components.css.
+      -->
+      <article class="post-featured">
+        <div class="post-featured__top">
+          <!-- Featured + category pill -->
+          <div class="badge-featured">
+            <span class="badge-featured__label">FEATURED</span>
+            <span class="badge-featured__category">Health</span>
+          </div>
+        </div>
+
+        <h3 class="post-featured__title">
+          Free Medical Mission this Saturday at the Barangay Hall
+        </h3>
+        <p class="post-featured__body">
+          Free check-ups, dental services, and medicine distribution for all residents.
+          Bring your barangay ID.
+        </p>
+
+        <div class="post-featured__footer">
+          <div class="post-featured__author">
+            <!-- placeholder image -->
+            <img src="assets/images/avatars/health-center.jpg" 
+                 alt="Barangay Health Center"
+                 class="post-featured__avatar" />
+            <div>
+              <p class="post-featured__author-name">Barangay Health Center</p>
+              <p class="post-featured__author-time">2 hours ago</p>
+            </div>
+          </div>
+          <span class="post-featured__comments">
+            <i data-lucide="message-circle"></i> 14 replies
+          </span>
+        </div>
+      </article>
+
+
+      <!-- Right column: bulletin rows + view-all button -->
+      <div class="section-updates__rows">
+
+        <!--
+          CLASS: .post-row .post-row--accented .post-row--orange from frames.css
+          Orange left-border accent = infrastructure/general category
+        -->
+        <article class="post-row post-row--accented post-row--orange">
+          <div class="post-row__meta">
+            <span class="tag tag--green">Infrastructure</span>
+            <span class="post-row__time">5 hours ago</span>
+          </div>
+          <h4 class="post-row__title">Road repair schedule along Rizal St.</h4>
+          <p class="post-row__body">Construction work begins Monday. Alternate routes have been designated.</p>
+          <div class="post-row__footer">
+            <div class="post-row__author">
+              <!-- placeholder image -->
+              <img src="assets/images/avatars/dpwh.jpg" alt="DPWH Liaison" class="post-row__avatar" />
+              <span class="post-row__author-name">DPWH Liaison</span>
+            </div>
+            <span class="post-row__comments">
+              <i data-lucide="message-circle"></i> 7
+            </span>
+          </div>
+        </article>
+
+        <!--
+          CLASS: .post-row .post-row--accented .post-row--red from frames.css
+          Red left-border accent = safety/emergency category
+        -->
+        <article class="post-row post-row--accented post-row--red">
+          <div class="post-row__meta">
+            <span class="tag tag--red">Safety</span>
+            <span class="post-row__time">Yesterday</span>
+          </div>
+          <h4 class="post-row__title">Advisory: Dengue prevention drive ongoing</h4>
+          <p class="post-row__body">Fogging operations scheduled this week. Clear any stagnant water around your property.</p>
+          <div class="post-row__footer">
+            <div class="post-row__author">
+              <!-- placeholder image -->
+              <img src="assets/images/avatars/health-officer.jpg" alt="Brgy. Health Officer" class="post-row__avatar" />
+              <span class="post-row__author-name">Brgy. Health Officer</span>
+            </div>
+            <span class="post-row__comments">
+              <i data-lucide="message-circle"></i> 22
+            </span>
+          </div>
+        </article>
+
+        <!--
+          "View all announcements" — full-width dashed button
+          CLASS: .btn .btn--dashed .btn--full from buttons.css
+        -->
+        <a href="community.html" class="btn btn--dashed btn--full">
+          View all announcements <i data-lucide="chevron-right"></i>
+        </a>
+
+      </div><!-- /section-updates__rows -->
+
+    </div><!-- /section-updates__grid -->
+
+  </section><!-- /section-updates -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 4 — COMMUNITY OVERVIEW  (Stats)
+       ───────────────────────────────────────────────────────────────
+       Centered section with a big heading and 4 stat columns.
+       Each stat has a large orange number and a gray label below.
+       Vertical dividers sit between the columns.
+
+       CLASS: .stat-grid from components.css
+       The stat grid handles the 4-column layout, dividers, and
+       the large orange animated counter numbers automatically.
+
+       Inside each .stat-grid__item:
+         .stat-grid__number  → the big orange number (animate with JS
+                               counting up from 0 on scroll into view)
+         .stat-grid__label   → the gray description below the number
+
+       The section eyebrow and heading are styled in home.css.
+  ══════════════════════════════════════════════════════════════════ -->
+  <section class="section-stats">
+
+    <h2 class="section-heading section-heading--center">Community Overview</h2>
+    <p class="section-eyebrow section-eyebrow--center">A QUICK LOOK AT YOUR BARANGAY TODAY</p>
+
+    <!--
+      CLASS: .stat-grid from components.css
+      Four columns separated by vertical dividers.
+      Numbers are large and orange (--orange color token).
+    -->
+    <div class="stat-grid">
+
+      <div class="stat-grid__item">
+        <p class="stat-grid__number" data-target="2436">2,436</p>
+        <p class="stat-grid__label">Residents</p>
+      </div>
+
+      <div class="stat-grid__item">
+        <p class="stat-grid__number" data-target="38">38</p>
+        <p class="stat-grid__label">Concerns Resolved</p>
+      </div>
+
+      <div class="stat-grid__item">
+        <p class="stat-grid__number" data-target="12">12</p>
+        <p class="stat-grid__label">Events This Week</p>
+      </div>
+
+      <div class="stat-grid__item">
+        <p class="stat-grid__number" data-target="96">96%</p>
+        <p class="stat-grid__label">Satisfaction Rate</p>
+      </div>
+
+    </div>
+  </section><!-- /section-stats -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MARQUEE BANNER  (scrolling text strip)
+       ───────────────────────────────────────────────────────────────
+       A full-width horizontally scrolling text strip.
+       CLASS: .marquee-banner .marquee-banner--dark from frames.css
+       MODIFIER: .marquee-banner--dark → dark background with outline text
+
+       Inner structure:
+         .marquee-text or .marquee-text--solid for the text style
+         Repeat the text phrase several times inside .marquee__track
+         so it scrolls seamlessly.
+
+       Text says: "UMUNLAD • BARANGAY BANCOD •" repeated.
+  ══════════════════════════════════════════════════════════════════ -->
+  <!-- Placeholder text, admin should be able to set what text goes on the marquee -->
+
+  <div class="marquee-banner marquee-banner--dark" aria-hidden="true">
+    <div class="marquee__track">
+      <span class="marquee-text">UMUNLAD</span>
+      <span class="marquee-text--solid">•</span>
+      <span class="marquee-text">BARANGAY BANCOD</span>
+      <span class="marquee-text--solid">•</span>
+      <span class="marquee-text">UMUNLAD</span>
+      <span class="marquee-text--solid">•</span>
+      <span class="marquee-text">BARANGAY BANCOD</span>
+      <span class="marquee-text--solid">•</span>
+      <span class="marquee-text">UMUNLAD</span>
+      <span class="marquee-text--solid">•</span>
+      <span class="marquee-text">BARANGAY BANCOD</span>
+      <span class="marquee-text--solid">•</span>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SECTION 5 — CTA  ("Ready to connect?")
+       ───────────────────────────────────────────────────────────────
+       Dark green section with a curved/wave top edge.
+       Fully centered layout.
+
+       The curved top is achieved with a border-radius on the top of
+       this section or a clip-path in home.css. See Home5.png.
+
+       Contents:
+         - An orange checkmark circle icon (Lucide: circle-check)
+         - Big bold heading in white
+         - Description paragraph in muted white
+         - One CTA button: "Open My Barangay →"
+           CLASS: .btn .btn--orange from buttons.css (orange solid)
+
+       Style the section itself (bg color, padding, curve) in home.css.
+  ══════════════════════════════════════════════════════════════════ -->
+  <section class="section-cta">
+
+    <!--
+      Checkmark icon — orange, circle-shaped, centered above heading
+      Style the icon color and size in home.css
+    -->
+    <i data-lucide="circle-check" class="section-cta__icon"></i>
+
+    <h2 class="section-cta__heading">
+      Ready to connect with<br> your community?
+    </h2>
+
+    <p class="section-cta__desc">
+      Join thousands of residents staying informed and engaged with their barangay.
+    </p>
+
+    <!--
+      CTA button — orange solid, with arrow icon
+      CLASS: .btn .btn--orange from buttons.css
+    -->
+    <a href="my-barangay.html" class="btn btn--orange">
+      Open My Barangay <i data-lucide="arrow-right"></i>
+    </a>
+
+  </section><!-- /section-cta -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       FOOTER
+       ───────────────────────────────────────────────────────────────
+       CLASS: .site-footer from main.css
+       Dark gray background. Two columns: brand left, links right.
+       Full structure and class reference is inside main.css.
+  ══════════════════════════════════════════════════════════════════ -->
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+
+      <!-- Brand block (left) -->
+      <div class="site-footer__brand">
+        <div class="site-footer__brand-logo">
+          <img src="assets/images/logo.png" alt="BarangayConnect" class="site-footer__logo-img" />
+          <span class="site-footer__logo-text">BarangayConnect</span>
+        </div>
+        <p class="site-footer__tagline">Barangay Bancod, Indang, Cavite &copy; 2026</p>
+      </div>
+
+      <!-- Links (right) -->
+      <nav class="site-footer__links" aria-label="Footer navigation">
+        <a href="#" class="site-footer__link">Privacy Policy</a>
+        <a href="#" class="site-footer__link">Terms of Use</a>
+        <a href="#" class="site-footer__link">Contact Us</a>
+        <a href="#" class="site-footer__link">Sitemap</a>
+      </nav>
+
+    </div>
+  </footer>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+        SCRIPTS
+        ───────────────────────────────────────────────────────────────
+        1. lucide.createIcons() — renders all data-lucide icons
+        2. Live clock — updates #live-clock and #live-date every second
+        3. Navbar scroll — removes .navbar--transparent when user scrolls
+            down past the hero, restores it when back at top
+        4. Alert banner dismiss — clicking × removes the banner
+        5. Stat counter — animates numbers when scrolled into view
+    ══════════════════════════════════════════════════════════════════ -->
+    <script>
+      // 1. Render Lucide icons
+      lucide.createIcons();
+
+      // 2. Live clock
+      function updateClock() {
+        const now  = new Date();
+        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        const date = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        document.getElementById('live-clock').textContent = time;
+        document.getElementById('live-date').textContent  = date;
+      }
+      updateClock();
+      setInterval(updateClock, 1000);
+
+      // 3. Navbar transparent-on-scroll
+      const navbar = document.querySelector('.navbar');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 60) {
+          navbar.classList.remove('navbar--transparent');
+        } else {
+          navbar.classList.add('navbar--transparent');
+        }
+      });
+
+      // 4. Alert banner dismiss
+      document.querySelector('.alert-banner .btn--close')
+        ?.addEventListener('click', e => {
+          e.target.closest('.alert-banner').remove();
+        });
+
+      // 5. Stat counter
+      (function () {
+        function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+        function formatNumber(value, separator) {
+          if (!separator && separator !== '') separator = ',';
+          return Math.floor(value).toLocaleString('en-US').replace(/,/g, separator);
+        }
+
+        function animateCounter(el) {
+          if (el.dataset.animated === 'true') return;
+          el.dataset.animated = 'true';
+
+          const target    = parseFloat(el.dataset.target)    || 0;
+          const duration  = parseFloat(el.dataset.duration)  || 1500;
+          const suffix    = el.dataset.suffix    ?? '';
+          const prefix    = el.dataset.prefix    ?? '';
+          const separator = el.dataset.separator ?? ',';
+          let startTime   = null;
+
+          function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            const current  = target * easeOutCubic(progress);
+            el.textContent = prefix + formatNumber(current, separator) + suffix;
+            progress < 1 ? requestAnimationFrame(step)
+                        : el.textContent = prefix + formatNumber(target, separator) + suffix;
+          }
+
+          requestAnimationFrame(step);
+        }
+
+        const elements = document.querySelectorAll('[data-target]');
+        if (!elements.length) return;
+
+        if (!('IntersectionObserver' in window)) {
+          elements.forEach(animateCounter);
+          return;
+        }
+
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              animateCounter(entry.target);
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.25 });
+
+        elements.forEach((el) => observer.observe(el));
+      })();
+    </script>
+  ```
+
+</body>
 </html>
