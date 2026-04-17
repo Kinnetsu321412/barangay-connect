@@ -285,6 +285,9 @@
   font-size: var(--text-sm);
   font-weight: var(--fw-semibold);
   white-space: nowrap;
+
+  /*Bago po*/
+  width: fit-content;
 }
 
 .location-pill--light {
@@ -365,7 +368,24 @@
 /* ================================================================
    12. ACTIVE ALERTS WIDGET CARD
    ================================================================ */
-.alert-widget { display: flex; flex-direction: column; gap: 10px; width: 220px; }
+.alert-widget { 
+  /*bago po lahat ito */
+  position: fixed;
+  background: var(--orange);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: var(--space-md);
+
+  border: 1px solid var(--overlay-white-18);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 200px;
+  max-height: 90vh;
+  box-shadow: var(--shadow-lg);
+  animation: modalSlideIn 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  position: relative;
+  /*--end--*/
+}
 
 .alert-widget__time {
   background: var(--alpha-glass-green);
