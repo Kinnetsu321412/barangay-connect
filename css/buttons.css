@@ -156,6 +156,12 @@
   background: var(--orange);
   color: var(--black);
   box-shadow: 0 2px 8px rgba(255,161,53,0.28);
+
+  /*Bago po*/
+  display: flex;
+  width: max-content; /*Para lang po sakto sa haba ng words*/
+  align-self: center;
+  /*--End--*/
 }
 .btn--orange:hover:not(:disabled) {
   background: var(--orange-hover);
@@ -640,10 +646,13 @@
   border-radius: var(--radius-lg);
   font-size: var(--text-sm);
   font-weight: var(--fw-bold);
-  min-width: 72px;
+  min-width: 98px; /*Binago ko po*/
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   letter-spacing: 0.02em;
+
+  /*Bago po*/
+  animation: modalSlideIn 1.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .btn--widget [data-lucide], .btn--widget svg {
   width: 22px;
