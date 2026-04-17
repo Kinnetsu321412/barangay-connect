@@ -1233,3 +1233,161 @@
 }
 .notice-banner--green .notice-banner__icon [data-lucide],
 .notice-banner--green .notice-banner__icon svg { color: var(--green-dark); }
+
+/* ================================================================
+   25. ID CARD WIDGET
+   ─────────────────────────────────────────────────────────────────
+   The glass-card container that houses the Digital Resident ID on
+   profile.html. Designed to match the .alert-widget aesthetic —
+   same dark-green glass surface, same rounded shell.
+
+   The flip-card itself (.id-card-scene, .card-face, etc.) and the
+   fullscreen modal overlay (.id-card-modal-overlay) live in
+   id-card.css, which must be imported alongside this file.
+
+   STRUCTURE:
+     <div class="id-card-widget">
+       <div class="id-card-widget__header">
+         <span class="id-card-widget__title">
+           <i data-lucide="id-card"></i> Digital Resident ID
+         </span>
+         <span class="id-card-widget__role-badge id-card-widget__role-badge--resident">
+           Resident
+         </span>
+       </div>
+       <div class="id-card-widget__card" id="idCardContainer">
+         <!-- renderIDCard() injects .id-card-scene here -->
+       </div>
+       <div class="id-card-widget__footer">
+         <span class="id-card-widget__hint">
+           <i data-lucide="rotate-ccw"></i> Tap to flip
+         </span>
+         <button class="btn btn--ghost btn--sm" id="viewFullIdBtn">
+           <i data-lucide="expand"></i> Full Size
+         </button>
+       </div>
+     </div>
+
+   ROLE MODIFIER:
+     .id-card-widget__role-badge--resident  → green
+     .id-card-widget__role-badge--officer   → orange
+     .id-card-widget__role-badge--admin     → red
+   ================================================================ */
+
+/* ── Outer glass shell ───────────────────────────────────────── */
+.id-card-widget {
+  background: var(--green-dark);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle decorative circle blob — top-right corner */
+.id-card-widget::before {
+  content: '';
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: var(--overlay-white-05);
+  right: -60px;
+  top: -70px;
+  pointer-events: none;
+}
+
+/* ── Header row (title + role badge) ────────────────────────── */
+.id-card-widget__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  position: relative;
+  z-index: 1;
+}
+
+.id-card-widget__title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-display);
+  font-size: var(--text-base-sm);
+  font-weight: var(--fw-bold);
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.01em;
+}
+
+.id-card-widget__title [data-lucide],
+.id-card-widget__title svg {
+  width: 15px;
+  height: 15px;
+  color: var(--orange);
+  flex-shrink: 0;
+}
+
+/* Role pill — indicates which colour variant the card will be */
+.id-card-widget__role-badge {
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.80);
+  white-space: nowrap;
+}
+
+.id-card-widget__role-badge--resident { border-color: rgba(255, 255, 255, 0.25); color: rgba(255, 255, 255, 0.85); }
+.id-card-widget__role-badge--officer  { border-color: var(--orange);             color: var(--orange);            }
+.id-card-widget__role-badge--admin    { border-color: var(--red);                color: var(--red);               }
+
+/* ── Card slot ───────────────────────────────────────────────── */
+.id-card-widget__card {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Footer row (hint + expand button) ───────────────────────── */
+.id-card-widget__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  position: relative;
+  z-index: 1;
+}
+
+.id-card-widget__hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: rgba(255, 255, 255, 0.38);
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+.id-card-widget__hint [data-lucide],
+.id-card-widget__hint svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+/* Override .btn--ghost colours inside the dark widget */
+.id-card-widget .btn--ghost {
+  color: rgba(255, 255, 255, 0.65);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.id-card-widget .btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.90);
+}

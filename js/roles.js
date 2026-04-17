@@ -23,6 +23,7 @@ let currentFilter     = 'all';
 let currentSearch     = '';
 let adminBarangay     = '';
 let adminUid          = '';
+let currentHousehold = '';
 
 let pendingChange     = null;
 
@@ -85,6 +86,9 @@ function loadUsers() {
         phone:      d.phone ?? '',
         role:       d.role     ?? 'resident',
         barangay:   d.barangay ?? '',
+        residentIdNumber: d.residentIdNumber ?? '—',
+        streetAddress: d.streetAddress ?? '',
+        householdId:   d.householdId   ?? '',
         createdAt:  d.createdAt,
         lastSeen:   d.lastSeen  ?? null,
         superAdmin: d.superAdmin === true,
@@ -104,15 +108,22 @@ function renderUsers() {
 
   if (currentFilter !== 'all') list = list.filter(u => u.role === currentFilter);
 
-  if (currentSearch) {
+  if (currentSearch) 
+  {
     const q = currentSearch.toLowerCase();
-    list = list.filter(u =>
-      u.fullName.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q)
-    );
+    const qClean = q.replace(/-/g, '');
+    list = list.filter(u => {
+      const id      = (u.residentIdNumber ?? '').toLowerCase();
+      const idClean = id.replace(/-/g, '');
+      return (
+        u.fullName.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q)    ||
+        id.includes(q)                       ||
+        idClean.includes(qClean)
+      );
+    });
   }
 
-  // FIX 1: Sort — current admin pins to top, everyone else alphabetical by full name
   list.sort((a, b) => {
     if (a.uid === adminUid) return -1;
     if (b.uid === adminUid) return  1;
@@ -125,7 +136,12 @@ function renderUsers() {
     return;
   }
 
+  if (currentHousehold) {
+    list = list.filter(u => u.householdId === currentHousehold);
+  }
+
   table.innerHTML = list.map(u => buildUserRow(u)).join('');
+  buildHouseholdBar();
   lucide.createIcons({ el: table });
   initTooltips();   // attach JS tooltips after each render
 }
@@ -175,42 +191,50 @@ function buildUserRow(user) {
     ><i data-lucide="${icon}"></i></button>`;
   };
 
-  return `
+    return `
     <div class="user-row" id="row-${user.uid}" ${isMe ? 'style="background:#f8fdf9"' : ''}>
+
+      <!-- COL 1: Avatar + Name + Since + Resident ID -->
       <div class="user-info">
         <div class="user-avatar user-avatar--${user.role}">${initials}</div>
-        <div>
+        <div style="min-width:0;">
           <div class="user-name">
-            ${escapeHtml(user.fullName)}
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${escapeHtml(user.fullName)}</span>
             ${youChip}${superBadge}
           </div>
-
           <div class="user-since">Since ${joinDate}</div>
-          <span class="detail-item__label">Email</span>
-          <span class="detail-item__value">${user.email}</span>
+          <div style="font-size:0.72rem;color:#aaa;margin-top:2px;font-family:monospace;">${escapeHtml(user.residentIdNumber)}</div>
         </div>
-
-        <div class="detail-item">
-          <span class="detail-item__label">Phone</span>
-          <span class="detail-item__value">${user.phone}</span>
-        </div>
-        
       </div>
+
+      <!-- COL 2: Email + Phone (separate column, truncates cleanly) -->
+      <div style="min-width:0;display:flex;flex-direction:column;gap:3px;overflow:hidden;">
+        <span style="font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">${escapeHtml(user.email)}</span>
+        <span style="font-size:0.78rem;color:#999;">${escapeHtml(user.phone || '—')}</span>
+        <span style="font-size:0.75rem;color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${escapeHtml(user.streetAddress || '—')}
+        </span>
+      </div>
+
+      <!-- COL 3: Role badge -->
       <div class="role-badge ${roleBadgeClass}">
         <i data-lucide="${roleIconName(user.role)}"></i>
         ${roleDisplayName(user.role)}
       </div>
+
+      <!-- COL 4: Status -->
       <div class="status-dot ${statusClass}">${statusLabel}</div>
-      <div style="font-size:0.8rem;color:#888">${escapeHtml(user.barangay)}</div>
+
+      <!-- COL 5: Role action buttons -->
       <div class="role-actions">
         ${makeBtn('resident', 'user')}
         ${makeBtn('officer',  'shield')}
         ${makeBtn('admin',    'settings')}
       </div>
+
     </div>
   `;
 }
-
 
 // =====================================================
 //                  JS TOOLTIP
@@ -407,6 +431,51 @@ function showToast(message, type = 'success') {
   }, 3500);
 }
 
+
+// =====================================================
+// HOUSEHOLD
+// =====================================================
+window.setHouseholdFilter = function(id) {
+  currentHousehold = id;
+  renderUsers();
+};
+
+function buildHouseholdBar() {
+  const bar = document.getElementById('householdBar');
+  if (!bar) return;
+
+  const counts = {};
+  allUsers.forEach(u => {
+    if (u.householdId) counts[u.householdId] = (counts[u.householdId] || 0) + 1;
+  });
+  const grouped = Object.keys(counts).filter(id => counts[id] >= 2);
+
+  // Hide the whole section if nothing to show
+  const section = bar.closest('div[style]') ?? bar.parentElement;
+  if (grouped.length === 0 && !currentHousehold) {
+    if (section) section.style.display = 'none';
+    bar.innerHTML = '';
+    return;
+  }
+  if (section) section.style.display = '';
+
+  bar.innerHTML = grouped.map(hid => {
+    const count   = counts[hid];
+    const address = allUsers.find(u => u.householdId === hid)?.streetAddress || hid;
+    const active  = currentHousehold === hid
+      ? 'style="background:#1a3a1a;color:white;border-color:#1a3a1a"'
+      : '';
+    return `<button class="role-filter-btn" onclick="setHouseholdFilter('${hid}')" ${active}>
+      <i data-lucide="home"></i> ${escapeHtml(address)}&nbsp;<strong>(${count})</strong>
+    </button>`;
+  }).join('') + (currentHousehold
+    ? `<button class="role-filter-btn" onclick="setHouseholdFilter('')">
+        <i data-lucide="x"></i> Clear
+       </button>`
+    : '');
+
+  lucide.createIcons({ el: bar });
+}
 
 // =====================================================
 // HELPERS

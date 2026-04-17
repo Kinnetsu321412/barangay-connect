@@ -230,6 +230,38 @@
         <span class="form-error" id="yearsError"></span>
       </div>
 
+      <!-- Address Fields -->
+      <p style="font-size:0.75rem;font-weight:600;text-transform:uppercase;color:#aaa;letter-spacing:0.08em;margin-bottom:0.5rem;">Home Address</p>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="addrPhase">Phase</label>
+          <input class="form-input" type="text" id="addrPhase" placeholder="e.g. Phase 5" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="addrBlock">Block</label>
+          <input class="form-input" type="text" id="addrBlock" placeholder="e.g. 54" />
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label" for="addrLot">Lot <span style="color:#aaa;font-weight:400">(optional)</span></label>
+          <input class="form-input" type="text" id="addrLot" placeholder="e.g. 10" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="addrPurok">Purok / Sitio <span style="color:#aaa;font-weight:400">(optional)</span></label>
+          <input class="form-input" type="text" id="addrPurok" placeholder="e.g. Purok 2" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="addrStreet">Street <span style="color:#aaa;font-weight:400">(optional)</span></label>
+        <input class="form-input" type="text" id="addrStreet" placeholder="e.g. Rizal St." />
+      </div>
+
+      <span class="form-error" id="addressError"></span>
+
       <!-- Actions -->
       <div class="register-actions">
         <button type="button" class="btn btn--outline" id="step2Back">

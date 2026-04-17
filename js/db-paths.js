@@ -5,12 +5,13 @@
 // never hardcode paths in individual files.
 //
 // FIRESTORE STRUCTURE:
-//   barangays/{barangayId}/users/{uid}     full user doc
-//   userIndex/{uid}                         fast auth routing
-//                                            top-level on purpose —
-//                                           at login we don't know the
-//                                           barangay yet, so this must
-//                                           be reachable by UID alone.
+//   barangays/{barangayId}/users/{uid}          full user doc
+//   barangays/{barangayId}/meta/counter         sequential ID counter
+//   userIndex/{uid}                             fast auth routing
+//                                               top-level on purpose —
+//                                               at login we don't know the
+//                                               barangay yet, so this must
+//                                               be reachable by UID alone.
 //
 // STORAGE STRUCTURE
 //   barangays/{barangayId}/id-photos/{uid}/front.webp
@@ -45,6 +46,25 @@ export function barangayId(barangayName) {
 
 
 // =====================================================
+// BARANGAY ID ABBREVIATION
+// Produces a 3-letter uppercase code for use in ID numbers.
+//   "Bancod"           → "BAN"
+//   "San Isidro"       → "SAN"
+//   "Barangay 1"       → "BAR"
+//   Single-word names shorter than 3 chars get zero-padded:
+//   "Bo"               → "BO0"
+// =====================================================
+export function barangayAbbrev(barangayName) {
+  return String(barangayName)
+    .trim()
+    .replace(/[^a-zA-Z0-9]/g, '')   // strip non-alphanumeric
+    .slice(0, 3)
+    .toUpperCase()
+    .padEnd(3, '0');                 // pad if shorter than 3 chars
+}
+
+
+// =====================================================
 // FIRESTORE PATHS
 // =====================================================
 
@@ -63,6 +83,13 @@ export function usersCol(barangay) {
 // Contains: { barangay, barangayId, role, status }
 export function userIndexDoc(uid) {
   return doc(db, 'userIndex', uid);
+}
+
+// Sequential ID counter: barangays/{barangayId}/meta/counter
+// Document shape: { total: <number> }
+// Always increment via runTransaction — never write directly.
+export function barangayCounterDoc(barangay) {
+  return doc(db, 'barangays', barangayId(barangay), 'meta', 'counter');
 }
 
 

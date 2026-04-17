@@ -8,14 +8,20 @@
 
 import { auth, db } from './firebase-config.js';
 import { uploadIdPhotos } from './storage.js';
-import { userDoc, userIndexDoc, barangayId as toBid } from './db-paths.js';
+import {
+  userDoc,
+  userIndexDoc,
+  barangayCounterDoc,
+  barangayAbbrev,
+  barangayId as toBid,
+} from './db-paths.js';
 import { initLocationDropdowns } from './location.js';
 import {
   createUserWithEmailAndPassword,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
-  setDoc, serverTimestamp
+  setDoc, runTransaction, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 
@@ -37,6 +43,11 @@ const formData = {
   idNumber:      '',
   idFrontURL:    '',
   idBackURL:     '',
+  addrPhase:  '',
+  addrBlock:  '',
+  addrLot:    '',
+  addrPurok:  '',
+  addrStreet: '',
 };
 
 let currentStep  = 1;
@@ -162,11 +173,19 @@ if (step2Form) {
     e.preventDefault();
     if (!validateStep2()) return;
 
-    formData.province      = document.getElementById('province').value;
-    formData.municipality  = document.getElementById('municipality').value;
-    formData.barangay      = document.getElementById('barangay').value;
-    formData.yearsResident = document.getElementById('yearsResident').value;
+    const provinceEl     = document.getElementById('province');
+    const municipalityEl = document.getElementById('municipality');
+    const barangayEl     = document.getElementById('barangay');
 
+    formData.province     = provinceEl.options[provinceEl.selectedIndex].text;
+    formData.municipality = municipalityEl.options[municipalityEl.selectedIndex].text;
+    formData.barangay     = barangayEl.options[barangayEl.selectedIndex].text;
+    formData.yearsResident = document.getElementById('yearsResident').value;
+    formData.addrPhase  = document.getElementById('addrPhase').value.trim();
+    formData.addrBlock  = document.getElementById('addrBlock').value.trim();
+    formData.addrLot    = document.getElementById('addrLot').value.trim();
+    formData.addrPurok  = document.getElementById('addrPurok').value.trim();
+    formData.addrStreet = document.getElementById('addrStreet').value.trim();
     goToStep(3);
   });
 }
@@ -245,7 +264,7 @@ if (step3Form) {
       // 2. Upload ID photos — barangay-scoped path
       //    Storage: id-photos/{barangayId}/{uid}/front.webp
       const { frontURL, backURL } = await uploadIdPhotos(
-        formData.barangay,   // ← barangay now included
+        formData.barangay,
         uid,
         idFrontFile,
         idBackFile
@@ -254,7 +273,44 @@ if (step3Form) {
       formData.idFrontURL = frontURL;
       formData.idBackURL  = backURL;
 
-      // 3a. Save full user profile to barangay subcollection
+      // 3. Assign a sequential resident ID number via Firestore transaction.
+      //    The counter doc lives at: barangays/{barangayId}/meta/counter
+      //    Shape: { total: <number> }
+      //    The transaction ensures two simultaneous registrations never get
+      //    the same number even under heavy load.
+      //
+      //    Format: BRY-[ABBREV]-[YEAR]-[00001]
+      //      ABBREV = first 3 letters of barangay name, uppercase
+      //      YEAR   = 4-digit registration year
+      //      Seq    = zero-padded 5-digit counter (resets per barangay, not per year)
+      //
+      //    Examples:
+      //      BRY-BAN-2024-00001   (1st resident of Bancod)
+      //      BRY-SAN-2025-00042   (42nd resident of San Isidro)
+      const counterRef = barangayCounterDoc(formData.barangay);
+      let assignedIdNumber;
+
+      await runTransaction(db, async (tx) => {
+        const counterSnap = await tx.get(counterRef);
+        const prevTotal   = counterSnap.exists() ? (counterSnap.data().total ?? 0) : 0;
+        const nextTotal   = prevTotal + 1;
+
+        tx.set(counterRef, { total: nextTotal }, { merge: true });
+
+        const year    = new Date().getFullYear();
+        const abbrev  = barangayAbbrev(formData.barangay);   // e.g. "BAN"
+        const padded  = String(nextTotal).padStart(5, '0');  // e.g. "00001"
+        assignedIdNumber = `BRY-${abbrev}-${year}-${padded}`;
+      });
+
+      // 4. Compute validUntil (3 years from now) as a Firestore Timestamp.
+      //    Stored on the doc so admins can extend or revoke it independently
+      //    of createdAt — no more hardcoding on the frontend.
+      const validUntilDate = new Date();
+      validUntilDate.setFullYear(validUntilDate.getFullYear() + 3);
+      const validUntilTimestamp = Timestamp.fromDate(validUntilDate);
+
+      // 5a. Save full user profile to barangay subcollection
       //     Firestore: barangays/{barangayId}/users/{uid}
       await setDoc(userDoc(formData.barangay, uid), {
         uid,
@@ -268,31 +324,46 @@ if (step3Form) {
         municipality:  formData.municipality,
         barangay:      formData.barangay,
         yearsResident: Number(formData.yearsResident),
+        addrPhase:     formData.addrPhase,
+        addrBlock:     formData.addrBlock,
+        addrLot:       formData.addrLot,
+        addrPurok:     formData.addrPurok,
+        addrStreet:    formData.addrStreet,
+        streetAddress: buildAddressString(formData),
+        householdId:   generateHouseholdId(formData.barangay, formData),
         idType:        formData.idType,
         idNumber:      formData.idNumber,
         idFrontURL:    formData.idFrontURL,
         idBackURL:     formData.idBackURL,
+        residentIdNumber: assignedIdNumber,   
+        validUntil:    validUntilTimestamp,  
         role:          'resident',
         status:        'pending',
         createdAt:     serverTimestamp(),
       });
 
-      // 3b. Write lightweight index for fast auth routing
+      // 5b. Write lightweight index for fast auth routing
       //     Firestore: userIndex/{uid}
       await setDoc(userIndexDoc(uid), {
-        barangay:   formData.barangay,           // display name
-        barangayId: toBid(formData.barangay),    // sanitized path segment
-        role:       'resident',
-        status:     'pending',
+        barangay:         formData.barangay,
+        barangayId:       toBid(formData.barangay),
+        municipality:     formData.municipality,
+        province:         formData.province,  
+        role:             'resident',
+        status:           'pending',
+        residentIdNumber: assignedIdNumber,
+        householdId: generateHouseholdId(formData.barangay, formData),
       });
 
-      // 4. Sign out and show success
+      // 6. Sign out and show success
       await signOut(auth);
       showSuccess();
 
     } catch (error) {
       // Rollback: delete the Auth account if anything after it failed,
       // so the email is freed and the user can try again.
+      // NOTE: the counter increment is NOT rolled back — gaps in the sequence
+      // are acceptable and much safer than a double-rollback race condition.
       if (createdUser) {
         try { await createdUser.delete(); } catch (e) {
           console.warn('Could not roll back auth account:', e.message);
@@ -364,7 +435,18 @@ function validateStep1() {
 function validateStep2() {
   clearAllErrors(['provinceError','municipalityError','barangayError','yearsError']);
   let valid = true;
+  const addrPhase = document.getElementById('addrPhase').value.trim();
+  const addrBlock = document.getElementById('addrBlock').value.trim();
 
+  if (!addrPhase) {
+    showFieldError('addressError', 'Phase is required.');
+    valid = false;
+  } else if (!addrBlock) {
+    showFieldError('addressError', 'Block is required.');
+    valid = false;
+  } else {
+    clearFieldError('addressError');
+  }
   if (!document.getElementById('province').value)
     { showFieldError('provinceError', 'Please select your province.'); valid = false; }
   if (!document.getElementById('municipality').value)
@@ -444,4 +526,24 @@ function getRegisterErrorMessage(code, fallback) {
     'auth/network-request-failed': 'Network error. Check your connection.',
   };
   return messages[code] || fallback || 'Something went wrong. Please try again.';
+}
+
+function buildAddressString(data) {
+  const parts = [];
+  if (data.addrPhase)  parts.push(data.addrPhase);
+  if (data.addrBlock)  parts.push(`Blk. ${data.addrBlock}`);
+  if (data.addrLot)    parts.push(`Lot ${data.addrLot}`);
+  if (data.addrStreet) parts.push(data.addrStreet);
+  if (data.addrPurok)  parts.push(data.addrPurok);
+  return parts.join(', ');
+}
+
+function generateHouseholdId(barangay, data) {
+  const n = s => (s || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Phase + block are required
+  // Lot included if present.
+  const key = [n(data.addrPhase), n(data.addrBlock), n(data.addrLot)]
+    .filter(Boolean)
+    .join('_');
+  return `${toBid(barangay)}_${key}`;
 }

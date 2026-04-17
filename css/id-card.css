@@ -1,0 +1,486 @@
+/* ================================================================
+   id-card.css — BarangayConnect
+   Flip-card styles for the Digital Resident ID widget.
+   Extracted from the inline <style> block in profile.html.
+
+   Import AFTER components.css (uses tokens from main.css :root).
+   Also used by id-card.html standalone viewer.
+
+   ROLE VARIANTS (applied to .id-card-inner wrapper):
+     .card--resident  → green gradient
+     .card--officer   → warm brown/orange gradient
+     .card--admin     → deep red gradient
+
+   USAGE:
+     <div class="id-card-scene" id="myCard">
+       <div class="id-card-inner card--resident">
+         <div class="card-face card-front"> … </div>
+         <div class="card-face card-face--back card-back"> … </div>
+       </div>
+     </div>
+     JS: scene.addEventListener('click', () => scene.classList.toggle('flipped'));
+   ================================================================ */
+
+
+/* ── Scene / flip container ──────────────────────────────────── */
+.id-card-scene {
+  width: 100%;
+  aspect-ratio: 1.586;           /* CR80 standard — 85.6 × 54 mm */
+  perspective: 1200px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.id-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.72s cubic-bezier(0.76, 0, 0.24, 1);
+  border-radius: 14px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.18),
+    0 4px  8px  rgba(0, 0, 0, 0.10);
+}
+
+.id-card-scene.flipped .id-card-inner { transform: rotateY(180deg); }
+
+
+/* ── Shared face rules ───────────────────────────────────────── */
+.card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-face--back { transform: rotateY(180deg); }
+
+/* Diagonal hatching overlay — depth texture */
+.card-face::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0,
+    rgba(255, 255, 255, 0.03) 1px,
+    transparent 1px,
+    transparent 14px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Decorative circle blob */
+.card-face::after {
+  content: '';
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  right: -60px;
+  top: -70px;
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: 0;
+}
+
+
+/* ── FRONT face layout ───────────────────────────────────────── */
+.card-front {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  color: rgba(255, 255, 255, 0.95);
+  font-family: var(--font-body);
+}
+
+.card-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 14px 9px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.card-seal {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.card-header-text { flex: 1; min-width: 0; }
+
+.card-republic {
+  font-size: 7px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  font-weight: 400;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.card-barangay-name {
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-role-pill {
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.10);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.card-body {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 11px;
+  padding: 0 14px 10px;
+}
+
+/* Avatar — initials fallback + optional photo overlay */
+.card-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  flex-shrink: 0;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  position: relative;
+}
+
+.card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.card-avatar img.loaded { opacity: 1; }
+
+/* Shimmer while avatar photo loads */
+.card-avatar--loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: avatar-shimmer 1.4s ease-in-out infinite;
+  z-index: 1;
+  pointer-events: none;
+}
+
+@keyframes avatar-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.card-name-block { flex: 1; min-width: 0; }
+
+.card-micro-label {
+  font-size: 7px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  opacity: 0.45;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.card-name {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-address {
+  font-size: 8px;
+  opacity: 0.55;
+  margin-top: 3px;
+  line-height: 1.4;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-address-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.card-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.card-footer-fields { display: flex; gap: 20px; align-items: flex-end; }
+
+.card-field-label {
+  font-size: 6.5px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  opacity: 0.42;
+  margin-bottom: 2px;
+  font-weight: 500;
+}
+
+.card-field-value  { font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em; }
+.card-id-number    { font-size: 10px;   font-weight: 700; letter-spacing: 0.07em; }
+
+.card-flip-hint {
+  font-size: 7px;
+  opacity: 0.28;
+  letter-spacing: 0.07em;
+  font-style: italic;
+  white-space: nowrap;
+  align-self: flex-end;
+}
+
+
+/* ── BACK face layout ────────────────────────────────────────── */
+.card-back {
+  display: flex;
+  flex-direction: column;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.back-strip {
+  position: relative;
+  z-index: 2;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.back-strip-title {
+  font-size: 7.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.45;
+  font-weight: 500;
+}
+
+.back-strip-id {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  opacity: 0.85;
+}
+
+.back-fields {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 8px 14px 6px;
+  align-content: start;
+}
+
+.back-field {
+  padding: 5px 8px 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.back-field:nth-child(odd)  { border-right: 1px solid rgba(255, 255, 255, 0.06); padding-right: 10px; }
+.back-field:nth-child(even) { padding-left: 10px; padding-right: 0; }
+.back-field--full           { grid-column: 1 / -1; border-right: none; padding-right: 0; }
+
+.back-field-label {
+  font-size: 6.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  opacity: 0.38;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.back-field-value {
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  word-break: break-all;
+}
+
+.back-footer {
+  position: relative;
+  z-index: 2;
+  padding: 7px 14px 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.back-legal {
+  font-size: 6.5px;
+  opacity: 0.28;
+  line-height: 1.55;
+  font-style: italic;
+  max-width: 195px;
+}
+
+.back-logo {
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.25;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+}
+
+
+/* ── Role colour themes ───────────────────────────────────────── */
+.card--resident .card-face             { background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 55%, var(--green-light) 100%); }
+.card--resident .card-face::after      { background: var(--green-light); }
+.card--resident .card-seal             { background: var(--orange); color: var(--green-dark); }
+.card--resident .card-id-number        { color: var(--orange); }
+
+.card--officer .card-face              { background: linear-gradient(135deg, #3d1e00 0%, #7a3d00 55%, var(--orange-hover) 100%); }
+.card--officer .card-face::after       { background: var(--orange); }
+.card--officer .card-seal              { background: var(--orange); color: #3d1e00; }
+.card--officer .card-id-number         { color: var(--orange); }
+
+.card--admin .card-face                { background: linear-gradient(135deg, #2a0000 0%, var(--red-dark) 55%, var(--red) 100%); }
+.card--admin .card-face::after         { background: var(--red); }
+.card--admin .card-seal                { background: var(--orange); color: #2a0000; }
+.card--admin .card-id-number           { color: var(--orange); }
+
+
+/* ================================================================
+   ID CARD MODAL (fullscreen overlay for enlarged card view)
+   ─────────────────────────────────────────────────────────────────
+   Triggered by the "View Full Size" button on profile.html.
+   The enlarged card inside shares all .id-card-scene / .card-face
+   styles above — modal only handles the overlay + sizing.
+
+   JS: idCardModal.classList.toggle('is-open')
+   ================================================================ */
+.id-card-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  /* Hard-coded — must sit above step-progress z-index:1 circles,
+     navbar, drawers, and any other stacking context on the page. */
+  z-index: 9999;
+  isolation: isolate;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.id-card-modal-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.id-card-modal-overlay.is-open .id-card-modal-card {
+  transform: translateY(0) scale(1);
+}
+
+.id-card-modal-card {
+  width: 100%;
+  max-width: 520px;
+  transform: translateY(12px) scale(0.97);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.id-card-modal-card__close {
+  align-self: flex-end;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-full);
+  padding: 6px 14px;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.id-card-modal-card__close:hover { background: rgba(255, 255, 255, 0.20); }
+
+.id-card-modal-card__close [data-lucide],
+.id-card-modal-card__close svg { width: 14px; height: 14px; }
+
+/* Hint below card */
+.id-card-modal-card__hint {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
