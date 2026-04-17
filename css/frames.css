@@ -543,6 +543,12 @@
   border-bottom: none;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   margin-bottom: var(--space-md);
+  
+  /*For borber - Comments*/
+  border-left: 5px solid var(--white);
+  border-radius: 20px;
+  box-shadow:-0px 0px 8px -5px var(--overlay-black-55);
+
 }
 .post-row--accented.post-row--green  { border-left-color: var(--green-dark); }
 .post-row--accented.post-row--orange { border-left-color: var(--orange); }
@@ -562,6 +568,10 @@
   font-weight: var(--fw-medium);
   margin-left: auto;
   white-space: nowrap;
+
+  /*Bago po*/
+  float: right;
+  margin-right: 15px;
 }
 
 .post-row__title {
@@ -583,6 +593,11 @@
   align-items: center;
   gap: var(--space-sm);
   margin-top: 2px;
+
+  /*Bago po*/
+  padding-right: auto;
+  justify-content: space-between;
+  margin-right: 15px;
 }
 
 .post-row__avatar {
@@ -593,6 +608,9 @@
   flex-shrink: 0;
   background: var(--gray-200);
   border: 1.5px solid var(--gray-100);
+
+  /*Bago po*/
+  float: left;
 }
 
 .post-row__author {
@@ -600,6 +618,11 @@
   font-weight: var(--fw-semibold);
   color: var(--gray-700);
   font-family: var(--font-display);
+
+  /*Bago po*/
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
 }
 
 
