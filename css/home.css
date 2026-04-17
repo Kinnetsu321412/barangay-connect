@@ -37,9 +37,16 @@
    Used by multiple sections on this page.
    ================================================================ */
 
+
 /* Eyebrow label — small caps, tracked, muted
    e.g. "QUICK ACTIONS", "RECENT UPDATES" */
 .section-eyebrow {
+  text-transform: uppercase;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--space-md);
+
+  color: var(--gray-400);
+  
   /* Uppercase, bold, wide letter-spacing.
      Use --gray-400 for the muted color.
      Refer to .community-hero__eyebrow for the inverted (light) version. */
@@ -47,23 +54,42 @@
 
 /* Center-aligned variant (used in Community Overview) */
 .section-eyebrow--center {
+  text-align: center;
+
   /* One property needed. */
 }
 
 /* Section headings (e.g. "What do you need today?") */
 .section-heading {
+  font-size: clamp(2.00rem, 5vw , 3.00rem);
+  font-weight: var(--fw-black);
+  color: var(--text-dark);
+  
   /* Large, black-weight, dark. Use clamp() for fluid sizing between
      mobile and desktop. Refer to .community-hero__title for scale reference. */
 }
 
 .section-heading--center {
+  text-transform: uppercase;
+
   /* One property needed. */
 }
 
 /* "View all ›" link in section headers */
 .section-view-all {
+  display: inline-flex;
+  align-items: center;
+  color: var(--black);
+  
   /* Inline-flex with the chevron icon. Inherits --black by default,
      transitions to --orange on hover. The icon is a data-lucide chevron-right. */
+}
+
+.section-view-all:hover{
+  transition: var(--transition);
+  color: var(--orange);
+
+  /* transitions to --orange on hover */
 }
 
 
@@ -83,17 +109,38 @@
 
 
 .hero::before {
+  content: "";
+  position: absolute;
+  inset: 2;
+
+  background-color: var(--alpha-green-12);
+
+  z-index: 1;
   /* The dark overlay — inset: 0 covers the full hero area.
      Use the --alpha-glass-green token for the rgba value.
      Needs a z-index below the hero's children. */
 }
 
 .hero > * {
+  position: relative;
+  z-index: 3;
+
   /* Lift children above the ::before overlay. */
 }
 
 /* Inner layout: left content + right widget panel side by side */
 .hero__content {
+  max-width: 1280px;
+  width: 100%;
+  margin-inline: auto;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding-top: 150px;
+
+  offset: var(--navbar-h);
+
   /* Centered max-width column (1280px).
      Flex row, space-between, with top padding that clears the navbar.
      Use --navbar-h token for the offset. */
@@ -101,78 +148,172 @@
 
 /* ── Left column ── */
 .hero__left {
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  margin-left: 33px;
+
   /* Constrained width, flex column with gap between children. */
 }
 
 /* Big headline — "Your Barangay," */
 .hero__headline {
+  font-size: clamp(4.55rem, 8vh, 5.50rem);
+  font-weight: var(--fw-black);
+  color: var(--white);
+
   /* Very large, black-weight, white. Same fluid clamp approach
      as .community-hero__title but bigger since this is the main hero. */
 }
 
 /* "Connected." — the orange second line */
 .hero__headline--accent {
+  color: var(--orange);
+
   /* One property — pulls from the token. */
 }
 
 /* Description paragraph */
 .hero__desc {
+  font-family: var( --font-body);
+  font-size: var(--text-sm);
+  line-height: var(--lh-relaxed);
+  color: var(--overlay-white-55);
+
+  padding-bottom: 10px;
+
   /* Body font, relaxed line-height, slightly transparent white
      so it reads as secondary to the headline. */
 }
 
 /* CTA buttons row */
 .hero__cta {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
+
   /* Flex row with wrap — the two .btn elements from buttons.css
      handle their own sizing; just control gap and wrapping here. */
 }
 
 /* ── Right column (widget panel) ── */
 .hero__right {
+  width: 290px;
+  flex-direction: column;
+  flex-shrink: 0;
+
+  margin-right: -60px;
+  
   /* Fixed-width flex column. Flex-shrink: 0 prevents it from
      collapsing when the left side is wide. */
 }
 
 /* Clock card — frosted glass tile */
 .hero__clock-card {
+  position: fixed;
+  background: var(--overlay-white-12);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: var(--space-md);
+
+  border: 1px solid var(--overlay-white-18);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 200px;
+  max-height: 90vh;
+  box-shadow: var(--shadow-lg);
+  animation: modalSlideIn 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  position: relative;
+
+  margin-bottom: 10px;
+  
   /* Frosted glass: semi-transparent white background + blur.
      Refer to how modal overlays use backdrop-filter in frames.css
      for a similar translucent treatment. */
 }
 
 .hero__clock-label {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--space-xs);
+  text-transform: uppercase;
+  color: var(--overlay-white-55);
+
   /* Tiny, tracked, uppercase — same pattern as .section-eyebrow
      but on a dark background, so use muted-white opacity. */
 }
 
 .hero__clock-time {
+  font-family: var(--font-display);
+  font-size: var(--text-4xl);
+  line-height: var(--lh-tight);
+
   /* The large time digits — display font, very large, tight line-height. */
 }
 
 .hero__clock-date {
+  font-size: var(--text-2xs);
+  color: var(--overlay-white-55);
+
   /* Small, secondary opacity — sits below the time. */
 }
 
 /* Widget buttons row (Docs + Events side by side) */
 .hero__widget-btns {
+  display: flex;
+  flex: 1;
+  gap: 5px;  
+
+  padding-top: 10px;
+
   /* Two .btn--widget tiles side by side from buttons.css.
      Just flex + gap here. */
 }
 
 /* Scroll indicator (bottom center of hero) */
 .hero__scroll-indicator {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+
+  padding-top: 100px;
+
   /* Absolutely positioned at the bottom-center of .hero.
      Flex column, centered, with a small gap between text and line. */
 }
 
 .hero__scroll-text {
+  font-size: var(--text-2xs);
+  letter-spacing: var(--radius-lg);
+  color: var(--overlay-white-55);
+
   /* Tiny, very tracked, low-opacity white — purely decorative. */
 }
 
 .hero__scroll-line {
+  content: "";
+  display: block;
+  width: 1px;
+  height: 50px;
+  background: var(--white);
+  margin: 0 auto;
+
+  animation: down 1.5s infinite;
+
+  border-radius: 100px;
+
   /* A thin 1px vertical line that acts as a visual downward cue. */
 }
 
+@keyframes down {
+  0% {transform: translateY(-5px); opacity: 0.5;}
+  50% {transform: translateY(5px); opacity: 1;}
+  100% {transform: translateY(-5px); opacity: 0.5;}
+  
+}
 
 /* ================================================================
    QUICK ACTIONS SECTION
@@ -184,11 +325,27 @@
    Content is centered; the grid holds 6 .btn--selector tiles.
    ================================================================ */
 .section-quick-actions {
+  background-color: var(--white);
+  padding: 190px 190px;
+  text-align: center;
+
+  border-radius: 0px 0px 0% 0%;
+
+  /*Trasision - How huhu*/
   /* White bg, generous vertical padding, centered text.
      The wave transition from the hero is the main design detail here. */
 }
 
 .quick-actions__grid {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: nowrap;
+  
+
+  gap: 20px;
+  align-items: center;
+
   /* Flex row, centered, wrapping. The .btn--selector tiles in buttons.css
      handle their own sizing — control gap and alignment here. */
 }
@@ -202,21 +359,44 @@
    stacked post rows fill the right column.
    ================================================================ */
 .section-updates {
+  background-color: var(--white);
+
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 150px 150px;
+
   /* Centered max-width column with vertical padding.
      Mirrors the same container pattern as .community-panel-inner. */
 }
 
 .section-updates__header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+
+  align-items: baseline;
+
   /* Flex row: eyebrow + heading group on the left,
      .section-view-all link on the right, aligned to the baseline. */
 }
 
 .section-updates__grid {
+  display: grid;
+  grid-template-columns: 55% 45%;
+
+  gap: 23px;
+  
   /* Two-column grid. The left column (featured post) is wider.
      Use grid-template-columns with a roughly 55/45 split. */
 }
 
 .section-updates__rows {
+  display: flex;
+  flex-direction: column;
+
+  gap: 1px;
+
   /* Flex column holding the stacked .post-row cards from frames.css.
      Just a gap between items. */
 }
@@ -230,6 +410,10 @@
    no grid styles needed here, just the section wrapper spacing.
    ================================================================ */
 .section-stats {
+  background-color: var(--white);
+  padding: 100px 100px;
+  text-align: center;
+
   /* Vertical padding, centered text, white bg.
      The heading and eyebrow use the --center modifier variants above. */
 }
@@ -244,20 +428,53 @@
    apply it to the top-left and top-right corners only.
    ================================================================ */
 .section-cta {
+  background-color: var(--green-dark);
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 100px;
+
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+
   /* Dark green bg, centered flex column, generous padding.
      Border-radius on top corners creates the wave transition. */
 }
 
 .section-cta__icon {
+  color: var(--orange);
+  stroke-width: 2px;
+
+  align-self: center;
+  margin-bottom: 45px;
+  width: 45px;
+  height: 45px;
+
   /* The Lucide icon above the heading — use --orange and a light stroke-width. */
 }
 
 .section-cta__heading {
+  font-size: clamp(3.00rem, 6vh, 4.00rem);
+  font-weight: var(--fw-black);
+  color: var(--white);
+
+  line-height: var(--lh-tight);
+
+  text-align: center;
+
   /* Large, black-weight, white. Fluid sizing with clamp().
      Tighter than .hero__headline since it's a shorter string. */
 }
 
 .section-cta__desc {
+  text-align: center;
+  font-family: var(--font-body);
+  color: var(--overlay-white-55);
+  max-width: 100%;
+
+  margin: 50px;
+
   /* Body font, muted white opacity, constrained max-width
      so the line length stays readable. */
 }
