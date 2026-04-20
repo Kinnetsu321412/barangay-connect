@@ -23,6 +23,8 @@
   <link rel="stylesheet" href="../css/frames.css" />
   <link rel="stylesheet" href="../css/home.css" />
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 
@@ -35,26 +37,6 @@
   ─────────────────────────────────────────────
 -->
 <body class="role-resident">
-
-    <!-- ═══════════════════════════════════════════════════════════════
-        ALERT BANNER
-        ───────────────────────────────────────────────────────────────
-        Sits above the navbar. Shows weather advisories or urgent alerts.
-        CLASS: .alert-banner from components.css
-        VARIANTS: .alert-banner--orange (weather/advisory) ← use this one
-                  .alert-banner--red    (emergency)
-                  .alert-banner--green  (info/resolved)
-                  .alert-banner--blue   (general notice)
-        The × close button uses: .btn .btn--close .btn--sm from buttons.css
-    ══════════════════════════════════════════════════════════════════ -->
-    <div class="alert-banner alert-banner--orange">
-      <i data-lucide="triangle-alert"></i>
-      <p><strong>Weather Advisory:</strong> Signal No. 1 in effect. Stay indoors and monitor official updates from PAGASA.</p>
-      <button class="btn btn--close btn--sm" aria-label="Dismiss alert">
-        <i data-lucide="x"></i>
-      </button>
-    </div>
-
 
     <!-- ═══════════════════════════════════════════════════════════════
         NAVBAR
@@ -124,6 +106,7 @@
         <a href="profile.html" class="navbar__link">My Barangay</a>
       </div>
     </nav>
+  </header>
 
 
   <!-- ═══════════════════════════════════════════════════════════════
@@ -152,7 +135,7 @@
           Has a small orange dot before the text (handled by CSS).
           VARIANT: .location-pill--light for use on white backgrounds
         -->
-        <span class="location-pill">Barangay Bancod, Indang, Cavite</span>
+        <span class="location-pill"><span class="location-pill__dot"></span>Barangay Bancod, Indang, Cavite</span>
 
         <!--
           Hero headline — styled in home.css
@@ -387,17 +370,12 @@
         </p>
 
         <div class="post-featured__footer">
+          <img src="assets/images/avatars/health-center.jpg" alt="Barangay Health Center" class="post-featured__avatar" />
           <div class="post-featured__author">
-            <!-- placeholder image -->
-            <img src="assets/images/avatars/health-center.jpg" 
-                 alt="Barangay Health Center"
-                 class="post-featured__avatar" />
-            <div>
-              <p class="post-featured__author-name">Barangay Health Center</p>
-              <p class="post-featured__author-time">2 hours ago</p>
-            </div>
+            <span class="post-featured__author-name">Barangay Health Center</span>
+            <span class="post-featured__author-time">2 hours ago</span>
           </div>
-          <span class="post-featured__comments">
+          <span class="post-featured__replies">
             <i data-lucide="message-circle"></i> 14 replies
           </span>
         </div>
@@ -412,21 +390,18 @@
           Orange left-border accent = infrastructure/general category
         -->
         <article class="post-row post-row--accented post-row--orange">
-          <div class="post-row__meta">
-            <span class="tag tag--green">Infrastructure</span>
+          <div class="post-row__tags">
+            <span class="tag tag--amber">Infrastructure</span>
             <span class="post-row__time">5 hours ago</span>
           </div>
           <h4 class="post-row__title">Road repair schedule along Rizal St.</h4>
-          <p class="post-row__body">Construction work begins Monday. Alternate routes have been designated.</p>
+          <p class="post-row__excerpt">Construction work begins Monday. Alternate routes have been designated.</p>
           <div class="post-row__footer">
-            <div class="post-row__author">
-              <!-- placeholder image -->
-              <img src="assets/images/avatars/dpwh.jpg" alt="DPWH Liaison" class="post-row__avatar" />
-              <span class="post-row__author-name">DPWH Liaison</span>
+            <img src="assets/images/avatars/dpwh.jpg" alt="DPWH Liaison" class="post-row__avatar" />
+            <span class="post-row__author">DPWH Liaison</span>
+            <div class="reaction-bar" style="margin-left:auto">
+              <button class="reaction-count reaction-count--comment"><i data-lucide="message-circle"></i><span>7</span></button>
             </div>
-            <span class="post-row__comments">
-              <i data-lucide="message-circle"></i> 7
-            </span>
           </div>
         </article>
 
@@ -435,21 +410,18 @@
           Red left-border accent = safety/emergency category
         -->
         <article class="post-row post-row--accented post-row--red">
-          <div class="post-row__meta">
+          <div class="post-row__tags">
             <span class="tag tag--red">Safety</span>
             <span class="post-row__time">Yesterday</span>
           </div>
           <h4 class="post-row__title">Advisory: Dengue prevention drive ongoing</h4>
-          <p class="post-row__body">Fogging operations scheduled this week. Clear any stagnant water around your property.</p>
+          <p class="post-row__excerpt">Fogging operations scheduled this week. Clear any stagnant water around your property.</p>
           <div class="post-row__footer">
-            <div class="post-row__author">
-              <!-- placeholder image -->
-              <img src="assets/images/avatars/health-officer.jpg" alt="Brgy. Health Officer" class="post-row__avatar" />
-              <span class="post-row__author-name">Brgy. Health Officer</span>
+            <img src="assets/images/avatars/health-officer.jpg" alt="Brgy. Health Officer" class="post-row__avatar" />
+            <span class="post-row__author">Brgy. Health Officer</span>
+            <div class="reaction-bar" style="margin-left:auto">
+              <button class="reaction-count reaction-count--comment"><i data-lucide="message-circle"></i><span>22</span></button>
             </div>
-            <span class="post-row__comments">
-              <i data-lucide="message-circle"></i> 22
-            </span>
           </div>
         </article>
 
@@ -496,25 +468,31 @@
       Four columns separated by vertical dividers.
       Numbers are large and orange (--orange color token).
     -->
-    <div class="stat-grid">
+    <div class="stat-grid stat-grid--centered">
 
       <div class="stat-grid__item">
         <p class="stat-grid__number" data-target="2436">2,436</p>
         <p class="stat-grid__label">Residents</p>
       </div>
 
+      <div class="stat-grid__divider"></div>
+
       <div class="stat-grid__item">
         <p class="stat-grid__number" data-target="38">38</p>
         <p class="stat-grid__label">Concerns Resolved</p>
       </div>
+
+      <div class="stat-grid__divider"></div>
 
       <div class="stat-grid__item">
         <p class="stat-grid__number" data-target="12">12</p>
         <p class="stat-grid__label">Events This Week</p>
       </div>
 
+      <div class="stat-grid__divider"></div>
+
       <div class="stat-grid__item">
-        <p class="stat-grid__number" data-target="96">96%</p>
+        <p class="stat-grid__number" data-target="96" data-suffix="%">96%</p>
         <p class="stat-grid__label">Satisfaction Rate</p>
       </div>
 
@@ -537,6 +515,8 @@
        Text says: "UMUNLAD • BARANGAY BANCOD •" repeated.
   ══════════════════════════════════════════════════════════════════ -->
   <!-- Placeholder text, admin should be able to set what text goes on the marquee -->
+
+  <div class="dark-footer-wrap"></div>
 
   <div class="marquee-banner marquee-banner--dark" aria-hidden="true">
     <div class="marquee__track">
@@ -599,6 +579,7 @@
     </a>
 
   </section><!-- /section-cta -->
+  </div><!-- /dark-footer-wrap -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════
@@ -614,7 +595,7 @@
       <!-- Brand block (left) -->
       <div class="site-footer__brand">
         <div class="site-footer__brand-logo">
-          <img src="assets/images/logo.png" alt="BarangayConnect" class="site-footer__logo-img" />
+          <img src="../assets/images/logo.png" alt="BarangayConnect" class="site-footer__logo-img" />
           <span class="site-footer__logo-text">BarangayConnect</span>
         </div>
         <p class="site-footer__tagline">Barangay Bancod, Indang, Cavite &copy; 2026</p>
@@ -724,6 +705,7 @@
         elements.forEach((el) => observer.observe(el));
       })();
     </script>
+    <script src="../js/home-animations.js" defer></script>
   ```
 
 </body>

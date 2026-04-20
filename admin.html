@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin</title>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="/css/main.css" />
+  <link rel="stylesheet" href="/css/buttons.css" />
+  <link rel="stylesheet" href="/css/components.css" />
+  <link rel="stylesheet" href="/css/frames.css" />
+  <link rel="stylesheet" href="/css/home.css" />
   <style>
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -491,6 +495,9 @@
                 padding:0 6px;font-size:0.7rem;margin-left:2px;display:none">
         </span>
     </button>
+    <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')">
+        <i data-lucide="settings"></i> Settings
+      </button>
     </div>
   </nav>
 
@@ -581,13 +588,113 @@
   </div>
 
       <div id="community-sub-bulletin">
-        <h1 class="panel-heading">Bulletin Posts</h1>
-        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
-          color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-          <div style="font-size:2rem;margin-bottom:.5rem;">📌</div>
-          <p style="margin:0;font-size:.9rem;">Community bulletin posts will appear here.</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;
+          margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+          <div>
+            <h1 class="panel-heading" style="margin:0;">Bulletin Posts</h1>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:.3rem;margin-bottom:1rem;flex-wrap:wrap;">
+        <button class="bulletin-section-btn" onclick="switchBulletinSection('posts',this)"
+          style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;
+            border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;
+            color:#fff;font-size:.78rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="layout-list" style="width:11px;height:11px;"></i> Posts
+        </button>
+        <button class="bulletin-section-btn" onclick="switchBulletinSection('reports',this)"
+          style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;
+            border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+            color:#6b7280;font-size:.78rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="flag" style="width:11px;height:11px;"></i> Reports
+          <span id="reportsMainBadge" style="display:none;background:#dc2626;color:#fff;
+            border-radius:999px;padding:0 5px;font-size:.68rem;"></span>
+        </button>
+        <button class="bulletin-section-btn" onclick="switchBulletinSection('comments',this)"
+          style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;
+            border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+            color:#6b7280;font-size:.78rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="message-circle" style="width:11px;height:11px;"></i> Comments
+        </button>
+      </div>
+
+      <!-- Sub-filters row (changes depending on active section) -->
+      <div id="bulletin-subfilters" style="display:flex;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap;padding-top:.75rem;border-top:1.5px solid #f0f0f0;"></div>
+
+        <div id="bulletin-view-official">
+          <div id="announcementList" style="margin-bottom:1.5rem;"></div>
+          <div id="announcementForm"></div>
+        </div>
+
+        <div id="bulletin-view-community" hidden>
+          <div id="communityPostsList" style="display:flex;flex-direction:column;gap:.75rem;"></div>
+        </div>
+      
+        <div id="bulletin-view-pending" hidden>
+          <div id="pendingPostsList" style="display:flex;flex-direction:column;gap:1rem;"></div>
+        </div>
+
+        <div id="bulletin-view-reported" hidden>
+          <div id="reportedPostsList" style="display:flex;flex-direction:column;gap:1rem;">
+            <p style="color:#aaa;">Loading…</p>
+          </div>
+        </div>
+        <div id="bulletin-view-reported-comments" hidden>
+          <div id="reportedCommentsList" style="display:flex;flex-direction:column;gap:.75rem;">
+            <p style="color:#aaa;">Loading…</p>
+          </div>
+        </div>
+
+              <div id="bulletin-view-comments" hidden>
+        <div style="position:relative;margin-bottom:1rem;max-width:400px;">
+          <i data-lucide="search" style="position:absolute;left:12px;top:50%;
+            transform:translateY(-50%);width:15px;height:15px;color:#aaa;pointer-events:none;"></i>
+          <input id="commentSearchInput" type="text" placeholder="Search by author or content…"
+            oninput="filterComments()"
+            style="width:100%;padding:.55rem 1rem .55rem 2.4rem;border:1.5px solid #e0e0e0;
+              border-radius:10px;font-size:.875rem;outline:none;background:#fff;box-sizing:border-box;" />
+        </div>
+        <div id="commentManagerList" style="display:flex;flex-direction:column;gap:.75rem;">
+          <p style="color:#aaa;font-size:.9rem;">Click Refresh to load comments.</p>
         </div>
       </div>
+      </div>
+
+          <div id="community-sub-comments" hidden>
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        margin-bottom:1rem;flex-wrap:wrap;gap:.75rem;">
+        <h1 class="panel-heading" style="margin:0;">Comment Manager</h1>
+        <button onclick="refreshComments()"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+            border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+            color:#555;font-size:.82rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Refresh
+        </button>
+      </div>
+      <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+        <button class="comment-source-btn" onclick="setCommentSource('all',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;
+            border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;
+            color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">
+          All
+        </button>
+        <button class="comment-source-btn" onclick="setCommentSource('announcements',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;
+            border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+            color:#555;font-size:.82rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="shield-check" style="width:13px;height:13px;"></i> Official
+        </button>
+        <button class="comment-source-btn" onclick="setCommentSource('communityPosts',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;
+            border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+            color:#555;font-size:.82rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="users" style="width:13px;height:13px;"></i> Community
+        </button>
+      </div>
+      <div id="commentManagerList" style="display:flex;flex-direction:column;gap:.75rem;">
+        <p style="color:#aaa;font-size:.9rem;">Click Refresh to load comments.</p>
+      </div>
+    </div>
 
       <div id="community-sub-pets" hidden>
         <h1 class="panel-heading">Pets</h1>
@@ -613,7 +720,7 @@
       <div style="display:flex;gap:.5rem;margin-bottom:1.75rem;padding-bottom:.75rem;border-bottom:2px solid #f0f0f0;flex-wrap:wrap;">
       <button class="mgmt-sub-btn" data-sub="pending" onclick="switchSubTab('pending',this)"
         style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;">
-        <i data-lucide="clock" style="width:14px;height:14px;"></i> Pending
+        <i data-lucide="clock" style="width:14px;height:14px;"></i> Pending Registrations
         <span id="pendingSubBadge" style="background:rgba(255,255,255,0.25);border-radius:999px;padding:0 6px;font-size:0.7rem;display:none"></span>
       </button>
       <button class="mgmt-sub-btn" data-sub="users" onclick="switchSubTab('users',this)"
@@ -725,6 +832,12 @@
   </div><!-- end alerts-sub-curfew -->
 
 </div><!-- end panel-alerts -->
+<div id="panel-settings" class="admin-panel">
+  <h1 class="panel-heading">Settings &amp; Preferences</h1>
+  <div id="settingsContainer">
+    <p style="color:#aaa;">Loading settings…</p>
+  </div>
+</div>
 
   <!-- JS TOOLTIP -->
   <div id="adminTooltip"></div>
@@ -853,6 +966,11 @@
     btn.style.background = '#1a3a1a'; btn.style.color = '#fff'; btn.style.borderColor = '#1a3a1a';
   }
 
+    document.addEventListener('DOMContentLoaded', () => {
+    const firstBtn = document.querySelector('.bulletin-section-btn');
+    if (firstBtn) switchBulletinSection('posts', firstBtn);
+  });
+
   function switchCommunitySubTab(sub, btn) {
     document.querySelectorAll('[id^="community-sub-"]').forEach(el => el.hidden = true);
     document.getElementById('community-sub-' + sub).hidden = false;
@@ -898,12 +1016,91 @@
       panel.classList.toggle('active', panel.id === `panel-${tab}`);
     });
   }
+
+function switchBulletinView(view, btn) {
+  document.querySelectorAll('[id^="bulletin-view-"]').forEach(el => el.hidden = true);
+  document.getElementById('bulletin-view-' + view).hidden = false;
+
+  document.querySelectorAll('#bulletin-subfilters .bulletin-view-btn, #bulletin-subfilters .comment-source-btn').forEach(b => {
+    b.classList.remove('is-active');
+  });
+  if (btn) btn.classList.add('is-active');
+
+  if (view === 'comments' && (!window._allComments || window._allComments.length === 0)) {
+    window.refreshComments?.();
+  }
+}
+
+  function switchBulletinSection(section, btn) {
+  document.querySelectorAll('.bulletin-section-btn').forEach(b => {
+    b.style.background = '#fff'; b.style.color = '#6b7280'; b.style.borderColor = '#e0e0e0';
+  });
+  btn.style.background = '#1a3a1a'; btn.style.color = '#fff'; btn.style.borderColor = '#1a3a1a';
+
+  const subEl = document.getElementById('bulletin-subfilters');
+
+  if (section === 'posts') {
+    subEl.innerHTML = `
+      <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+        color:#9ca3af;letter-spacing:.06em;flex-shrink:0;align-self:center;">View</span>
+      <button class="bulletin-view-btn btn btn--filter is-active" onclick="switchBulletinView('official',this)">
+        <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
+      </button>
+      <button class="bulletin-view-btn btn btn--filter" onclick="switchBulletinView('community',this)">
+        <i data-lucide="users" style="width:11px;height:11px;"></i> Community
+      </button>
+      <button class="bulletin-view-btn btn btn--filter" onclick="switchBulletinView('pending',this)">
+        <i data-lucide="clock" style="width:11px;height:11px;"></i> Pending
+        <span id="pendingPostsBadge" style="display:none;background:#dc2626;color:#fff;
+          border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;"></span>
+      </button>`;
+    lucide.createIcons({ el: subEl });
+    switchBulletinView('official', subEl.querySelector('.bulletin-view-btn'));
+
+  } else if (section === 'reports') {
+    subEl.innerHTML = `
+      <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+        color:#9ca3af;letter-spacing:.06em;flex-shrink:0;align-self:center;">View</span>
+      <button class="bulletin-view-btn btn btn--filter is-active" onclick="switchBulletinView('reported',this)">
+        <i data-lucide="file-text" style="width:11px;height:11px;"></i> Posts
+        <span id="reportedPostsBadge" style="display:none;background:#dc2626;color:#fff;
+          border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;"></span>
+      </button>
+      <button class="bulletin-view-btn btn btn--filter" onclick="switchBulletinView('reported-comments',this)">
+        <i data-lucide="message-circle" style="width:11px;height:11px;"></i> Comments
+        <span id="reportedCommentsBadge" style="display:none;background:#dc2626;color:#fff;
+          border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;"></span>
+      </button>`;
+    lucide.createIcons({ el: subEl });
+    switchBulletinView('reported', subEl.querySelector('.bulletin-view-btn'));
+
+  } else if (section === 'comments') {
+    subEl.innerHTML = `
+      <button class="btn btn--filter" onclick="refreshComments()">
+        <i data-lucide="refresh-cw" style="width:11px;height:11px;"></i> Refresh
+      </button>`;
+    lucide.createIcons({ el: subEl });
+    switchBulletinView('comments', null);
+  }
+}
+
+</script>
+
+  <script type="module">
+  import { openImageViewer } from '../js/image-viewer.js';
+  window.openImageViewer = openImageViewer;
 </script>
 
   <script>lucide.createIcons();</script>
   <script type="module" src="js/admin.js"></script>
-  <script type="module" src="js/roles.js"></script>
+  <script type="module" src="js/roles-admin.js"></script>
   <script type="module" src="js/alerts-admin.js"></script>
   <script type="module" src="js/curfew-admin.js"></script>
+  <script type="module" src="js/bulletin-admin.js"></script>
+  <script type="module" src="js/community-posts-admin.js"></script>
+  <script type="module" src="js/reported-posts-admin.js"></script>
+  <script type="module" src="js/reported-comments-admin.js"></script>
+  <script type="module" src="js/comment-manager-admin.js"></script>
+  <script type="module" src="js/settings-admin.js"></script>
 </body>
 </html>

@@ -85,6 +85,11 @@ export function userIndexDoc(uid) {
   return doc(db, 'userIndex', uid);
 }
 
+// barangays/{barangayId}/meta/settings
+export function barangaySettingsDoc(barangay) {
+  return doc(db, 'barangays', barangayId(barangay), 'meta', 'settings');
+}
+
 // Sequential ID counter: barangays/{barangayId}/meta/counter
 // Document shape: { total: <number> }
 // Always increment via runTransaction — never write directly.

@@ -141,120 +141,36 @@
     <section class="tab-panel tab-panel--bulletin is-active" id="tab-bulletin" role="tabpanel">
       <div class="community-panel-inner">
 
-        <!-- Filter pills row -->
-        <div class="bulletin-filters">
+        <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.25rem;">
+
+        <!-- Category pills -->
+        <div class="bulletin-filters" id="bulletinCategoryFilters">
           <button class="btn btn--filter is-active">All</button>
+          <button class="btn btn--filter">General</button>
           <button class="btn btn--filter">Announcements</button>
           <button class="btn btn--filter">Health</button>
           <button class="btn btn--filter">Infrastructure</button>
           <button class="btn btn--filter">Safety</button>
           <button class="btn btn--filter">Events</button>
         </div>
+        <!-- Source toggle — visually separated row -->
+        <div style="display:flex;align-items:center;gap:.4rem;">
+          <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+            color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Source</span>
+          <div class="bulletin-source-toggle" style="display:flex;gap:.3rem;">
+            <button class="btn btn--filter bulletin-source-seg__btn is-active" data-source="all">All</button>
+            <button class="btn btn--filter bulletin-source-seg__btn" data-source="official">
+              <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
+            </button>
+            <button class="btn btn--filter bulletin-source-seg__btn" data-source="community">
+              <i data-lucide="users" style="width:11px;height:11px;"></i> Community
+            </button>
+          </div>
+        </div>
+      </div>
 
-        <!-- Post list -->
-        <div class="bulletin-list">
-
-          <!-- Post — Health (green accent) -->
-          <article class="post-row post-row--accented post-row--green">
-            <div class="post-row__tags">
-              <span class="tag tag--green">Health</span>
-              <span class="post-row__time">2 hours ago</span>
-            </div>
-            <h3 class="post-row__title">Free Medical Mission this Saturday at the Barangay Hall</h3>
-            <p class="post-row__excerpt">Free check-ups, dental services, and medicine distribution for all residents. Bring your barangay ID and cedula for faster processing.</p>
-            <div class="post-row__footer">
-              <!-- placeholder image -->
-              <img src="assets/images/avatars/health-center.jpg" alt="Brgy. Health Center" class="post-row__avatar" />
-              <span class="post-row__author">Brgy. Health Center</span>
-              <div class="reaction-bar" style="margin-left: auto;">
-                <button class="reaction-count reaction-count--like">
-                  <i data-lucide="heart"></i>
-                  <span>38</span>
-                </button>
-                <button class="reaction-count reaction-count--comment">
-                  <i data-lucide="message-circle"></i>
-                  <span>14</span>
-                </button>
-              </div>
-            </div>
-          </article>
-
-          <!-- Post — Infrastructure (orange accent) -->
-          <article class="post-row post-row--accented post-row--orange">
-            <div class="post-row__tags">
-              <span class="tag tag--amber">Infrastructure</span>
-              <span class="post-row__time">5 hours ago</span>
-            </div>
-            <h3 class="post-row__title">Road Repair Schedule — Rizal Street and Adjacent Areas</h3>
-            <p class="post-row__excerpt">Construction work begins Monday. Motorists are advised to use alternate routes. Expect road closures from 7AM to 5PM daily for two weeks.</p>
-            <div class="post-row__footer">
-              <!-- placeholder image -->
-              <img src="assets/images/avatars/dpwh.jpg" alt="DPWH Liaison" class="post-row__avatar" />
-              <span class="post-row__author">DPWH Liaison</span>
-              <div class="reaction-bar" style="margin-left: auto;">
-                <button class="reaction-count reaction-count--like">
-                  <i data-lucide="heart"></i>
-                  <span>21</span>
-                </button>
-                <button class="reaction-count reaction-count--comment">
-                  <i data-lucide="message-circle"></i>
-                  <span>9</span>
-                </button>
-              </div>
-            </div>
-          </article>
-
-          <!-- Post — Safety (red accent) -->
-          <article class="post-row post-row--accented post-row--red">
-            <div class="post-row__tags">
-              <span class="tag tag--red">Safety</span>
-              <span class="post-row__time">Yesterday</span>
-            </div>
-            <h3 class="post-row__title">Dengue Prevention Drive — Fogging Operations This Week</h3>
-            <p class="post-row__excerpt">Barangay health workers will conduct fogging operations from Tuesday to Thursday. Please clear stagnant water around your property.</p>
-            <div class="post-row__footer">
-              <!-- placeholder image -->
-              <img src="assets/images/avatars/health-officer.jpg" alt="Brgy. Health Officer" class="post-row__avatar" />
-              <span class="post-row__author">Brgy. Health Officer</span>
-              <div class="reaction-bar" style="margin-left: auto;">
-                <button class="reaction-count reaction-count--like">
-                  <i data-lucide="heart"></i>
-                  <span>54</span>
-                </button>
-                <button class="reaction-count reaction-count--comment">
-                  <i data-lucide="message-circle"></i>
-                  <span>22</span>
-                </button>
-              </div>
-            </div>
-          </article>
-
-          <!-- Post — Events (blue accent) -->
-          <article class="post-row post-row--accented post-row--blue">
-            <div class="post-row__tags">
-              <span class="tag tag--blue">Events</span>
-              <span class="post-row__time">2 days ago</span>
-            </div>
-            <h3 class="post-row__title">Barangay Fiesta 2025 — Save the Date!</h3>
-            <p class="post-row__excerpt">Mark your calendars for our annual Barangay Fiesta on June 28–30. Enjoy live performances, sports fests, and a grand parade.</p>
-            <div class="post-row__footer">
-              <!-- placeholder image -->
-              <img src="assets/images/avatars/cultural.jpg" alt="Brgy. Cultural Committee" class="post-row__avatar" />
-              <span class="post-row__author">Brgy. Cultural Committee</span>
-              <div class="reaction-bar" style="margin-left: auto;">
-                <button class="reaction-count reaction-count--like">
-                  <i data-lucide="heart"></i>
-                  <span>102</span>
-                </button>
-                <button class="reaction-count reaction-count--comment">
-                  <i data-lucide="message-circle"></i>
-                  <span>41</span>
-                </button>
-              </div>
-            </div>
-          </article>
-
-        </div><!-- /bulletin-list -->
+        <!-- Post list — rendered dynamically by bulletin.js -->
+        <div class="bulletin-list" id="bulletinList"></div>
 
       </div><!-- /community-panel-inner -->
 
@@ -831,6 +747,27 @@
         </button>
       </div>
 
+      <div id="newPostApprovalWarning"
+          style="display:none;align-items:center;gap:.5rem;background:#fef9c3;
+            border:1px solid #fde68a;border-radius:8px;padding:.6rem .85rem;
+            font-size:.78rem;color:#854d0e;margin-bottom:.5rem;">
+          <i data-lucide="clock" style="width:14px;height:14px;flex-shrink:0;"></i>
+          Your post will be reviewed by an admin before it appears on the bulletin.
+        </div>
+
+        <div id="newPostAdminNotice"
+        style="display:none;align-items:center;gap:.5rem;background:#eff6ff;
+          border:1px solid #bfdbfe;border-radius:8px;padding:.6rem .85rem;
+          font-size:.78rem;color:#1e40af;margin-bottom:.5rem;">
+        <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
+        You're posting as <strong>staff</strong>. For official announcements, use the <a href="../pages/admin-community.html" style="color:#1e40af;font-weight:700;text-decoration:underline;">Admin Panel</a> instead.
+      </div>
+
+      <div id="newPostGuidelineText"
+          style="display:none;font-size:.75rem;color:#6b7280;padding:.5rem .75rem;
+            background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:.5rem;">
+        </div>
+
       <div class="modal__body">
 
         <p class="modal-section-label">Report Type</p>
@@ -991,43 +928,93 @@
           <h2 class="modal__header-title">New Post</h2>
           <p class="modal__header-sub">Share an update with your barangay</p>
         </div>
-        <button class="btn btn--close btn--sm modal__close" aria-label="Close" onclick="closeModal('newPostModal')">
+        <button class="btn btn--close btn--sm modal__close" aria-label="Close" onclick="closeModal('newPostModal');resetNewPostModal();">
           <i data-lucide="x"></i>
         </button>
       </div>
 
       <div class="modal__body">
+
+        <div id="newPostApprovalWarning"
+          style="display:none;align-items:center;gap:.5rem;background:#fef9c3;
+            border:1px solid #fde68a;border-radius:8px;padding:.6rem .85rem;
+            font-size:.78rem;color:#854d0e;margin-bottom:.5rem;">
+          <i data-lucide="clock" style="width:14px;height:14px;flex-shrink:0;"></i>
+          Your post will be reviewed by an admin before it appears on the bulletin.
+        </div>
+        <div id="newPostAdminNotice"
+          style="display:none;align-items:center;gap:.5rem;background:#eff6ff;
+            border:1px solid #bfdbfe;border-radius:8px;padding:.6rem .85rem;
+            font-size:.78rem;color:#1e40af;margin-bottom:.5rem;">
+          <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
+          You're posting as <strong>staff</strong>.
+        </div>
+        <div id="newPostGuidelineText"
+          style="display:none;font-size:.75rem;color:#6b7280;padding:.5rem .75rem;
+            background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:.5rem;">
+        </div>
+
         <div class="form-group">
-          <label class="form-label">Category</label>
-          <select class="form-select">
-            <option>Announcements</option>
-            <option>Health</option>
-            <option>Infrastructure</option>
-            <option>Safety</option>
-            <option>Events</option>
-          </select>
+          <label class="form-label">
+            Category <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional)</span>
+          </label>
+          <select class="form-select" id="newPostCategory">
+          <option value="general">General</option>
+          <option value="announcements" class="admin-only-option" style="display:none;">Announcement</option>
+          <option value="health">Health</option>
+          <option value="infrastructure">Infrastructure</option>
+          <option value="safety">Safety</option>
+          <option value="events">Events</option>
+        </select>
         </div>
         <div class="form-group">
           <label class="form-label">Title</label>
-          <input type="text" class="form-input" placeholder="Post title..." />
+          <input type="text" id="newPostTitle" class="form-input" placeholder="Post title..." />
+          <div class="form-group">
+          <label class="form-label">
+            What's on your mind?
+            <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional)</span>
+          </label>
+          <div id="postWarningBanner" style="display:none;background:#fef9c3;border:1px solid #fde68a;
+            border-radius:8px;padding:.55rem .75rem;font-size:.78rem;color:#92400e;margin-bottom:.5rem;"></div>
+          <textarea id="newPostBody" class="form-input" rows="4"
+            placeholder="Share something with your barangay…"
+            maxlength="500"
+            oninput="document.getElementById('newPostCharCount').textContent = this.value.length + ' / 500'"></textarea>
+          <span class="char-count" id="newPostCharCount">0 / 500</span>
+        </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Content</label>
-          <textarea class="form-input" rows="4" placeholder="What's happening in the barangay?"></textarea>
-          <span class="char-count">0 / 500</span>
+          <label class="form-label">
+            Photos <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional · up to 4)</span>
+          </label>
+          <label for="newPostImages"
+            style="display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;
+              border:1.5px dashed #d1d5db;border-radius:8px;cursor:pointer;
+              font-size:.82rem;color:#6b7280;background:#fafafa;transition:all .2s;"
+            onmouseover="this.style.borderColor='#1a3a1a';this.style.color='#1a3a1a'"
+            onmouseout="this.style.borderColor='#d1d5db';this.style.color='#6b7280'">
+            <i data-lucide="image" style="width:15px;height:15px;flex-shrink:0;"></i>
+            <span id="newPostImageLabel">Tap to add photos (up to 4)</span>
+          </label>
+          <input type="file" id="newPostImages"
+            accept="image/jpeg,image/png,image/webp" multiple
+            style="display:none;"
+            onchange="previewNewPostImages(this)" />
+          <div id="newPostImagePreviews"
+            style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;"></div>
         </div>
       </div>
 
       <div class="modal__footer">
-        <button class="btn btn--outline" onclick="closeModal('newPostModal')">Cancel</button>
-        <button class="btn btn--green btn--full">
+        <button class="btn btn--outline" onclick="closeModal('newPostModal');resetNewPostModal();">Cancel</button>
+        <button id="newPostSubmitBtn" class="btn btn--green btn--full" onclick="handleNewPostSubmit()">
           <i data-lucide="send"></i> Publish Post
         </button>
       </div>
 
     </div>
   </div><!-- /newPostModal -->
-
 
   <!-- ═══════════════════════════════════════════════════════════════
        FOOTER
@@ -1052,6 +1039,49 @@
     </div>
   </footer>
 
+  <div class="modal-overlay" id="reportPostModal" onclick="closeOnBackdrop(event)">
+  <div class="modal">
+    <div class="modal__header modal__header--red">
+      <div class="modal__header-icon"><i data-lucide="flag"></i></div>
+      <div class="modal__header-content">
+        <p class="modal__header-label">Community Safety</p>
+        <h2 class="modal__header-title">Report Post</h2>
+        <p class="modal__header-sub">Help us keep the community safe</p>
+      </div>
+      <button class="btn btn--close btn--sm modal__close" onclick="closeModal('reportPostModal')">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal__body">
+      <div class="form-group">
+        <label class="form-label">Reason</label>
+        <select class="form-select" id="reportCategory">
+          <option value="spam">Spam or misleading</option>
+          <option value="hate">Hate speech or discrimination</option>
+          <option value="harassment">Harassment or bullying</option>
+          <option value="violence">Violence or threats</option>
+          <option value="misinformation">False information</option>
+          <option value="inappropriate">Inappropriate content</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Additional details
+          <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional)</span>
+        </label>
+        <textarea id="reportDescription" class="form-input" rows="3"
+          placeholder="Describe the issue..." maxlength="300"></textarea>
+      </div>
+    </div>
+    <div class="modal__footer">
+      <button class="btn btn--outline" onclick="closeModal('reportPostModal')">Cancel</button>
+      <button class="btn btn--red btn--full" onclick="submitReport()">
+        <i data-lucide="flag"></i> Submit Report
+      </button>
+    </div>
+  </div>
+</div>
+
 
   <!-- ═══════════════════════════════════════════════════════════════
        SCRIPTS
@@ -1066,6 +1096,9 @@
   <script>
     // 1. Render Lucide icons
     lucide.createIcons();
+    const _ts = document.createElement('style');
+    _ts.textContent = `@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`;
+    document.head.appendChild(_ts);
 
     
    // 2. Tab switching
@@ -1099,7 +1132,9 @@
     }
 
     // 5. Generic filter pill toggle
-    document.querySelectorAll('.bulletin-filters, .pets-filters, .gallery-filters').forEach(group => {
+    // Bulletin filters are wired inside bulletin.js → initBulletin().
+    // Pets and gallery filters still use the class-toggle approach here.
+    document.querySelectorAll('.pets-filters, .gallery-filters').forEach(group => {
       group.querySelectorAll('.btn--filter').forEach(btn => {
         btn.addEventListener('click', () => {
           group.querySelectorAll('.btn--filter').forEach(b => b.classList.remove('is-active'));
@@ -1127,6 +1162,170 @@
       document.getElementById('bullyingIdentityFields').style.display = isAnon ? 'none' : 'flex';
     }
   </script>
+
+<script type="module">
+  import { initBulletin } from '../js/bulletin.js';
+  import { submitCommunityPost } from '../js/community-posts.js';
+  let _selectedFiles = [];
+
+  document.addEventListener('DOMContentLoaded', initBulletin);
+
+  function showPostToast(msg, type = 'success') {
+    let container = document.getElementById('residentToastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'residentToastContainer';
+      container.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;
+        display:flex;flex-direction:column;gap:.5rem;z-index:2000;`;
+      document.body.appendChild(container);
+    }
+    const t = document.createElement('div');
+    t.style.cssText = `display:flex;align-items:center;gap:.6rem;
+      background:${type === 'error' ? '#9b1c1c' : '#1a3a1a'};color:#fff;
+      padding:.75rem 1.1rem;border-radius:10px;font-size:.875rem;font-weight:500;
+      box-shadow:0 4px 16px rgba(0,0,0,.2);animation:toastIn .25s ease both;`;
+    t.textContent = msg;
+    container.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
+
+  window.previewNewPostImages = function(input) {
+    if (input.files?.length) {
+      Array.from(input.files).forEach(newFile => {
+        const exists = _selectedFiles.some(f => f.name === newFile.name && f.size === newFile.size);
+        if (!exists) _selectedFiles.push(newFile);
+      });
+    }
+    if (_selectedFiles.length > 4) _selectedFiles = _selectedFiles.slice(0, 4);
+
+    const container = document.getElementById('newPostImagePreviews');
+    const label     = document.getElementById('newPostImageLabel');
+    container.innerHTML = '';
+
+    if (!_selectedFiles.length) {
+      if (label) label.textContent = 'Tap to add photos (up to 4)';
+      return;
+    }
+    if (label) label.textContent = `${_selectedFiles.length} photo${_selectedFiles.length > 1 ? 's' : ''} selected`;
+
+    _selectedFiles.forEach((file, idx) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative;width:80px;height:60px;flex-shrink:0;';
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.cssText = 'width:80px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;display:block;';
+        const removeBtn = document.createElement('button');
+        removeBtn.innerHTML = '×';
+        removeBtn.style.cssText = `position:absolute;top:-5px;right:-5px;width:18px;height:18px;
+          border-radius:50%;background:#dc2626;color:#fff;border:none;cursor:pointer;
+          font-size:.75rem;line-height:1;display:flex;align-items:center;justify-content:center;`;
+        removeBtn.onclick = function() {
+          _selectedFiles.splice(idx, 1);
+          previewNewPostImages({ files: null });
+        };
+        wrap.appendChild(img);
+        wrap.appendChild(removeBtn);
+        container.appendChild(wrap);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  
+    window.resetNewPostModal = function() {
+    _selectedFiles = [];
+    const submitBtn = document.getElementById('newPostSubmitBtn');
+    if (submitBtn) { delete submitBtn.dataset.editId; submitBtn.textContent = 'Publish Post'; }
+    
+    document.getElementById('newPostTitle').value   = '';
+    document.getElementById('newPostBody').value    = '';
+    document.getElementById('newPostCategory').value = 'general';
+    document.getElementById('newPostCharCount').textContent = '0 / 500';
+    const imgInput = document.getElementById('newPostImages');
+    if (imgInput) {
+      imgInput.value = '';
+      const imgSection = imgInput.closest('.form-group');
+      if (imgSection) imgSection.style.display = '';
+
+      const prevContainer = document.getElementById('newPostImagePreviews');
+      if (prevContainer) prevContainer.innerHTML = '';
+      const imgLabel = document.getElementById('newPostImageLabel');
+      if (imgLabel) imgLabel.textContent = 'Tap to add photos (up to 4)';
+    }
+  };
+
+  import { requiresApproval } from '../js/community-posts.js';
+
+  // Show approval warning in modal when it opens
+  const _origOpenModal = window.openModal;
+  window.openModal = async function(id) {
+    _origOpenModal?.(id);
+    if (id !== 'newPostModal') return;
+    const { getModerationSettings } = await import('../js/community-posts.js');
+    const settings = await getModerationSettings();
+    const warningEl = document.getElementById('newPostApprovalWarning');
+    const guidelineEl = document.getElementById('newPostGuidelineText');
+    if (warningEl) warningEl.style.display = (settings.requirePostApproval) ? 'flex' : 'none';
+    const adminNoticeEl = document.getElementById('newPostAdminNotice');
+    if (adminNoticeEl) adminNoticeEl.style.display = (_currentUserRole === 'admin' || _currentUserRole === 'officer') ? 'flex' : 'none';
+    if (guidelineEl) {
+      guidelineEl.textContent = settings.postWarningText || '';
+      guidelineEl.style.display = settings.postWarningText ? 'block' : 'none';
+    }
+  };
+
+  window.handleNewPostSubmit = async function () {
+    const btn      = document.getElementById('newPostSubmitBtn');
+    const category = document.getElementById('newPostCategory')?.value || 'general';
+    const title    = document.getElementById('newPostTitle')?.value.trim();
+    const body     = document.getElementById('newPostBody')?.value.trim() || '';
+    if (!title) { showPostToast('Please enter a title.'); return; }
+    btn.disabled = true; btn.textContent = 'Publishing…';
+    try {
+      const imageFiles = (_selectedFiles ?? []).slice(0, 4);
+      const editId = document.getElementById('newPostSubmitBtn').dataset.editId;
+      let needsApproval = false;
+
+      if (editId) {
+        const { doc: _d, updateDoc, serverTimestamp: _ts } =
+          await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+        const { db } = await import('../js/firebase-config.js');
+        const { getModerationSettings } = await import('../js/community-posts.js');
+        const settings = await getModerationSettings();
+        const combined = `${title} ${body}`.toLowerCase();
+        const hitWord  = (settings.blockedWords ?? []).find(w => w && combined.includes(w));
+        const hasLink  = (settings.blockedLinksEnabled ?? true) && /https?:\/\/|www\./i.test(combined);
+        needsApproval  = !!hitWord || hasLink;
+        const bid = window._communityBid;
+        if (!bid) { showPostToast('Not ready. Please try again.', 'error'); return; }
+        await updateDoc(_d(db, 'barangays', bid, 'communityPosts', editId), {
+          title, body, category,
+          status:    needsApproval ? 'pending' : 'published',
+          isEdited:  true,
+          updatedAt: _ts(),
+        });
+      } else {
+        needsApproval = await submitCommunityPost({ title, body, category, imageFiles });
+      }
+
+      const wasEdit = !!document.getElementById('newPostSubmitBtn').dataset.editId;
+      closeModal('newPostModal');
+      resetNewPostModal();
+      showPostToast(needsApproval
+        ? 'Your post was submitted and is awaiting approval.'
+        : (wasEdit ? 'Post updated!' : 'Your post is now live on the bulletin!'));
+    } catch (err) {
+      showPostToast(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      if (!document.getElementById('newPostSubmitBtn')?.dataset.editId) {
+        btn.textContent = 'Publish Post';
+      }
+    }
+  };
+</script>
 
 </body>
 </html>

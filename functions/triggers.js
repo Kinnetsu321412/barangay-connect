@@ -6,6 +6,7 @@
 const {
   onDocumentUpdated,
   onDocumentDeleted,
+  onDocumentCreated,
 } = require("firebase-functions/v2/firestore");
 
 const { onSchedule } = require("firebase-functions/v2/scheduler"); // ← ADD
@@ -222,3 +223,84 @@ exports.pollPagasaAlerts = onSchedule("every 30 minutes", async () => {
 
   console.log("[pagasa] Poll complete.");
 });
+
+// =====================================================
+// 4. NOTIFY POST AUTHOR ON NEW LIKE
+//    Fires when a like doc is created under an announcement
+//    barangays/{barangayId}/announcements/{postId}/likes/{likerId}
+// =====================================================
+exports.notifyOnLike = onDocumentCreated(
+  "barangays/{barangayId}/announcements/{postId}/likes/{likerId}",
+  async (event) => {
+    const { barangayId, postId, likerId } = event.params;
+    const db = getFirestore();
+
+    // Don't notify if someone likes their own post
+    const postSnap = await db
+      .collection(`barangays/${barangayId}/announcements`)
+      .doc(postId).get();
+    if (!postSnap.exists) return null;
+
+    const post = postSnap.data();
+    const authorId = post.authorId;
+    if (!authorId || authorId === likerId) return null;
+
+    // Get liker's name
+    const likerSnap = await db
+      .collection(`barangays/${barangayId}/users`)
+      .doc(likerId).get();
+    const likerName = likerSnap.exists
+      ? (likerSnap.data().fullName ?? 'Someone')
+      : 'Someone';
+
+    await db
+      .collection(`barangays/${barangayId}/users/${authorId}/notifications`)
+      .add({
+        type:      'like',
+        postId,
+        postTitle: post.title ?? '',
+        actorName: likerName,
+        read:      false,
+        createdAt: new Date(),
+      });
+
+    return null;
+  }
+);
+
+
+// =====================================================
+// 5. NOTIFY POST AUTHOR ON NEW COMMENT
+//    Fires when a comment doc is created
+//    barangays/{barangayId}/announcements/{postId}/comments/{commentId}
+// =====================================================
+exports.notifyOnComment = onDocumentCreated(
+  "barangays/{barangayId}/announcements/{postId}/comments/{commentId}",
+  async (event) => {
+    const { barangayId, postId } = event.params;
+    const db = getFirestore();
+    const comment = event.data.data();
+
+    const postSnap = await db
+      .collection(`barangays/${barangayId}/announcements`)
+      .doc(postId).get();
+    if (!postSnap.exists) return null;
+
+    const post = postSnap.data();
+    const authorId = post.authorId;
+    if (!authorId || authorId === comment.authorId) return null;
+
+    await db
+      .collection(`barangays/${barangayId}/users/${authorId}/notifications`)
+      .add({
+        type:      'comment',
+        postId,
+        postTitle: post.title ?? '',
+        actorName: comment.authorName ?? 'Someone',
+        read:      false,
+        createdAt: new Date(),
+      });
+
+    return null;
+  }
+);

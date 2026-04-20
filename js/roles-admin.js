@@ -1,4 +1,4 @@
-// js/roles.js
+// js/roles-admin.js
 // =====================================================
 // Users & Roles tab — scoped to admin's barangay.
 // Firestore path: barangays/{barangayId}/users/{uid}
@@ -24,7 +24,6 @@ let currentSearch     = '';
 let adminBarangay     = '';
 let adminUid          = '';
 let currentHousehold = '';
-
 let pendingChange     = null;
 
 
@@ -92,6 +91,7 @@ function loadUsers() {
         createdAt:  d.createdAt,
         lastSeen:   d.lastSeen  ?? null,
         superAdmin: d.superAdmin === true,
+        postLimitOverride: typeof d.postLimitOverride === 'number' ? d.postLimitOverride : null,
       });
     });
     renderUsers();
@@ -141,6 +141,9 @@ function renderUsers() {
   }
 
   table.innerHTML = list.map(u => buildUserRow(u)).join('');
+  list.filter(u => u.role === 'resident').forEach(u => {
+    loadTodayPostCount(u.uid, adminBarangay);
+  });
   buildHouseholdBar();
   lucide.createIcons({ el: table });
   initTooltips();   // attach JS tooltips after each render
@@ -171,18 +174,15 @@ function buildUserRow(user) {
     : '';
 
   const makeBtn = (role, icon) => {
-    const isCurrent = user.role === role;
+    const isCurrent  = user.role === role;
     const currentClass = isCurrent ? `current-role current-role--${role}` : '';
     const colorClass   = `role-action-btn--${role}`;
-
     let tooltip;
     let disabled = '';
-
-    if (isSuperAdmin)      { disabled = 'disabled'; tooltip = 'Protected — cannot be modified'; }
-    else if (isMe)         { disabled = 'disabled'; tooltip = "This is you — you can't change your own role"; }
-    else if (isCurrent)    { disabled = 'disabled'; tooltip = `Already ${roleDisplayName(role)}`; }
-    else                   { tooltip = `Set as ${roleDisplayName(role)}`; }
-
+    if (isSuperAdmin)   { disabled = 'disabled'; tooltip = 'Protected — cannot be modified'; }
+    else if (isMe)      { disabled = 'disabled'; tooltip = "This is you — you can't change your own role"; }
+    else if (isCurrent) { disabled = 'disabled'; tooltip = `Already ${roleDisplayName(role)}`; }
+    else                { tooltip = `Set as ${roleDisplayName(role)}`; }
     return `<button
       class="role-action-btn ${colorClass} ${currentClass}"
       data-tooltip="${tooltip}"
@@ -191,10 +191,9 @@ function buildUserRow(user) {
     ><i data-lucide="${icon}"></i></button>`;
   };
 
-    return `
+  return `
     <div class="user-row" id="row-${user.uid}" ${isMe ? 'style="background:#f8fdf9"' : ''}>
 
-      <!-- COL 1: Avatar + Name + Since + Resident ID -->
       <div class="user-info">
         <div class="user-avatar user-avatar--${user.role}">${initials}</div>
         <div style="min-width:0;">
@@ -207,33 +206,65 @@ function buildUserRow(user) {
         </div>
       </div>
 
-      <!-- COL 2: Email + Phone (separate column, truncates cleanly) -->
       <div style="min-width:0;display:flex;flex-direction:column;gap:3px;overflow:hidden;">
         <span style="font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">${escapeHtml(user.email)}</span>
         <span style="font-size:0.78rem;color:#999;">${escapeHtml(user.phone || '—')}</span>
-        <span style="font-size:0.75rem;color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-          ${escapeHtml(user.streetAddress || '—')}
-        </span>
+        <span style="font-size:0.75rem;color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(user.streetAddress || '—')}</span>
       </div>
 
-      <!-- COL 3: Role badge -->
       <div class="role-badge ${roleBadgeClass}">
         <i data-lucide="${roleIconName(user.role)}"></i>
         ${roleDisplayName(user.role)}
       </div>
 
-      <!-- COL 4: Status -->
       <div class="status-dot ${statusClass}">${statusLabel}</div>
 
-      <!-- COL 5: Role action buttons -->
       <div class="role-actions">
         ${makeBtn('resident', 'user')}
         ${makeBtn('officer',  'shield')}
         ${makeBtn('admin',    'settings')}
       </div>
 
-    </div>
-  `;
+      <div style="grid-column:1/-1;padding:.5rem 1.25rem .75rem;border-top:1px solid #f3f4f6;">
+        ${user.role === 'resident' ? `
+          <details>
+            <summary style="cursor:pointer;font-size:.75rem;color:#9ca3af;font-weight:600;
+              list-style:none;display:inline-flex;align-items:center;gap:.4rem;
+              user-select:none;-webkit-user-select:none;">
+              <i data-lucide="sliders-horizontal" style="width:12px;height:12px;"></i>
+              Post limit &nbsp;·&nbsp;
+              <span style="color:#374151;font-weight:700;">${
+                user.postLimitOverride === -1 ? 'Unlimited'
+                : user.postLimitOverride != null ? `${user.postLimitOverride}/day`
+                : '3/day (default)'
+              }</span>
+              &nbsp;·&nbsp;
+              <span id="plimit-today-${user.uid}" style="color:#6b7280;font-weight:500;">checking…</span>
+            </summary>
+            <div style="display:flex;align-items:center;gap:.6rem;margin-top:.6rem;flex-wrap:wrap;
+              padding:.6rem .75rem;background:#f9fafb;border-radius:8px;border:1px solid #f0f0f0;">
+              <label style="font-size:.75rem;color:#6b7280;font-weight:500;">Daily limit:</label>
+              <input type="number" min="-1" max="99"
+                id="plimit-${user.uid}"
+                value="${user.postLimitOverride ?? 3}"
+                style="width:60px;padding:4px 8px;border:1.5px solid #e0e0e0;border-radius:7px;
+                  font-size:.82rem;text-align:center;outline:none;font-weight:600;" />
+              <span style="font-size:.72rem;color:#aaa;">(-1 = unlimited)</span>
+              <button onclick="savePostLimit('${user.uid}')"
+                style="padding:4px 12px;border-radius:7px;background:#1a3a1a;color:#fff;
+                  border:none;font-size:.75rem;font-weight:600;cursor:pointer;
+                  transition:background .15s;"
+                onmouseover="this.style.background='#14291a'"
+                onmouseout="this.style.background='#1a3a1a'">
+                Save
+              </button>
+              <span id="plimit-status-${user.uid}" style="font-size:.72rem;color:#22c55e;font-weight:600;"></span>
+            </div>
+          </details>`
+        : `<span style="font-size:.72rem;color:#aaa;">Unlimited posts (${user.role})</span>`}
+      </div>
+
+    </div>`;
 }
 
 // =====================================================
@@ -477,6 +508,30 @@ function buildHouseholdBar() {
   lucide.createIcons({ el: bar });
 }
 
+window.savePostLimit = async function(uid, _unused) {
+  const input = document.getElementById(`plimit-${uid}`);
+  if (!input) return;
+  const val = parseInt(input.value, 10);
+  if (isNaN(val) || val < -1 || val > 99) {
+    input.style.borderColor = '#dc2626';
+    setTimeout(() => input.style.borderColor = '#e0e0e0', 1500);
+    return;
+  }
+  try {
+    const { updateDoc: _up, doc: _d } =
+      await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await _up(_d(db, 'barangays', adminBarangay, 'users', uid), {
+      postLimitOverride: val,
+    });
+    input.style.borderColor = '#22c55e';
+    const statusEl = document.getElementById(`plimit-status-${uid}`);
+    if (statusEl) { statusEl.textContent = 'Saved ✓'; setTimeout(() => statusEl.textContent = '', 2000); }
+    setTimeout(() => input.style.borderColor = '#e0e0e0', 1500);
+  } catch (err) {
+    console.error('[roles] post limit save:', err);
+  }
+};
+
 // =====================================================
 // HELPERS
 // =====================================================
@@ -494,4 +549,42 @@ function escapeHtml(str) {
 }
 function escapeAttr(str) {
   return String(str).replace(/'/g,"\\'");
+}
+
+async function loadTodayPostCount(uid, barangay) {
+  const label = document.getElementById(`plimit-today-${uid}`);
+  if (!label) return;
+  try {
+    const { collection: _col, query: _q, where: _w, getDocs, limit: _lim } =
+      await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const today = new Date().toISOString().slice(0, 10);
+    const start = new Date(today + 'T00:00:00');
+    const end   = new Date(today + 'T23:59:59');
+    const snap  = await getDocs(_q(
+      _col(db, 'barangays', barangay, 'communityPosts'),
+      _w('authorId', '==', uid),
+      _lim(20)
+    ));
+    const count = snap.docs.filter(d => {
+      const t = d.data().createdAt?.toDate?.() ?? new Date(0);
+      return t >= start && t <= end;
+    }).length;
+    const user = allUsers.find(u => u.uid === uid);
+    let defaultLim = 3;
+    try {
+      const { getDoc: _gd2, doc: _d2 } =
+        await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const sSnap = await _gd2(_d2(db, 'barangays', barangay, 'meta', 'settings'));
+      if (sSnap.exists()) defaultLim = sSnap.data().defaultPostLimit ?? 3;
+    } catch { /* use 3 */ }
+    const lim = user?.postLimitOverride === -1 ? Infinity
+      : user?.postLimitOverride != null ? user.postLimitOverride : defaultLim;
+    const remaining = lim === Infinity ? '∞' : Math.max(0, lim - count);
+    label.textContent = remaining === 0
+  ? 'No posts remaining today'
+  : `${remaining} post${remaining === 1 ? '' : 's'} left today`;
+label.style.color  = remaining === 0 ? '#dc2626' : remaining === 1 ? '#f59e0b' : '#6b7280';
+  } catch {
+    label.textContent = '';
+  }
 }
