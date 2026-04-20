@@ -160,10 +160,10 @@
         <li><a href="services.html"  class="navbar__link">Services</a></li>
         <li><a href="profile.html"   class="navbar__link is-active">My Barangay</a></li>
         <li class="navbar__item--officer">
-          <a href="dashboard.html" class="navbar__link navbar__link--officer">Officer Panel</a>
+          <a  class="navbar__link navbar__link--officer">Officer Panel</a>
         </li>
         <li class="navbar__item--admin">
-          <a href="admin.html" class="navbar__link navbar__link--admin">Admin Panel</a>
+          <a href="../admin.html" class="navbar__link navbar__link--admin">Admin Panel</a>
         </li>
       </ul>
 
@@ -663,7 +663,8 @@
     // FILE:// DEMO FALLBACK
     // ══════════════════════════════════════════════════════════════
     (function () {
-      if (window.location.protocol !== 'file:') return;
+      const isGuest = localStorage.getItem('guestMode') === 'true';
+      if (window.location.protocol !== 'file:' && !isGuest) return;
 
       var DEMO = {
         uid:              'demo-uid-000001',

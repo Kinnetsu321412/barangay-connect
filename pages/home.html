@@ -48,7 +48,7 @@
                   JS can toggle this off when the user scrolls down.
         Full class reference is in main.css at the top comment block.
         ══════════════════════════════════════════════════════════════════ -->
-    <nav class="navbar navbar--transparent">
+    <nav class="navbar navbar--transparent" id="mainNavbar">
       <div class="navbar__inner">
 
         <!-- Logo -->
@@ -77,21 +77,21 @@
               .navbar__role--resident (green outline)
               .navbar__role--officer  (orange outline)
               .navbar__role--admin    (red outline)   -->
-          <span class="navbar__role navbar__role--resident">Resident</span>
+          <span class="navbar__role navbar__role--resident" id="navRole">Resident</span>
 
           <!-- Bell icon — remove .navbar__bell-dot when there are no notifications -->
-          <button class="navbar__bell" aria-label="Notifications">
+          <button class="navbar__bell" aria-label="Notifications" id="bellBtn">
             <i data-lucide="bell"></i>
             <span class="navbar__bell-dot"></span>
           </button>
 
           <!-- Avatar — replace the icon with an <img> when user has a photo -->
-          <button class="navbar__avatar" aria-label="My profile">
+          <button class="navbar__avatar" aria-label="Open profile" id="avatarBtn">
             <i data-lucide="user"></i>
           </button>
 
           <!-- Mobile hamburger (auto-shows on small screens via CSS) -->
-          <button class="navbar__hamburger" aria-label="Open menu">
+          <button class="navbar__hamburger" aria-label="Open menu" id="hamburgerBtn">
             <i data-lucide="menu"></i>
           </button>
 
@@ -99,7 +99,7 @@
       </div>
 
       <!-- Mobile drawer (toggled open by JS adding .is-open) -->
-      <div class="navbar__mobile-drawer">
+      <div class="navbar__mobile-drawer" id="mobileDrawer">
         <a href="home.html"        class="navbar__link is-active">Home</a>
         <a href="community.html"   class="navbar__link">Community</a>
         <a href="services.html"    class="navbar__link">Services</a>
@@ -574,7 +574,7 @@
       CTA button — orange solid, with arrow icon
       CLASS: .btn .btn--orange from buttons.css
     -->
-    <a href="my-barangay.html" class="btn btn--orange">
+    <a href="profile.html" class="btn btn--orange">
       Open My Barangay <i data-lucide="arrow-right"></i>
     </a>
 

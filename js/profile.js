@@ -90,17 +90,17 @@ if (IS_LOCAL) {
     resolved = true;
 
     if (!firebaseUser) {
-      window.location.href = 'index.html';
+      window.location.href = '../index.html';
       return;
     }
 
     try {
       const indexSnap = await getDoc(userIndexDoc(firebaseUser.uid));
-      if (!indexSnap.exists()) { await signOut(auth); window.location.href = 'index.html'; return; }
+      if (!indexSnap.exists()) { await signOut(auth); window.location.href = '../index.html'; return; }
 
       const { barangay, status, role } = indexSnap.data();
 
-      if (status !== 'active') { await signOut(auth); window.location.href = 'index.html'; return; }
+      if (status !== 'active') { await signOut(auth); window.location.href = '../index.html'; return; }
 
       const userSnap = await getDoc(userDoc(barangay, firebaseUser.uid));
       const userData = {
@@ -183,7 +183,7 @@ function initPage(userData, isDemo) {
       if (!IS_LOCAL) {
         try { await signOut(auth); } catch (_) {}
       }
-      window.location.href = 'index.html';
+      window.location.href = '../index.html';
     });
   }
 

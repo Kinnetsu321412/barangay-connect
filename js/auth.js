@@ -182,8 +182,8 @@ if (loginForm) {
 function redirectByRole(role) {
   switch (role) {
     case 'admin':   window.location.href = 'admin.html';     break;
-    case 'officer': window.location.href = 'dashboard.html'; break;
-    default:        window.location.href = 'dashboard.html'; break;
+    case 'officer': window.location.href = 'pages/home.html'; break;
+    default:        window.location.href = 'pages/home.html'; break;
   }
 }
 

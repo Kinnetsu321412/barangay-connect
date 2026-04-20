@@ -32,7 +32,7 @@
   <!-- ═══════════════════════════════════════════════════════════════
        NAVBAR
   ══════════════════════════════════════════════════════════════════ -->
-  <nav class="navbar navbar--transparent">
+  <nav class="navbar navbar--transparent" id="mainNavbar">
     <div class="navbar__inner">
 
       <!-- Logo -->
@@ -47,19 +47,23 @@
         <li><a href="community.html" class="navbar__link is-active">Community</a></li>
         <li><a href="services.html"  class="navbar__link">Services</a></li>
         <li><a href="profile.html"   class="navbar__link">My Barangay</a></li>
+        <li class="navbar__item--officer"><a class="navbar__link navbar__link--officer">Officer Panel</a></li>
+        <li class="navbar__item--admin">
+          <a href="../admin.html" class="navbar__link navbar__link--admin">Admin Panel</a>
+        </li>
       </ul>
 
       <!-- Actions -->
       <div class="navbar__actions">
-        <span class="navbar__role navbar__role--resident">Resident</span>
-        <button class="navbar__bell" aria-label="Notifications">
+        <span class="navbar__role navbar__role--resident" id="navRole">Resident</span>
+        <button class="navbar__bell" aria-label="Notifications" id="bellBtn">
           <i data-lucide="bell"></i>
           <span class="navbar__bell-dot"></span>
         </button>
-        <button class="navbar__avatar" aria-label="My profile">
+        <button class="navbar__avatar" aria-label="Open profile" id="avatarBtn">
           <i data-lucide="user"></i>
         </button>
-        <button class="navbar__hamburger" aria-label="Open menu">
+        <button class="navbar__hamburger" aria-label="Open menu" id="hamburgerBtn">
           <i data-lucide="menu"></i>
         </button>
       </div>
@@ -67,7 +71,7 @@
     </div><!-- /navbar__inner -->
 
     <!-- Mobile drawer -->
-    <div class="navbar__mobile-drawer">
+    <div class="navbar__mobile-drawer" id="mobileDrawer">
       <a href="home.html"      class="navbar__link">Home</a>
       <a href="community.html" class="navbar__link is-active">Community</a>
       <a href="services.html"  class="navbar__link">Services</a>

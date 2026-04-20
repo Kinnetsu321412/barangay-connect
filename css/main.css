@@ -578,8 +578,8 @@ input, textarea, select {
 
        <!-- Right: Role badge + Bell + Avatar -->
        <div class="navbar__actions">
-         <span class="navbar__role navbar__role--resident">Resident</span>
-         <button class="navbar__bell" aria-label="Notifications">
+         <span class="navbar__role navbar__role--resident" id="navRole">Resident</span>
+         <button class="navbar__bell" aria-label="Notifications" id="bellBtn">
            <i data-lucide="bell"></i>
            <span class="navbar__bell-dot"></span>
          </button>

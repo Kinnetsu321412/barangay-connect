@@ -17,13 +17,13 @@ import {
 // GUARD: Admins only. Fetches their barangay for scoping.
 // =====================================================
 onAuthStateChanged(auth, async (user) => {
-  if (!user) { window.location.href = 'index.html'; return; }
+  if (!user) { window.location.href = '../index.html'; return; }
 
   const indexSnap = await getDoc(userIndexDoc(user.uid));
-  if (!indexSnap.exists()) { window.location.href = 'index.html'; return; }
+  if (!indexSnap.exists()) { window.location.href = '../index.html'; return; }
 
   const { barangay, role } = indexSnap.data();
-  if (role !== 'admin') { window.location.href = 'dashboard.html'; return; }
+  if (role !== 'admin') { window.location.href = '../index.html'; return; }
 
   loadPendingUsers(barangay, user.uid);
 });
