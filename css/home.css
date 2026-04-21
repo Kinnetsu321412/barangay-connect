@@ -55,16 +55,20 @@
    GSAP morphs to 0 0 64px 64px as they go.
    ================================================================ */
 .hero {
-  margin-top: -130px;
-  min-height: 100vh;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  min-height: 600px;
+  margin-top: 0;
+  z-index: 1;
+  padding-top: 0;
   background-image: url('../assets/images/bg.png');
   background-size: cover;
+  background-repeat: no-repeat;
   background-position: center top;
-  background-attachment: scroll;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  position: relative;
   border-radius: 0;            /* GSAP will animate this on scroll */
   overflow: hidden;
 }
@@ -75,11 +79,12 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(
-    150deg,
-    rgba(8, 24, 12, 0.92) 0%,
-    rgba(18, 52, 28, 0.80) 48%,
-    rgba(12, 34, 18, 0.62) 100%
-  );
+  to bottom,
+  rgba(8, 24, 12, 0.92) 0%,
+  rgba(18, 52, 28, 0.85) 40%,
+  rgba(12, 34, 18, 0.60) 70%,
+  rgba(12, 34, 18, 0.00) 100%
+);
   z-index: 1;
 }
 
@@ -103,8 +108,8 @@
   width: 100%;
   margin-inline: auto;
   padding: 0 var(--space-xl);
-  padding-top: 210px;           /* header height + breathing room */
-  padding-bottom: 120px;
+  padding-top: 140px;
+  padding-bottom: 80px;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -161,6 +166,8 @@
   0%, 100% { box-shadow: 0 0 0 3px rgba(74,222,128,0.22); }
   50%       { box-shadow: 0 0 0 8px rgba(74,222,128,0.06); }
 }
+
+body { overflow-x: hidden; }
 
 
 /* ── Headline ────────────────────────────────────────────────── */
@@ -259,48 +266,42 @@
 
 /* ── Right column — widget panel ─────────────────────────────── */
 .hero__right {
-  width: 300px;
+  width: 260px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 13px;
+  gap: 12px;
+  align-self: center;
 }
-
 
 /* Clock card */
 .hero__clock-card {
-  background: rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.10);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 22px;
-  padding: 20px 22px 18px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.20);
-  transition: background 0.2s ease, transform 0.2s ease;
-}
-.hero__clock-card:hover {
-  background: rgba(255,255,255,0.13);
-  transform: translateY(-1px);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 20px;
+  padding: 20px 22px;
 }
 
 .hero__clock-label {
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: var(--fw-bold);
-  letter-spacing: 0.22em;
+  letter-spacing: 0.20em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.45);
+  color: rgba(255,255,255,0.50);
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .hero__clock-time {
   font-family: var(--font-display);
-  font-size: clamp(2.6rem, 5vw, 3.2rem);
+  font-size: 2.4rem;
   font-weight: var(--fw-black);
-  line-height: 1;
   color: var(--white);
   letter-spacing: -0.03em;
+  line-height: 1;
   display: block;
   margin-bottom: 6px;
 }
@@ -308,125 +309,102 @@
 .hero__clock-date {
   font-family: var(--font-body);
   font-size: var(--text-sm);
-  color: rgba(255,255,255,0.45);
+  color: rgba(255,255,255,0.50);
   display: block;
 }
 
-
-/* Alert widget */
-.hero .alert-widget {
+/* Alert card */
+.hero__alert-card {
   background: var(--orange);
-  border-radius: 22px;
-  padding: 18px 20px 16px;
-  border: none !important;
-  box-shadow: 0 6px 28px rgba(255,161,53,0.38);
-  width: 100%;
-  position: relative;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
-  cursor: pointer;
-}
-.hero .alert-widget:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 36px rgba(255,161,53,0.50);
+  border-radius: 20px;
+  padding: 18px 22px;
+  box-shadow: 0 6px 28px rgba(255,161,53,0.40);
 }
 
-.hero .alert-widget__header {
+.hero__alert-header {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-bottom: 6px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.hero .alert-widget__dot {
-  width: 7px;
-  height: 7px;
+.hero__alert-dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: rgba(40,30,10,0.45);
+  background: rgba(40,30,10,0.50);
   flex-shrink: 0;
   animation: alertDot 2s ease-in-out infinite;
 }
+
 @keyframes alertDot {
-  0%, 100% { transform: scale(1);   opacity: 0.45; }
-  50%       { transform: scale(1.5); opacity: 0.80; }
+  0%, 100% { transform: scale(1);   opacity: 0.50; }
+  50%       { transform: scale(1.5); opacity: 1; }
 }
 
-.hero .alert-widget__label {
+.hero__alert-label {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: var(--text-sm);
   font-weight: var(--fw-bold);
-  color: rgba(44,30,10,0.58);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: rgba(44,30,10,0.70);
 }
 
-.hero .alert-widget__title {
+.hero__alert-title {
   font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: var(--fw-black);
-  color: rgba(30,22,8,0.90);
-  line-height: var(--lh-tight);
-  letter-spacing: -0.025em;
+  color: rgba(30,22,8,0.92);
+  letter-spacing: -0.02em;
   margin-bottom: 4px;
 }
 
-.hero .alert-widget__sub {
+.hero__alert-sub {
   font-family: var(--font-body);
   font-size: var(--text-sm);
-  color: rgba(44,30,10,0.56);
-  line-height: var(--lh-snug);
+  color: rgba(44,30,10,0.62);
 }
-
 
 /* Widget buttons */
 .hero__widget-btns {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
-.hero__widget-btns .btn--widget {
+.hero__widget-btn {
   flex: 1;
-  min-width: 0;
-  background: rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.10);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.16);
-  border-radius: 20px;
-  padding: 20px 10px 16px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 18px;
+  padding: 16px 10px 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.14);
-  transition: background 0.20s ease, border-color 0.20s ease, transform 0.22s ease, box-shadow 0.22s ease;
-  color: rgba(255,255,255,0.80);
+  color: rgba(255,255,255,0.82);
   font-family: var(--font-display);
+  transition: background 0.20s ease, border-color 0.20s ease, transform 0.22s ease;
 }
 
-.hero__widget-btns .btn--widget [data-lucide],
-.hero__widget-btns .btn--widget svg {
+.hero__widget-btn [data-lucide],
+.hero__widget-btn svg {
   width: 22px;
   height: 22px;
   stroke-width: 1.8;
-  color: rgba(255,255,255,0.76);
 }
 
-.hero__widget-btns .btn--widget span {
-  font-family: var(--font-display);
-  font-size: 11px;
+.hero__widget-btn span {
+  font-size: 12px;
   font-weight: var(--fw-bold);
-  letter-spacing: 0.03em;
-  color: rgba(255,255,255,0.76);
-  line-height: 1;
+  letter-spacing: 0.02em;
 }
 
-.hero__widget-btns .btn--widget:hover {
-  background: rgba(255,255,255,0.16);
-  border-color: rgba(255,255,255,0.28);
-  transform: translateY(-3px);
-  box-shadow: 0 10px 26px rgba(0,0,0,0.24);
+.hero__widget-btn:hover {
+  background: rgba(255,255,255,0.18);
+  border-color: rgba(255,255,255,0.30);
+  transform: translateY(-2px);
 }
 
 
@@ -481,7 +459,10 @@
   border-bottom-color: transparent !important;
   box-shadow: none !important;
 }
-.navbar--transparent .navbar__logo-text  { color: var(--white); }
+.navbar--transparent .navbar__logo-text {
+  color: var(--white);
+  transition: color 0.25s ease; /* add this */
+}
 .navbar--transparent .navbar__link       { color: rgba(255,255,255,0.78); }
 .navbar--transparent .navbar__link:hover {
   color: var(--white);
@@ -511,8 +492,14 @@
    More breathing room; elements don't look stuck/frozen
    ================================================================ */
 .section-quick-actions {
+  z-index: 10;
+  margin-top: 0;
+  border-radius: 0;
+  will-change: clip-path;
+  border-radius: 0;
+  box-shadow: 0 -12px 40px rgba(0,0,0,0.05);
   background-color: var(--white);
-  padding: 100px var(--space-xl) 100px;
+  padding: 140px var(--space-xl) 140px;
   text-align: center;
   position: relative;
 }
@@ -573,8 +560,14 @@
    RECENT UPDATES SECTION
    ================================================================ */
 .section-updates {
+  position: relative;
+  z-index: 10;
+  border-radius: 0;
+  margin-top: 0;
+  will-change: clip-path;
   background-color: var(--white);
-  padding: 0 var(--space-xl) 100px;
+  border-radius: 0;
+  padding: 0 var(--space-xl) 140px;
 }
 
 .section-updates__header {
@@ -629,12 +622,14 @@
    STATS SECTION
    ================================================================ */
 .section-stats {
+  will-change: clip-path;
   background-color: var(--white);
-  padding: 0 var(--space-xl) 100px;
+  padding: 0 var(--space-xl) 140px;
   text-align: center;
 }
 
 .section-stats .stat-grid {
+  overflow: visible;
   margin-top: var(--space-3xl);
   border: 1px solid var(--gray-100);
   border-radius: var(--radius-xl);
@@ -670,6 +665,10 @@
    Has a rounded top that appears as user scrolls toward it.
    ================================================================ */
 .dark-footer-wrap {
+  z-index: 10;
+  position: relative;
+  margin-top: -40px;
+  will-change: clip-path;
   background: var(--green-dark);
   border-radius: 64px 64px 0 0;  /* GSAP can also animate this */
   overflow: hidden;
@@ -767,6 +766,7 @@
 
 /* ── Smooth page scroll ──────────────────────────────────────── */
 html {
+  overflow-x: hidden;
   scroll-behavior: smooth;
 }
 
@@ -793,9 +793,6 @@ html {
 }
 
 @media (max-width: 900px) {
-  .hero {
-    margin-top: -110px;
-  }
   .hero__content {
     flex-direction: column;
     align-items: flex-start;
@@ -833,4 +830,49 @@ html {
   .hero__cta      { flex-direction: column; }
   .hero__cta .btn--outline-hero { width: 100%; justify-content: center; }
   .quick-actions__grid .btn--selector { flex: 1 1 100%; }
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+.dark-footer-wrap {
+  padding-bottom: 0;
+}
+
+
+
+.site-footer {
+  margin-bottom: 0;
+}
+
+body {
+  background: var(--white);
+}
+
+.profile-drawer         { position: fixed; top: 0; right: 0; bottom: 0; z-index: 500; overflow-y: auto; }
+.profile-drawer-backdrop { position: fixed; inset: 0; z-index: 499; }
+.modal-overlay          { position: fixed; inset: 0; z-index: 600; }
+
+/* ================================================================
+   NAVBAR SCROLLED STATE — logo becomes visible on white bg
+   ================================================================ */
+
+/* Logo text → dark green when scrolled */
+.navbar:not(.navbar--transparent) .navbar__logo-text {
+  color: var(--green-dark);
+  transition: color 0.25s ease;
+}
+
+/* Logo image: if your logo.png is white/light, this darkens it.
+   Remove this rule if your logo is already a colored/dark image. */
+.navbar:not(.navbar--transparent) .navbar__logo-img {
+  filter: brightness(0) saturate(100%) invert(21%) sepia(28%) saturate(800%) hue-rotate(100deg) brightness(85%);
+  transition: filter 0.25s ease;
+}
+
+/* Also smooth the transparent → solid transition itself */
+.navbar--transparent {
+  transition: background 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }

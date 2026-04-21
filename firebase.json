@@ -17,7 +17,7 @@
     }
   ],
   "hosting": {
-    "public": "public",
+    "public": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -25,8 +25,56 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+      "source": "**/*.html",
+        "destination": "/public/index.html"
+      },
+      
+      {
+        "source": "/",
         "destination": "/index.html"
+      },
+
+      {
+        "source": "/home",
+        "destination": "/pages/home.html"
+      },
+      {
+        "source": "/community",
+        "destination": "/pages/community.html"
+      },
+      {
+        "source": "/profile",
+        "destination": "/pages/profile.html"
+      },
+      {
+        "source": "/service",
+        "destination": "/pages/service.html"
+      },
+
+      {
+        "source": "/register",
+        "destination": "/register.html"
+      },
+      {
+        "source": "/admin",
+        "destination": "/admin.html"
+      },
+
+      {
+        "source": "/library/button-library",
+        "destination": "/library/button-library.html"
+      },
+      {
+        "source": "/library/components-library",
+        "destination": "/library/components-library.html"
+      },
+      {
+        "source": "/library/frames-library",
+        "destination": "/library/frames-library.html"
+      },
+      {
+        "source": "/library/main-library",
+        "destination": "/library/main-library.html"
       }
     ]
   }

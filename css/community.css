@@ -1602,3 +1602,8 @@
 
 .bulletin-list .post-row--accented.post-row--purple { border-left: 4px solid #7c3aed !important; }
 .bulletin-list .post-row--accented.post-row--teal   { border-left: 4px solid #0f766e !important; }
+
+/* Navbar scrolled state — gray instead of white */
+.navbar:not(.navbar--transparent) {
+  background: var(--gray-50) !important;
+}

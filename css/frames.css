@@ -2078,10 +2078,6 @@
   will-change: transform;
 }
 
-.marquee-banner:hover .marquee-track {
-  animation-play-state: paused;
-}
-
 @keyframes marquee-scroll {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }

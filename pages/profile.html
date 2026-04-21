@@ -140,7 +140,7 @@
   </style>
 </head>
 
-<body class="role-resident">
+<body class="role-guest" data-role-init="pending">
 
 
   <!-- ═══════════════════════════════════════════════════════════════
@@ -465,6 +465,7 @@
   <script>
     // ── Lucide icons (initial pass) ───────────────────────────────
     lucide.createIcons();
+    
 
     // ── Navbar scroll transparency ────────────────────────────────
     const navbar = document.querySelector('.navbar');

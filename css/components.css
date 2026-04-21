@@ -699,6 +699,7 @@
 }
 
 .stat-grid__item {
+  overflow: visible;
   display: flex;
   flex-direction: column;
   gap: 6px;

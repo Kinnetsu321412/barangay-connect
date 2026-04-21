@@ -318,6 +318,12 @@
   --overlay-black-55: rgba(0, 0, 0, 0.55);
 }
 
+/* Hide role-gated nav items until auth resolves */
+[data-role-init="pending"] .navbar__item--officer,
+[data-role-init="pending"] .navbar__item--admin {
+  visibility: hidden;
+  pointer-events: none;
+}
 
 /* ================================================
    RESET & BASE
@@ -604,8 +610,10 @@ input, textarea, select {
 
 /* ---- Sticky wrapper ---- */
 .navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 400;
   height: var(--navbar-h);
   background: var(--navbar-bg);
@@ -898,11 +906,28 @@ body.role-admin   .navbar__item--admin {
   display: flex;
 }
 
+.navbar--transparent .navbar__mobile-drawer {
+  background: var(--green-dark);
+}
+
+.navbar--transparent .navbar__mobile-drawer .navbar__link {
+  color: var(--overlay-white-70);
+}
+
+.navbar--transparent .navbar__mobile-drawer .navbar__link:hover,
+.navbar--transparent .navbar__mobile-drawer .navbar__link.is-active {
+  color: var(--white);
+  background: var(--overlay-white-10);
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 900px) {
   .navbar__nav { display: none; }
-  .navbar__hamburger { display: flex; }
+  .navbar__hamburger { display: flex; order: 99; }
   .navbar__role { display: none; }
+  .navbar__bell { display: flex; }
+  .navbar__avatar { display: flex; }
+  .navbar__actions { margin-left: auto; }
 }
 
 @media (max-width: 520px) {
@@ -947,6 +972,7 @@ body.role-admin   .navbar__item--admin {
   color: var(--overlay-white-75);
   padding: var(--space-xl) 0;
   margin-top: auto;
+  margin-bottom: 0;
 }
 
 .site-footer__inner {
@@ -1026,4 +1052,14 @@ body.role-admin   .navbar__item--admin {
   }
 
   .site-footer__links { gap: var(--space-md); }
+}
+
+.navbar:not(.navbar--transparent) .navbar__logo-text {
+  color: var(--green-dark);
+  transition: color 0.25s ease;
+}
+
+.navbar:not(.navbar--transparent) .navbar__logo-img {
+  filter: brightness(0) saturate(100%) invert(21%) sepia(28%) saturate(800%) hue-rotate(100deg) brightness(85%);
+  transition: filter 0.25s ease;
 }

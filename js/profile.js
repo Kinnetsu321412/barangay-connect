@@ -24,6 +24,7 @@ import {
   onAuthStateChanged, signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { loadWeather } from './weather.js';
+import { initNavAuth } from './nav-auth.js';
 
 
 // =====================================================
@@ -74,8 +75,6 @@ if (IS_LOCAL) {
   initPage(DEMO_USER, true);
 } else {
   let resolved = false;
-
-  // Fallback if Firebase doesn't respond in 4 s
   const fallbackTimer = setTimeout(() => {
     if (!resolved) {
       resolved = true;
@@ -130,6 +129,7 @@ function initPage(userData, isDemo) {
   // ── Body role class (controls navbar officer/admin links) ────
   const role = userData.role || 'resident';
   document.body.className = `role-${role}`;
+  document.body.removeAttribute('data-role-init');
 
   // ── Hero greeting (Title Case) ───────────────────────────────
   const h = new Date().getHours();
@@ -148,13 +148,6 @@ function initPage(userData, isDemo) {
   const muniSuffix = userData.municipality ? ', ' + esc(userData.municipality) : '';
   setEl('widgetLocation', 'Brgy. ' + esc(userData.barangay || '') + muniSuffix);
   loadWeather(userData.municipality, userData.province);
-
-  // ── Navbar role pill ─────────────────────────────────────────
-  const navRoleEl = document.getElementById('navRole');
-  if (navRoleEl) {
-    navRoleEl.textContent = roleLabel(role);
-    navRoleEl.className   = `navbar__role navbar__role--${role}`;
-  }
 
   // ── Profile drawer ───────────────────────────────────────────
   const displayName = userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Guest';

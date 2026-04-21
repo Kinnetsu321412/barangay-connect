@@ -43,7 +43,6 @@
 .login-page {
   display: flex;
   min-height: 100vh;
-  overflow: hidden;
 }
 
 /* ===================== */
@@ -645,3 +644,98 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  /* Stack the two panels vertically */
+  body.login-page {
+    flex-direction: column;
+    min-height: 100svh;
+  }
+
+  /* Collapse the green left panel into a compact header */
+  .auth-left {
+    padding: 2rem 1.5rem 1.5rem;
+    min-height: unset;
+    flex: unset;
+  }
+
+  /* Hide the decorative circles and stats on mobile — too cluttered */
+  .auth-left__circle,
+  .auth-left__stats {
+    display: none;
+  }
+
+  /* Shrink the heading */
+  .auth-left__heading {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .auth-left__subtext {
+    font-size: 0.875rem;
+  }
+
+  /* Right panel takes remaining space */
+  .auth-right {
+    flex: 1;
+    padding: 2rem 1.5rem;
+    border-radius: 1.5rem 1.5rem 0 0;
+    margin-top: -1.5rem; /* overlaps slightly over left panel bottom */
+    background: #fff;
+    position: relative;
+    z-index: 1;
+  }
+
+  .auth-form-wrapper {
+    max-width: 100%;
+  }
+
+  /* Register nav */
+  .register-nav {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .register-nav__signin {
+    font-size: 0.8rem;
+  }
+
+  /* Register body padding */
+  .register-body {
+    padding: 1rem;
+  }
+
+  /* Step indicator — shrink labels */
+  .step-item__label {
+    font-size: 0.65rem;
+  }
+
+  /* Form cards */
+  .register-card {
+    padding: 1.25rem 1rem;
+  }
+
+  /* Two-column grids become single column */
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Action buttons row — stack vertically, full width */
+  .register-actions {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .register-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Success screen padding */
+  .register-success {
+    padding: 2rem 1rem;
+    text-align: center;
+  }
+}
+

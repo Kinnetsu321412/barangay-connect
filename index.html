@@ -162,31 +162,6 @@
   // Reuse your existing firebase config
   import { app } from './js/firebase-config.js';
 
-  document.getElementById('guestBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('guestBtn');
-    btn.disabled = true;
-    btn.textContent = 'Signing in…';
-
-    try {
-      const auth = getAuth(app);
-      await signInAnonymously(auth);
-
-      // Tag this session so profile.js knows to use Bancod guest data
-      localStorage.setItem('guestMode', 'true');
-      localStorage.setItem('guestBarangay', 'Bancod');
-      localStorage.setItem('guestMunicipality', 'Indang');
-      localStorage.setItem('guestProvince', 'Cavite');
-
-      window.location.href = 'pages/home.html';
-    } catch (err) {
-      // Fallback: just set the flag and redirect (works on file://)
-      localStorage.setItem('guestMode', 'true');
-      localStorage.setItem('guestBarangay', 'Bancod');
-      localStorage.setItem('guestMunicipality', 'Indang');
-      localStorage.setItem('guestProvince', 'Cavite');
-      window.location.href = 'pages/home.html';
-    }
-  });
 </script>
 </body>
 </html>
