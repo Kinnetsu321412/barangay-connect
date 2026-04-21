@@ -2,30 +2,46 @@
    id-card.css — BarangayConnect
    Flip-card styles for the Digital Resident ID widget.
    Extracted from the inline <style> block in profile.html.
+   Also used by the id-card.html standalone viewer.
 
-   Import AFTER components.css (uses tokens from main.css :root).
-   Also used by id-card.html standalone viewer.
+   WHAT IS IN HERE:
+     · Scene / flip container and 3-D transform mechanics
+     · Shared card face rules (hatching overlay, decorative blob)
+     · Front face layout — header, avatar, name block, footer
+     · Avatar shimmer loading state
+     · Back face layout — fields grid, legal footer
+     · Role colour themes — resident, officer, admin
+     · ID Card Modal — fullscreen overlay for enlarged card view
 
-   ROLE VARIANTS (applied to .id-card-inner wrapper):
-     .card--resident  → green gradient
-     .card--officer   → warm brown/orange gradient
-     .card--admin     → deep red gradient
+   WHAT IS NOT IN HERE:
+     · CSS custom properties / design tokens  → main.css
+     · Button base styles                     → buttons.css
+     · General modal overlay system           → frames.css
 
-   USAGE:
-     <div class="id-card-scene" id="myCard">
-       <div class="id-card-inner card--resident">
-         <div class="card-face card-front"> … </div>
-         <div class="card-face card-face--back card-back"> … </div>
-       </div>
-     </div>
-     JS: scene.addEventListener('click', () => scene.classList.toggle('flipped'));
-   ================================================================ */
+   REQUIRED IMPORTS:
+     <link rel="stylesheet" href="css/main.css" />
+     <link rel="stylesheet" href="css/id-card.css" />
+
+   QUICK REFERENCE:
+     Scene wrapper    → .id-card-scene.flipped
+     Inner (role)     → .id-card-inner.card--resident / --officer / --admin
+     Faces            → .card-face / .card-face--back
+     Front sections   → .card-header / .card-body / .card-footer
+     Back sections    → .back-strip / .back-fields / .back-footer
+     Modal overlay    → .id-card-modal-overlay.is-open
+     Modal card       → .id-card-modal-card
+================================================================ */
 
 
-/* ── Scene / flip container ──────────────────────────────────── */
+/* ================================================================
+   SCENE / FLIP CONTAINER
+   perspective + preserve-3d establish the 3-D stacking context.
+   .flipped is toggled by JS on the scene element.
+================================================================ */
+
 .id-card-scene {
   width: 100%;
-  aspect-ratio: 1.586;           /* CR80 standard — 85.6 × 54 mm */
+  aspect-ratio: 1.586;          /* CR80 standard — 85.6 × 54 mm */
   perspective: 1200px;
   cursor: pointer;
   user-select: none;
@@ -37,17 +53,22 @@
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: transform 0.72s cubic-bezier(0.76, 0, 0.24, 1);
   border-radius: 14px;
   box-shadow:
     0 10px 30px rgba(0, 0, 0, 0.18),
     0 4px  8px  rgba(0, 0, 0, 0.10);
+  transition: transform 0.72s cubic-bezier(0.76, 0, 0.24, 1);
 }
 
 .id-card-scene.flipped .id-card-inner { transform: rotateY(180deg); }
 
 
-/* ── Shared face rules ───────────────────────────────────────── */
+/* ================================================================
+   SHARED CARD FACE RULES
+   Both front and back share the border-radius, overflow clip,
+   and two pseudo-element decorations.
+================================================================ */
+
 .card-face {
   position: absolute;
   inset: 0;
@@ -57,13 +78,16 @@
   -webkit-backface-visibility: hidden;
 }
 
+/* Back face is pre-rotated so it reads correctly after the flip */
 .card-face--back { transform: rotateY(180deg); }
 
-/* Diagonal hatching overlay — depth texture */
+/* Diagonal hatching — depth texture */
 .card-face::before {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 1;
+  pointer-events: none;
   background-image: repeating-linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.03) 0,
@@ -71,14 +95,13 @@
     transparent 1px,
     transparent 14px
   );
-  pointer-events: none;
-  z-index: 1;
 }
 
-/* Decorative circle blob */
+/* Decorative circle blob — color set per role theme below */
 .card-face::after {
   content: '';
   position: absolute;
+  z-index: 0;
   width: 240px;
   height: 240px;
   border-radius: 50%;
@@ -86,17 +109,22 @@
   top: -70px;
   opacity: 0.07;
   pointer-events: none;
-  z-index: 0;
 }
 
 
-/* ── FRONT face layout ───────────────────────────────────────── */
+/* ================================================================
+   FRONT FACE LAYOUT
+   Three-row grid: header / body (avatar + name) / footer.
+================================================================ */
+
 .card-front {
   display: grid;
   grid-template-rows: auto 1fr auto;
   color: rgba(255, 255, 255, 0.95);
   font-family: var(--font-body);
 }
+
+/* ── Header ───────────────────────────────────────────────────── */
 
 .card-header {
   position: relative;
@@ -108,14 +136,15 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.09);
 }
 
+/* Seal circle — background and foreground set per role theme */
 .card-seal {
   width: 24px;
   height: 24px;
   border-radius: 50%;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   font-size: 8px;
   font-weight: 800;
   letter-spacing: -0.3px;
@@ -143,6 +172,7 @@
 }
 
 .card-role-pill {
+  flex-shrink: 0;
   font-size: 7px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -152,8 +182,9 @@
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.10);
   white-space: nowrap;
-  flex-shrink: 0;
 }
+
+/* ── Body — Avatar + Name Block ───────────────────────────────── */
 
 .card-body {
   position: relative;
@@ -164,8 +195,9 @@
   padding: 0 14px 10px;
 }
 
-/* Avatar — initials fallback + optional photo overlay */
+/* Avatar — displays initials as fallback; photo fades in on load */
 .card-avatar {
+  position: relative;
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -179,37 +211,36 @@
   font-size: 19px;
   font-weight: 700;
   letter-spacing: -1px;
-  position: relative;
 }
 
 .card-avatar img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  position: absolute;
-  inset: 0;
   opacity: 0;
   transition: opacity 0.25s ease;
 }
 
 .card-avatar img.loaded { opacity: 1; }
 
-/* Shimmer while avatar photo loads */
+/* Shimmer sweep while the avatar photo is loading */
 .card-avatar--loading::after {
   content: '';
   position: absolute;
   inset: 0;
+  z-index: 1;
   border-radius: 50%;
+  pointer-events: none;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0)    0%,
     rgba(255, 255, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0) 100%
+    rgba(255, 255, 255, 0)    100%
   );
   background-size: 200% 100%;
   animation: avatar-shimmer 1.4s ease-in-out infinite;
-  z-index: 1;
-  pointer-events: none;
 }
 
 @keyframes avatar-shimmer {
@@ -239,24 +270,26 @@
 }
 
 .card-address {
-  font-size: 8px;
-  opacity: 0.55;
-  margin-top: 3px;
-  line-height: 1.4;
-  font-weight: 400;
   display: flex;
   align-items: center;
   gap: 4px;
+  font-size: 8px;
+  opacity: 0.55;
+  font-weight: 400;
+  line-height: 1.4;
+  margin-top: 3px;
 }
 
 .card-address-dot {
   width: 3px;
   height: 3px;
   border-radius: 50%;
-  background: currentColor;
   flex-shrink: 0;
+  background: currentColor;
   opacity: 0.6;
 }
+
+/* ── Footer ───────────────────────────────────────────────────── */
 
 .card-footer {
   position: relative;
@@ -276,38 +309,44 @@
   letter-spacing: 0.11em;
   text-transform: uppercase;
   opacity: 0.42;
-  margin-bottom: 2px;
   font-weight: 500;
+  margin-bottom: 2px;
 }
 
-.card-field-value  { font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em; }
-.card-id-number    { font-size: 10px;   font-weight: 700; letter-spacing: 0.07em; }
+.card-field-value { font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em; }
+.card-id-number   { font-size: 10px;   font-weight: 700; letter-spacing: 0.07em; }
 
 .card-flip-hint {
-  font-size: 7px;
-  opacity: 0.28;
-  letter-spacing: 0.07em;
-  font-style: italic;
-  white-space: nowrap;
   align-self: flex-end;
+  font-size: 7px;
+  font-style: italic;
+  letter-spacing: 0.07em;
+  opacity: 0.28;
+  white-space: nowrap;
 }
 
 
-/* ── BACK face layout ────────────────────────────────────────── */
+/* ================================================================
+   BACK FACE LAYOUT
+   Strip (ID reference) / fields grid / legal footer.
+================================================================ */
+
 .card-back {
   display: flex;
   flex-direction: column;
   color: rgba(255, 255, 255, 0.92);
 }
 
+/* ── Back Strip ───────────────────────────────────────────────── */
+
 .back-strip {
   position: relative;
   z-index: 2;
-  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding: 10px 14px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.10);
 }
 
@@ -325,6 +364,8 @@
   letter-spacing: 0.10em;
   opacity: 0.85;
 }
+
+/* ── Fields Grid ──────────────────────────────────────────────── */
 
 .back-fields {
   position: relative;
@@ -362,74 +403,81 @@
   word-break: break-all;
 }
 
+/* ── Back Footer ──────────────────────────────────────────────── */
+
 .back-footer {
   position: relative;
   z-index: 2;
-  padding: 7px 14px 11px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  padding: 7px 14px 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .back-legal {
   font-size: 6.5px;
+  font-style: italic;
   opacity: 0.28;
   line-height: 1.55;
-  font-style: italic;
   max-width: 195px;
 }
 
 .back-logo {
   font-size: 11px;
   font-weight: 800;
-  opacity: 0.25;
   letter-spacing: -0.2px;
+  opacity: 0.25;
   white-space: nowrap;
 }
 
 
-/* ── Role colour themes ───────────────────────────────────────── */
-.card--resident .card-face             { background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 55%, var(--green-light) 100%); }
-.card--resident .card-face::after      { background: var(--green-light); }
-.card--resident .card-seal             { background: var(--orange); color: var(--green-dark); }
-.card--resident .card-id-number        { color: var(--orange); }
+/* ================================================================
+   ROLE COLOUR THEMES
+   Applied to .id-card-inner; cascades into both card faces.
+================================================================ */
 
-.card--officer .card-face              { background: linear-gradient(135deg, #3d1e00 0%, #7a3d00 55%, var(--orange-hover) 100%); }
-.card--officer .card-face::after       { background: var(--orange); }
-.card--officer .card-seal              { background: var(--orange); color: #3d1e00; }
-.card--officer .card-id-number         { color: var(--orange); }
+/* Resident — green gradient */
+.card--resident .card-face        { background: linear-gradient(135deg, var(--green-dark) 0%, var(--green-mid) 55%, var(--green-light) 100%); }
+.card--resident .card-face::after { background: var(--green-light); }
+.card--resident .card-seal        { background: var(--orange); color: var(--green-dark); }
+.card--resident .card-id-number   { color: var(--orange); }
 
-.card--admin .card-face                { background: linear-gradient(135deg, #2a0000 0%, var(--red-dark) 55%, var(--red) 100%); }
-.card--admin .card-face::after         { background: var(--red); }
-.card--admin .card-seal                { background: var(--orange); color: #2a0000; }
-.card--admin .card-id-number           { color: var(--orange); }
+/* Officer — warm brown / orange gradient */
+.card--officer .card-face        { background: linear-gradient(135deg, #3d1e00 0%, #7a3d00 55%, var(--orange-hover) 100%); }
+.card--officer .card-face::after { background: var(--orange); }
+.card--officer .card-seal        { background: var(--orange); color: #3d1e00; }
+.card--officer .card-id-number   { color: var(--orange); }
+
+/* Admin — deep red gradient */
+.card--admin .card-face        { background: linear-gradient(135deg, #2a0000 0%, var(--red-dark) 55%, var(--red) 100%); }
+.card--admin .card-face::after { background: var(--red); }
+.card--admin .card-seal        { background: var(--orange); color: #2a0000; }
+.card--admin .card-id-number   { color: var(--orange); }
 
 
 /* ================================================================
-   ID CARD MODAL (fullscreen overlay for enlarged card view)
-   ─────────────────────────────────────────────────────────────────
-   Triggered by the "View Full Size" button on profile.html.
-   The enlarged card inside shares all .id-card-scene / .card-face
-   styles above — modal only handles the overlay + sizing.
+   ID CARD MODAL
+   Fullscreen overlay for the enlarged card view. Triggered by
+   the "View Full Size" button on profile.html. The enlarged card
+   inside reuses all .id-card-scene / .card-face styles above.
 
    JS: idCardModal.classList.toggle('is-open')
-   ================================================================ */
+================================================================ */
+
 .id-card-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.78);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  z-index: 9999;    /* above navbar, drawers, and step-progress circles */
+  isolation: isolate;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-xl);
-  /* Hard-coded — must sit above step-progress z-index:1 circles,
-     navbar, drawers, and any other stacking context on the page. */
-  z-index: 9999;
-  isolation: isolate;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -447,23 +495,24 @@
 .id-card-modal-card {
   width: 100%;
   max-width: 520px;
-  transform: translateY(12px) scale(0.97);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
+  transform: translateY(12px) scale(0.97);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Close / dismiss button aligned to top-right of the card */
 .id-card-modal-card__close {
   align-self: flex-end;
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.85);
-  border-radius: var(--radius-full);
   padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
   font-family: var(--font-display);
   font-size: var(--text-sm);
   font-weight: var(--fw-semibold);
@@ -476,11 +525,11 @@
 .id-card-modal-card__close [data-lucide],
 .id-card-modal-card__close svg { width: 14px; height: 14px; }
 
-/* Hint below card */
+/* Flip hint shown below the enlarged card */
 .id-card-modal-card__hint {
   text-align: center;
   font-size: var(--text-sm);
-  color: rgba(255, 255, 255, 0.35);
   font-style: italic;
   letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.35);
 }

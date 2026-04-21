@@ -8,6 +8,12 @@
 
   <!--
     ═══════════════════════════════════════════════
+    home.html — BarangayConnect
+    Public-facing home page. Entry point for all
+    residents, guests, and officials. Displays the
+    hero, quick actions, recent updates, community
+    stats, CTA section, marquee, and footer.
+
     CSS IMPORT ORDER — DO NOT CHANGE THIS ORDER
     ═══════════════════════════════════════════════
     main.css        → design tokens, reset, navbar, footer, form inputs
@@ -15,7 +21,7 @@
     components.css  → badges, tags, banners, stat grid, alert widgets
     frames.css      → post cards, marquee, modals, drawers
     home.css        → THIS PAGE ONLY — hero bg, tab panels,
-                      gallery grid, section spacing.
+                      gallery grid, section spacing
   -->
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/buttons.css" />
@@ -34,100 +40,96 @@
   ROLE CLASS on <body> controls which navbar
   items are visible. JS sets this after auth.
   Values: role-resident | role-officer | role-admin
-  Default for this page: role-resident
+  Default for this page: role-guest
   ─────────────────────────────────────────────
 -->
 <body class="role-guest" data-role-init="pending">
 
-    <!-- ═══════════════════════════════════════════════════════════════
-        NAVBAR
-        ───────────────────────────────────────────────────────────────
-        CLASS: .navbar from main.css
-        MODIFIER: .navbar--transparent ← ADD THIS because it sits over
-                  the dark hero image. It makes the bg transparent and
-                  turns text/icons white so they're readable on the photo.
-                  JS can toggle this off when the user scrolls down.
-        Full class reference is in main.css at the top comment block.
-        ══════════════════════════════════════════════════════════════════ -->
-    <nav class="navbar navbar--transparent" id="mainNavbar">
-      <div class="navbar__inner">
 
-        <!-- Logo -->
-        <a href="home.html" class="navbar__logo">
-          <img src="../assets/images/logo.png" alt="BarangayConnect logo" class="navbar__logo-img" />
-          <span class="navbar__logo-text">BarangayConnect</span>
-        </a>
+  <!-- ═══════════════════════════════════════════════════════════════
+       NAVBAR
+       ───────────────────────────────────────────────────────────────
+       .navbar--transparent: transparent bg with white text, layered
+       over the hero image. JS removes this class on scroll > 60px.
+       Full class reference in main.css.
+  ══════════════════════════════════════════════════════════════════ -->
+  <nav class="navbar navbar--transparent" id="mainNavbar">
+    <div class="navbar__inner">
 
-        <!-- Desktop nav links -->
+      <!-- Logo -->
+      <a href="home.html" class="navbar__logo">
+        <img src="../assets/images/logo.png" alt="BarangayConnect logo" class="navbar__logo-img" />
+        <span class="navbar__logo-text">BarangayConnect</span>
+      </a>
+
+      <!--
+        Desktop nav links.
+        Active page gets .is-active. Role-gated items use
+        .navbar__item--officer or .navbar__item--admin and
+        auto-show/hide based on the <body> role class.
+      -->
+      <ul class="navbar__nav" style="list-style-type: none;">
+        <li><a href="home.html"      class="navbar__link is-active">Home</a></li>
+        <li><a href="community.html" class="navbar__link">Community</a></li>
+        <li><a href="services.html"  class="navbar__link">Services</a></li>
+        <li><a href="profile.html"   class="navbar__link">My Barangay</a></li>
+        <li class="navbar__item--officer"><a class="navbar__link navbar__link--officer">Officer Panel</a></li>
+        <li class="navbar__item--admin"><a href="../admin.html" class="navbar__link navbar__link--admin">Admin Panel</a></li>
+      </ul>
+
+      <!-- Right-side actions -->
+      <div class="navbar__actions">
+
         <!--
-          Active page gets .is-active on the link.
-          Role-gated items: wrap in .navbar__item--officer or .navbar__item--admin
-          and they'll auto-show/hide based on the <body> role class.
+          Role pill — modifier reflects logged-in user role:
+            .navbar__role--resident (green outline)
+            .navbar__role--officer  (orange outline)
+            .navbar__role--admin    (red outline)
         -->
-        <ul class="navbar__nav" style="list-style-type: none;">
-          <li><a href="home.html"       class="navbar__link is-active">Home</a></li>
-          <li><a href="community.html"  class="navbar__link">Community</a></li>
-          <li><a href="services.html"   class="navbar__link">Services</a></li>
-          <li><a href="profile.html" class="navbar__link">My Barangay</a></li>
-          <li class="navbar__item--officer"><a class="navbar__link navbar__link--officer">Officer Panel</a></li>
-          <li class="navbar__item--admin"><a href="../admin.html" class="navbar__link navbar__link--admin">Admin Panel</a></li>
-        </ul>
+        <span class="navbar__role navbar__role--resident" id="navRole">Resident</span>
 
-        <!-- Right-side actions -->
-        <div class="navbar__actions">
+        <!-- Bell — remove .navbar__bell-dot when no notifications -->
+        <button class="navbar__bell" aria-label="Notifications" id="bellBtn">
+          <i data-lucide="bell"></i>
+          <span class="navbar__bell-dot"></span>
+        </button>
 
-          <!-- Role pill — swap modifier to match logged-in user role:
-              .navbar__role--resident (green outline)
-              .navbar__role--officer  (orange outline)
-              .navbar__role--admin    (red outline)   -->
-          <span class="navbar__role navbar__role--resident" id="navRole">Resident</span>
+        <!-- Avatar — replace icon with <img> when user has a photo -->
+        <button class="navbar__avatar" aria-label="Open profile" id="avatarBtn">
+          <i data-lucide="user"></i>
+        </button>
 
-          <!-- Bell icon — remove .navbar__bell-dot when there are no notifications -->
-          <button class="navbar__bell" aria-label="Notifications" id="bellBtn">
-            <i data-lucide="bell"></i>
-            <span class="navbar__bell-dot"></span>
-          </button>
+        <!-- Mobile hamburger (auto-shows on small screens via CSS) -->
+        <button class="navbar__hamburger" aria-label="Open menu" id="hamburgerBtn">
+          <i data-lucide="menu"></i>
+        </button>
 
-          <!-- Avatar — replace the icon with an <img> when user has a photo -->
-          <button class="navbar__avatar" aria-label="Open profile" id="avatarBtn">
-            <i data-lucide="user"></i>
-          </button>
-
-          <!-- Mobile hamburger (auto-shows on small screens via CSS) -->
-          <button class="navbar__hamburger" aria-label="Open menu" id="hamburgerBtn">
-            <i data-lucide="menu"></i>
-          </button>
-
-        </div>
       </div>
+    </div>
 
-      <!-- Mobile drawer (toggled open by JS adding .is-open) -->
-      <div class="navbar__mobile-drawer" id="mobileDrawer">
-        <a href="home.html"        class="navbar__link is-active">Home</a>
-        <a href="community.html"   class="navbar__link">Community</a>
-        <a href="services.html"    class="navbar__link">Services</a>
-        <a href="profile.html" class="navbar__link">My Barangay</a>
-        <a class="navbar__link navbar__link--officer navbar__item--officer">Officer Panel</a>
-        <a href="../admin.html" class="navbar__link navbar__link--admin navbar__item--admin">Admin Panel</a>
-      </div>
-    </nav>
-  </header>
+    <!-- Mobile drawer (toggled by JS adding .is-open) -->
+    <div class="navbar__mobile-drawer" id="mobileDrawer">
+      <a href="home.html"      class="navbar__link is-active">Home</a>
+      <a href="community.html" class="navbar__link">Community</a>
+      <a href="services.html"  class="navbar__link">Services</a>
+      <a href="profile.html"   class="navbar__link">My Barangay</a>
+      <a class="navbar__link navbar__link--officer navbar__item--officer">Officer Panel</a>
+      <a href="../admin.html" class="navbar__link navbar__link--admin navbar__item--admin">Admin Panel</a>
+    </div>
+  </nav>
 
 
   <!-- ═══════════════════════════════════════════════════════════════
        SECTION 1 — HERO
        ───────────────────────────────────────────────────────────────
        Full-viewport section with a dark-overlaid barangay photo.
-       The background image + dark green overlay is set in home.css.
-       CLASS: .hero (define in home.css)
+       Background image and dark green overlay are set in home.css.
 
-       LAYOUT inside hero:
-         Left side  → location pill, headline, description, CTA buttons
-         Right side → clock widget card, active alert card, widget buttons
-         Bottom     → "SCROLL" label + scroll indicator line
-
-       See wireframe screenshots (Home1.pngwireframe/Home/Home1.png) for the visual layout.
-      ══════════════════════════════════════════════════════════════════ -->
+       Layout:
+         Left  → location pill, headline, description, CTA buttons
+         Right → clock card, active alert card, widget buttons
+         Bottom → scroll indicator
+  ══════════════════════════════════════════════════════════════════ -->
   <section class="hero">
     <div class="hero__content">
 
@@ -137,33 +139,31 @@
         <!--
           Location pill
           CLASS: .location-pill from components.css
-          Has a small orange dot before the text (handled by CSS).
-          VARIANT: .location-pill--light for use on white backgrounds
+          Orange dot before text handled by CSS.
+          VARIANT: .location-pill--light for white backgrounds.
         -->
-        <span class="location-pill"><span class="location-pill__dot"></span>Barangay Bancod, Indang, Cavite</span>
+        <span class="location-pill">
+          <span class="location-pill__dot"></span>Barangay Bancod, Indang, Cavite
+        </span>
 
         <!--
-          Hero headline — styled in home.css
-          "Your Barangay," is white; "Connected." is orange (--orange).
-          Wrap the orange word in a <span> and color it in home.css.
+          Hero headline
+          "Your Barangay," is white; "Connected." uses --orange.
+          Accent span colored in home.css.
         -->
         <h1 class="hero__headline">
           Your Barangay,<br>
           <span class="hero__headline--accent">Connected.</span>
         </h1>
 
-        <!-- Hero description — styled in home.css -->
         <p class="hero__desc">
           Your one-stop digital hub for barangay services,
           community updates, and real-time alerts — all in one place.
         </p>
 
         <!--
-          CTA Buttons
-          Both are ghost/outline buttons designed for dark backgrounds.
+          CTA buttons — ghost/outline style for dark backgrounds.
           CLASS: .btn .btn--outline-hero from buttons.css
-          "Get Started" has a right-arrow icon inside it.
-          On hover, they fill white with dark text (handled by CSS).
         -->
         <div class="hero__cta">
           <a href="services.html" class="btn btn--outline-hero">
@@ -210,12 +210,7 @@
 
     </div><!-- /hero__content -->
 
-    <!--
-      Scroll indicator at the bottom center of the hero.
-      "SCROLL" text with a thin vertical line extending downward.
-      Style entirely in home.css.
-    -->
-
+    <!-- Scroll indicator — "SCROLL" label with a vertical line. Styled in home.css. -->
     <div class="hero__scroll-indicator" aria-hidden="true">
       <span class="hero__scroll-text">SCROLL</span>
       <div class="hero__scroll-line"></div>
@@ -228,93 +223,39 @@
        SECTION 2 — QUICK ACTIONS
        ───────────────────────────────────────────────────────────────
        White background section below the hero wave transition.
-       Centered layout with an eyebrow label, heading, and 6 action tiles.
+       Eyebrow label, heading, and 6 square action tiles.
 
-       The wave/curved top comes from the hero section in home.css
-       (use a border-radius or SVG wave on the hero's bottom edge).
-
-       Eyebrow text "QUICK ACTIONS" — use small caps, letter-spacing,
-       muted color. Style in home.css.
-
-       Action tiles:
-       CLASS: .btn .btn--selector from buttons.css
-       Square-ish cards with a centered icon (top) and label (below).
-       Icon color is --green-dark. On hover, border turns green.
-       On .is-selected, fills solid green.
-      ══════════════════════════════════════════════════════════════════ -->
-
+       Tiles: .btn .btn--selector from buttons.css
+       Centered icon on top, label below. On .is-selected, fills green.
+  ══════════════════════════════════════════════════════════════════ -->
   <section class="section-quick-actions">
 
     <p class="section-eyebrow">QUICK ACTIONS</p>
     <h2 class="section-heading">What do you need today?</h2>
 
     <div class="quick-actions__grid">
-
-      <button class="btn btn--selector">
-        <i data-lucide="shield"></i>
-        Emergency
-      </button>
-
-      <button class="btn btn--selector">
-        <i data-lucide="triangle-alert"></i>
-        Report Issue
-      </button>
-
-      <button class="btn btn--selector">
-        <i data-lucide="file-text"></i>
-        Request Docs
-      </button>
-
-      <button class="btn btn--selector">
-        <i data-lucide="calendar"></i>
-        Events
-      </button>
-
-      <button class="btn btn--selector">
-        <i data-lucide="users"></i>
-        Community
-      </button>
-
-      <button class="btn btn--selector">
-        <i data-lucide="wrench"></i>
-        Services
-      </button>
-
+      <button class="btn btn--selector"><i data-lucide="shield"></i> Emergency</button>
+      <button class="btn btn--selector"><i data-lucide="triangle-alert"></i> Report Issue</button>
+      <button class="btn btn--selector"><i data-lucide="file-text"></i> Request Docs</button>
+      <button class="btn btn--selector"><i data-lucide="calendar"></i> Events</button>
+      <button class="btn btn--selector"><i data-lucide="users"></i> Community</button>
+      <button class="btn btn--selector"><i data-lucide="wrench"></i> Services</button>
     </div>
+
   </section><!-- /section-quick-actions -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════
-       SECTION 3 — RECENT UPDATES  ("What's happening?")
+       SECTION 3 — RECENT UPDATES
        ───────────────────────────────────────────────────────────────
        Two-column layout:
-         Left  → .post-featured  (large featured post card, dark green bg)
-         Right → two .post-row items stacked, + "View all" dashed button
+         Left  → .post-featured (large dark green card)
+         Right → two .post-row items + "View all" dashed button
 
-       EYEBROW: "RECENT UPDATES" (same small-caps style as Quick Actions)
-       HEADING: "What's happening?" — large, bold, black
-
-       ── LEFT: Featured Post Card ──────────────────────────────────
-       CLASS: .post-featured from frames.css
-       Dark green background card with:
-         - .badge-featured compound pill (e.g. "FEATURED · Health")
-         - Bold white title
-         - White body text
-         - Author avatar + name + timestamp at the bottom
-         - Comment count
-
-       ── RIGHT: Bulletin Rows ──────────────────────────────────────
-       CLASS: .post-row from frames.css
-       Each row is a list-style post summary with:
-         - A colored left border accent
-         - VARIANTS: .post-row--accented with .post-row--orange or .post-row--red
-         - Category tag (.tag from components.css), timestamp, title, preview text
-         - Author avatar + name on the bottom left, comment count on right
-
-       After the rows: a full-width "View all announcements" button
-       CLASS: .btn .btn--dashed .btn--full from buttons.css
-      ══════════════════════════════════════════════════════════════════ -->
-
+       .post-featured  → from frames.css (badge, title, body, footer)
+       .post-row       → from frames.css (.post-row--accented + color modifier)
+       .btn--dashed    → from buttons.css
+  ══════════════════════════════════════════════════════════════════ -->
   <section class="section-updates">
 
     <div class="section-updates__header">
@@ -329,21 +270,14 @@
 
     <div class="section-updates__grid">
 
-      <!-- Featured post (left, large, dark green card) -->
-      <!--
-        CLASS: .post-featured from frames.css
-        Check frames.css for the exact internal structure needed.
-        The .badge-featured pill inside uses components.css.
-      -->
+      <!-- Featured post — large dark green card -->
       <article class="post-featured">
         <div class="post-featured__top">
-          <!-- Featured + category pill -->
           <div class="badge-featured">
             <span class="badge-featured__label">FEATURED</span>
             <span class="badge-featured__category">Health</span>
           </div>
         </div>
-
         <h3 class="post-featured__title">
           Free Medical Mission this Saturday at the Barangay Hall
         </h3>
@@ -351,7 +285,6 @@
           Free check-ups, dental services, and medicine distribution for all residents.
           Bring your barangay ID.
         </p>
-
         <div class="post-featured__footer">
           <img src="assets/images/avatars/health-center.jpg" alt="Barangay Health Center" class="post-featured__avatar" />
           <div class="post-featured__author">
@@ -364,14 +297,10 @@
         </div>
       </article>
 
-
-      <!-- Right column: bulletin rows + view-all button -->
+      <!-- Right column — bulletin rows + view-all -->
       <div class="section-updates__rows">
 
-        <!--
-          CLASS: .post-row .post-row--accented .post-row--orange from frames.css
-          Orange left-border accent = infrastructure/general category
-        -->
+        <!-- Orange accent — infrastructure/general category -->
         <article class="post-row post-row--accented post-row--orange">
           <div class="post-row__tags">
             <span class="tag tag--amber">Infrastructure</span>
@@ -383,15 +312,14 @@
             <img src="assets/images/avatars/dpwh.jpg" alt="DPWH Liaison" class="post-row__avatar" />
             <span class="post-row__author">DPWH Liaison</span>
             <div class="reaction-bar" style="margin-left:auto">
-              <button class="reaction-count reaction-count--comment"><i data-lucide="message-circle"></i><span>7</span></button>
+              <button class="reaction-count reaction-count--comment">
+                <i data-lucide="message-circle"></i><span>7</span>
+              </button>
             </div>
           </div>
         </article>
 
-        <!--
-          CLASS: .post-row .post-row--accented .post-row--red from frames.css
-          Red left-border accent = safety/emergency category
-        -->
+        <!-- Red accent — safety/emergency category -->
         <article class="post-row post-row--accented post-row--red">
           <div class="post-row__tags">
             <span class="tag tag--red">Safety</span>
@@ -403,15 +331,14 @@
             <img src="assets/images/avatars/health-officer.jpg" alt="Brgy. Health Officer" class="post-row__avatar" />
             <span class="post-row__author">Brgy. Health Officer</span>
             <div class="reaction-bar" style="margin-left:auto">
-              <button class="reaction-count reaction-count--comment"><i data-lucide="message-circle"></i><span>22</span></button>
+              <button class="reaction-count reaction-count--comment">
+                <i data-lucide="message-circle"></i><span>22</span>
+              </button>
             </div>
           </div>
         </article>
 
-        <!--
-          "View all announcements" — full-width dashed button
-          CLASS: .btn .btn--dashed .btn--full from buttons.css
-        -->
+        <!-- Full-width view-all link — .btn--dashed from buttons.css -->
         <a href="community.html" class="btn btn--dashed btn--full">
           View all announcements <i data-lucide="chevron-right"></i>
         </a>
@@ -424,33 +351,21 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════════
-       SECTION 4 — COMMUNITY OVERVIEW  (Stats)
+       SECTION 4 — COMMUNITY OVERVIEW (Stats)
        ───────────────────────────────────────────────────────────────
-       Centered section with a big heading and 4 stat columns.
-       Each stat has a large orange number and a gray label below.
-       Vertical dividers sit between the columns.
-
+       Centered section with 4 animated stat columns.
        CLASS: .stat-grid from components.css
-       The stat grid handles the 4-column layout, dividers, and
-       the large orange animated counter numbers automatically.
+       Numbers animate from 0 on scroll via inline counter script.
 
-       Inside each .stat-grid__item:
-         .stat-grid__number  → the big orange number (animate with JS
-                               counting up from 0 on scroll into view)
-         .stat-grid__label   → the gray description below the number
-
-       The section eyebrow and heading are styled in home.css.
+       .stat-grid__number  → large orange counter (data-target drives animation)
+       .stat-grid__label   → gray descriptor below the number
+       .stat-grid__divider → vertical rule between columns
   ══════════════════════════════════════════════════════════════════ -->
   <section class="section-stats">
 
     <h2 class="section-heading section-heading--center">Community Overview</h2>
     <p class="section-eyebrow section-eyebrow--center">A QUICK LOOK AT YOUR BARANGAY TODAY</p>
 
-    <!--
-      CLASS: .stat-grid from components.css
-      Four columns separated by vertical dividers.
-      Numbers are large and orange (--orange color token).
-    -->
     <div class="stat-grid stat-grid--centered">
 
       <div class="stat-grid__item">
@@ -484,281 +399,280 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════════
-       MARQUEE BANNER  (scrolling text strip)
+       DARK FOOTER WRAP
        ───────────────────────────────────────────────────────────────
-       A full-width horizontally scrolling text strip.
-       CLASS: .marquee-banner .marquee-banner--dark from frames.css
-       MODIFIER: .marquee-banner--dark → dark background with outline text
-
-       Inner structure:
-         .marquee-text or .marquee-text--solid for the text style
-         Repeat the text phrase several times inside .marquee__track
-         so it scrolls seamlessly.
-
-       Text says: "UMUNLAD • BARANGAY BANCOD •" repeated.
+       Wraps the marquee, CTA section, and footer in a shared
+       dark background context.
   ══════════════════════════════════════════════════════════════════ -->
-  <!-- Placeholder text, admin should be able to set what text goes on the marquee -->
-
   <div class="dark-footer-wrap">
 
-  <div class="marquee-banner marquee-banner--dark" aria-hidden="true">
-    <div class="marquee-track">
-      <span class="marquee-text">UMUNLAD</span>
-      <span class="marquee-text--solid">•</span>
-      <span class="marquee-text">BARANGAY BANCOD</span>
-      <span class="marquee-text--solid">•</span>
-      <span class="marquee-text">UMUNLAD</span>
-      <span class="marquee-text--solid">•</span>
-      <span class="marquee-text">BARANGAY BANCOD</span>
-      <span class="marquee-text--solid">•</span>
-      <span class="marquee-text">UMUNLAD</span>
-      <span class="marquee-text--solid">•</span>
-      <span class="marquee-text">BARANGAY BANCOD</span>
-      <span class="marquee-text--solid">•</span>
-    </div>
-  </div>
-
-
-  <!-- ═══════════════════════════════════════════════════════════════
-       SECTION 5 — CTA  ("Ready to connect?")
-       ───────────────────────────────────────────────────────────────
-       Dark green section with a curved/wave top edge.
-       Fully centered layout.
-
-       The curved top is achieved with a border-radius on the top of
-       this section or a clip-path in home.css. See Home5.png.
-
-       Contents:
-         - An orange checkmark circle icon (Lucide: circle-check)
-         - Big bold heading in white
-         - Description paragraph in muted white
-         - One CTA button: "Open My Barangay →"
-           CLASS: .btn .btn--orange from buttons.css (orange solid)
-
-       Style the section itself (bg color, padding, curve) in home.css.
-  ══════════════════════════════════════════════════════════════════ -->
-  <section class="section-cta">
-
-    <!--
-      Checkmark icon — orange, circle-shaped, centered above heading
-      Style the icon color and size in home.css
-    -->
-    <i data-lucide="circle-check" class="section-cta__icon"></i>
-
-    <h2 class="section-cta__heading">
-      Ready to connect with<br> your community?
-    </h2>
-
-    <p class="section-cta__desc">
-      Join thousands of residents staying informed and engaged with their barangay.
-    </p>
-
-    <!--
-      CTA button — orange solid, with arrow icon
-      CLASS: .btn .btn--orange from buttons.css
-    -->
-    <a href="profile.html" class="btn btn--orange">
-      Open My Barangay <i data-lucide="arrow-right"></i>
-    </a>
-
-  </section><!-- /section-cta -->
-
-  
-   <!-- ═══════════════════════════════════════════════════════════════
-       FOOTER
-       ───────────────────────────────────────────────────────────────
-       .site-footer from main.css — same across all pages.
-  ══════════════════════════════════════════════════════════════════ -->
-
-  <footer class="site-footer">
-    <div class="site-footer__inner">
-      <div class="site-footer__brand">
-        <div class="site-footer__brand-logo">
-          <img src="../assets/images/logo.png" alt="BarangayConnect" class="site-footer__logo-img" />
-          <span class="site-footer__logo-text">BarangayConnect</span>
-        </div>
-        <p class="site-footer__tagline">Barangay Bancod, Indang, Cavite &copy; 2026</p>
+    <!-- ═══════════════════════════════════════════════════════════════
+         MARQUEE BANNER
+         ───────────────────────────────────────────────────────────────
+         Full-width horizontally scrolling text strip.
+         CLASS: .marquee-banner .marquee-banner--dark from frames.css
+         Text is admin-configurable. Duplicated for seamless looping.
+    ══════════════════════════════════════════════════════════════════ -->
+    <div class="marquee-banner marquee-banner--dark" aria-hidden="true">
+      <div class="marquee-track">
+        <span class="marquee-text">UMUNLAD</span>
+        <span class="marquee-text--solid">•</span>
+        <span class="marquee-text">BARANGAY BANCOD</span>
+        <span class="marquee-text--solid">•</span>
+        <span class="marquee-text">UMUNLAD</span>
+        <span class="marquee-text--solid">•</span>
+        <span class="marquee-text">BARANGAY BANCOD</span>
+        <span class="marquee-text--solid">•</span>
+        <span class="marquee-text">UMUNLAD</span>
+        <span class="marquee-text--solid">•</span>
+        <span class="marquee-text">BARANGAY BANCOD</span>
+        <span class="marquee-text--solid">•</span>
       </div>
-      <nav class="site-footer__links" aria-label="Footer navigation">
-        <a href="#" class="site-footer__link">Privacy Policy</a>
-        <a href="#" class="site-footer__link">Terms of Use</a>
-        <a href="#" class="site-footer__link">Contact Us</a>
-        <a href="#" class="site-footer__link">Sitemap</a>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         SECTION 5 — CTA
+         ───────────────────────────────────────────────────────────────
+         Dark green section with curved top edge.
+         Centered layout: icon, heading, description, orange CTA button.
+         Curve achieved via clip-path or border-radius in home.css.
+    ══════════════════════════════════════════════════════════════════ -->
+    <section class="section-cta">
+
+      <!-- Orange circle-check icon centered above heading -->
+      <i data-lucide="circle-check" class="section-cta__icon"></i>
+
+      <h2 class="section-cta__heading">
+        Ready to connect with<br> your community?
+      </h2>
+
+      <p class="section-cta__desc">
+        Join thousands of residents staying informed and engaged with their barangay.
+      </p>
+
+      <!-- .btn--orange from buttons.css -->
+      <a href="profile.html" class="btn btn--orange">
+        Open My Barangay <i data-lucide="arrow-right"></i>
+      </a>
+
+    </section><!-- /section-cta -->
+
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         FOOTER
+         ───────────────────────────────────────────────────────────────
+         .site-footer from main.css — shared across all pages.
+    ══════════════════════════════════════════════════════════════════ -->
+    <footer class="site-footer">
+      <div class="site-footer__inner">
+        <div class="site-footer__brand">
+          <div class="site-footer__brand-logo">
+            <img src="../assets/images/logo.png" alt="BarangayConnect" class="site-footer__logo-img" />
+            <span class="site-footer__logo-text">BarangayConnect</span>
+          </div>
+          <p class="site-footer__tagline">Barangay Bancod, Indang, Cavite &copy; 2026</p>
+        </div>
+        <nav class="site-footer__links" aria-label="Footer navigation">
+          <a href="#" class="site-footer__link">Privacy Policy</a>
+          <a href="#" class="site-footer__link">Terms of Use</a>
+          <a href="#" class="site-footer__link">Contact Us</a>
+          <a href="#" class="site-footer__link">Sitemap</a>
+        </nav>
+      </div>
+    </footer>
+
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         PROFILE DRAWER
+         ───────────────────────────────────────────────────────────────
+         Slide-in panel opened by the avatar button in the navbar.
+         Toggled via .is-open on #profileDrawer and #drawerBackdrop.
+    ══════════════════════════════════════════════════════════════════ -->
+    <div class="profile-drawer" id="profileDrawer">
+      <div class="profile-drawer__header">
+        <button class="btn btn--close btn--sm profile-drawer__close" id="drawerCloseBtn" aria-label="Close">
+          <i data-lucide="x"></i>
+        </button>
+        <div class="profile-drawer__avatar" id="drawerAvatar">…</div>
+        <p class="profile-drawer__name" id="drawerName">Loading…</p>
+        <p class="profile-drawer__role" id="drawerRole">—</p>
+        <span class="profile-drawer__id" id="drawerIdNumber">
+          <i data-lucide="id-card"></i> —
+        </span>
+      </div>
+      <nav class="profile-drawer__menu">
+        <a href="profile.html" class="profile-drawer__item">
+          <div class="profile-drawer__item-icon"><i data-lucide="user-pen"></i></div>
+          <div class="profile-drawer__item-body">
+            <span class="profile-drawer__item-title">My Barangay</span>
+            <span class="profile-drawer__item-sub">View your profile and ID</span>
+          </div>
+        </a>
+        <a href="services.html" class="profile-drawer__item">
+          <div class="profile-drawer__item-icon"><i data-lucide="file-text"></i></div>
+          <div class="profile-drawer__item-body">
+            <span class="profile-drawer__item-title">My Documents</span>
+            <span class="profile-drawer__item-sub">Request or track documents</span>
+          </div>
+        </a>
+        <a href="community.html" class="profile-drawer__item">
+          <div class="profile-drawer__item-icon"><i data-lucide="users"></i></div>
+          <div class="profile-drawer__item-body">
+            <span class="profile-drawer__item-title">Community</span>
+            <span class="profile-drawer__item-sub">Bulletin, polls, pet board</span>
+          </div>
+        </a>
+        <button class="profile-drawer__item profile-drawer__item--signout" id="signOutBtn">
+          <div class="profile-drawer__item-icon"><i data-lucide="log-out"></i></div>
+          <div class="profile-drawer__item-body">
+            <span class="profile-drawer__item-title">Sign Out</span>
+          </div>
+        </button>
       </nav>
     </div>
-  </footer>
+    <div class="profile-drawer-backdrop" id="drawerBackdrop"></div>
 
-  <!-- Profile Drawer -->
-<div class="profile-drawer" id="profileDrawer">
-  <div class="profile-drawer__header">
-    <button class="btn btn--close btn--sm profile-drawer__close" id="drawerCloseBtn" aria-label="Close">
-      <i data-lucide="x"></i>
-    </button>
-    <div class="profile-drawer__avatar" id="drawerAvatar">…</div>
-    <p class="profile-drawer__name" id="drawerName">Loading…</p>
-    <p class="profile-drawer__role" id="drawerRole">—</p>
-    <span class="profile-drawer__id" id="drawerIdNumber">
-      <i data-lucide="id-card"></i> —
-    </span>
-  </div>
-  <nav class="profile-drawer__menu">
-    <a href="profile.html" class="profile-drawer__item">
-      <div class="profile-drawer__item-icon"><i data-lucide="user-pen"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">My Barangay</span>
-        <span class="profile-drawer__item-sub">View your profile and ID</span>
-      </div>
-    </a>
-    <a href="services.html" class="profile-drawer__item">
-      <div class="profile-drawer__item-icon"><i data-lucide="file-text"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">My Documents</span>
-        <span class="profile-drawer__item-sub">Request or track documents</span>
-      </div>
-    </a>
-    <a href="community.html" class="profile-drawer__item">
-      <div class="profile-drawer__item-icon"><i data-lucide="users"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">Community</span>
-        <span class="profile-drawer__item-sub">Bulletin, polls, pet board</span>
-      </div>
-    </a>
-    <button class="profile-drawer__item profile-drawer__item--signout" id="signOutBtn">
-      <div class="profile-drawer__item-icon"><i data-lucide="log-out"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">Sign Out</span>
-      </div>
-    </button>
-  </nav>
-</div>
-<div class="profile-drawer-backdrop" id="drawerBackdrop"></div>
 
-<!-- Sign-out confirm modal -->
-<div class="modal-overlay" id="signoutModal" onclick="this.classList.remove('is-open')">
-  <div class="modal modal--confirm">
-    <div class="modal-confirm__icon"><i data-lucide="log-out"></i></div>
-    <h2 class="modal-confirm__title">Sign out?</h2>
-    <p class="modal-confirm__body">You'll be signed out of your BarangayConnect account on this device.</p>
-    <div class="modal-confirm__footer">
-      <button class="btn btn--outline" onclick="document.getElementById('signoutModal').classList.remove('is-open')">Cancel</button>
-      <button class="btn btn--red btn--full" id="confirmSignOutBtn">Sign Out</button>
+    <!-- ═══════════════════════════════════════════════════════════════
+         SIGN-OUT CONFIRM MODAL
+    ══════════════════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="signoutModal" onclick="this.classList.remove('is-open')">
+      <div class="modal modal--confirm">
+        <div class="modal-confirm__icon"><i data-lucide="log-out"></i></div>
+        <h2 class="modal-confirm__title">Sign out?</h2>
+        <p class="modal-confirm__body">You'll be signed out of your BarangayConnect account on this device.</p>
+        <div class="modal-confirm__footer">
+          <button class="btn btn--outline" onclick="document.getElementById('signoutModal').classList.remove('is-open')">
+            Cancel
+          </button>
+          <button class="btn btn--red btn--full" id="confirmSignOutBtn">Sign Out</button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
   </div><!-- /dark-footer-wrap -->
 
 
-    <!-- ═══════════════════════════════════════════════════════════════
-        SCRIPTS
-        ───────────────────────────────────────────────────────────────
-        1. lucide.createIcons() — renders all data-lucide icons
-        2. Live clock — updates #live-clock and #live-date every second
-        3. Navbar scroll — removes .navbar--transparent when user scrolls
-            down past the hero, restores it when back at top
-        4. Alert banner dismiss — clicking × removes the banner
-        5. Stat counter — animates numbers when scrolled into view
-    ══════════════════════════════════════════════════════════════════ -->
-    <script>
-      // 1. Render Lucide icons
-      lucide.createIcons();
-      
+  <!-- ═══════════════════════════════════════════════════════════════
+       SCRIPTS
+       ───────────────────────────────────────────────────────────────
+       1. lucide.createIcons()  — renders all data-lucide icons
+       2. Live clock            — updates #live-clock / #live-date every second
+       3. Navbar scroll         — removes .navbar--transparent past 60px scroll
+       4. Alert banner dismiss  — clicking × removes the banner element
+       5. Stat counter          — animates numbers on scroll via IntersectionObserver
+       6. Profile drawer        — avatar button toggles slide-in drawer
+  ══════════════════════════════════════════════════════════════════ -->
+  <script>
 
-      // 2. Live clock
-      function updateClock() {
-        const now  = new Date();
-        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        const date = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-        document.getElementById('live-clock').textContent = time;
-        document.getElementById('live-date').textContent  = date;
+    /* 1. Render Lucide icons */
+    lucide.createIcons();
+
+
+    /* 2. Live clock — updates every second */
+    function updateClock() {
+      const now  = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const date = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      document.getElementById('live-clock').textContent = time;
+      document.getElementById('live-date').textContent  = date;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+
+    /* 3. Navbar transparent-on-scroll */
+    const navbar = document.querySelector('.navbar');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 60) {
+        navbar.classList.remove('navbar--transparent');
+      } else {
+        navbar.classList.add('navbar--transparent');
       }
-      updateClock();
-      setInterval(updateClock, 1000);
+    });
 
-      // 3. Navbar transparent-on-scroll
-      const navbar = document.querySelector('.navbar');
-      window.addEventListener('scroll', () => {
-        if (window.scrollY > 60) {
-          navbar.classList.remove('navbar--transparent');
-        } else {
-          navbar.classList.add('navbar--transparent');
-        }
+
+    /* 4. Alert banner dismiss */
+    document.querySelector('.alert-banner .btn--close')
+      ?.addEventListener('click', e => {
+        e.target.closest('.alert-banner').remove();
       });
 
-      // 4. Alert banner dismiss
-      document.querySelector('.alert-banner .btn--close')
-        ?.addEventListener('click', e => {
-          e.target.closest('.alert-banner').remove();
-        });
 
-      // 5. Stat counter
-      (function () {
-        function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+    /* 5. Stat counter — animates [data-target] elements on viewport entry */
+    (function () {
+      function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
-        function formatNumber(value, separator) {
-          if (!separator && separator !== '') separator = ',';
-          return Math.floor(value).toLocaleString('en-US').replace(/,/g, separator);
+      function formatNumber(value, separator) {
+        if (!separator && separator !== '') separator = ',';
+        return Math.floor(value).toLocaleString('en-US').replace(/,/g, separator);
+      }
+
+      function animateCounter(el) {
+        if (el.dataset.animated === 'true') return;
+        el.dataset.animated = 'true';
+
+        const target    = parseFloat(el.dataset.target)    || 0;
+        const duration  = parseFloat(el.dataset.duration)  || 1500;
+        const suffix    = el.dataset.suffix    ?? '';
+        const prefix    = el.dataset.prefix    ?? '';
+        const separator = el.dataset.separator ?? ',';
+        let startTime   = null;
+
+        function step(timestamp) {
+          if (!startTime) startTime = timestamp;
+          const progress = Math.min((timestamp - startTime) / duration, 1);
+          const current  = target * easeOutCubic(progress);
+          el.textContent = prefix + formatNumber(current, separator) + suffix;
+          progress < 1
+            ? requestAnimationFrame(step)
+            : el.textContent = prefix + formatNumber(target, separator) + suffix;
         }
 
-        function animateCounter(el) {
-          if (el.dataset.animated === 'true') return;
-          el.dataset.animated = 'true';
+        requestAnimationFrame(step);
+      }
 
-          const target    = parseFloat(el.dataset.target)    || 0;
-          const duration  = parseFloat(el.dataset.duration)  || 1500;
-          const suffix    = el.dataset.suffix    ?? '';
-          const prefix    = el.dataset.prefix    ?? '';
-          const separator = el.dataset.separator ?? ',';
-          let startTime   = null;
+      const elements = document.querySelectorAll('[data-target]');
+      if (!elements.length) return;
 
-          function step(timestamp) {
-            if (!startTime) startTime = timestamp;
-            const progress = Math.min((timestamp - startTime) / duration, 1);
-            const current  = target * easeOutCubic(progress);
-            el.textContent = prefix + formatNumber(current, separator) + suffix;
-            progress < 1 ? requestAnimationFrame(step)
-                        : el.textContent = prefix + formatNumber(target, separator) + suffix;
+      if (!('IntersectionObserver' in window)) {
+        elements.forEach(animateCounter);
+        return;
+      }
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            animateCounter(entry.target);
+            observer.unobserve(entry.target);
           }
+        });
+      }, { threshold: 0.25 });
 
-          requestAnimationFrame(step);
-        }
+      elements.forEach((el) => observer.observe(el));
+    })();
 
-        const elements = document.querySelectorAll('[data-target]');
-        if (!elements.length) return;
 
-        if (!('IntersectionObserver' in window)) {
-          elements.forEach(animateCounter);
-          return;
-        }
+    /* 6. Profile drawer */
+    const drawer   = document.getElementById('profileDrawer');
+    const backdrop = document.getElementById('drawerBackdrop');
 
-        const observer = new IntersectionObserver((entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              animateCounter(entry.target);
-              observer.unobserve(entry.target);
-            }
-          });
-        }, { threshold: 0.25 });
+    function openDrawer()  { drawer.classList.add('is-open');    backdrop.classList.add('is-open'); }
+    function closeDrawer() { drawer.classList.remove('is-open'); backdrop.classList.remove('is-open'); }
 
-        elements.forEach((el) => observer.observe(el));
-      })();
+    document.getElementById('avatarBtn').addEventListener('click', openDrawer);
+    document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+    backdrop.addEventListener('click', closeDrawer);
 
-      // Profile drawer
-      const drawer   = document.getElementById('profileDrawer');
-      const backdrop = document.getElementById('drawerBackdrop');
-      function openDrawer()  { drawer.classList.add('is-open');    backdrop.classList.add('is-open'); }
-      function closeDrawer() { drawer.classList.remove('is-open'); backdrop.classList.remove('is-open'); }
-      document.getElementById('avatarBtn').addEventListener('click', openDrawer);
-      document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
-      backdrop.addEventListener('click', closeDrawer);
-      document.getElementById('signOutBtn').addEventListener('click', () => {
-        closeDrawer();
-        document.getElementById('signoutModal').classList.add('is-open');
-      });
+    document.getElementById('signOutBtn').addEventListener('click', () => {
+      closeDrawer();
+      document.getElementById('signoutModal').classList.add('is-open');
+    });
 
-    </script>
-    <script src="../js/home-animations.js" defer></script>
+  </script>
 
+  <script src="../js/home-animations.js" defer></script>
   <script type="module" src="../js/profile.js"></script>
 
 </body>

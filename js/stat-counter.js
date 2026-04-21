@@ -1,50 +1,74 @@
-// js/stat-counter.js
-// =====================================================
-// Animated number counter — runs when element enters
-// the viewport (IntersectionObserver).
-//
-// Works on any element with:
-//   data-target="2436"        — target number
-//   data-suffix="%"           — optional suffix appended after number
-//   data-prefix="₱"          — optional prefix prepended before number
-//   data-duration="1500"      — animation duration in ms (default: 1500)
-//   data-separator=","        — number format separator (default: ",")
-//
-// Elements with a data-suffix that has no data-target
-// are treated as static and skipped.
-//
-// Usage:
-//   <span class="stat-grid__number" data-target="2436" data-separator=",">0</span>
-//   <span class="stat-grid__number" data-target="98"   data-suffix="%">0</span>
-//   <script src="js/stat-counter.js"></script>
-// =====================================================
+/* ================================================
+   stat-counter.js — BarangayConnect
+   Animated number counter triggered by viewport
+   visibility. Uses IntersectionObserver to start
+   each counter when its element scrolls into view.
+
+   Activated by any element with [data-target]:
+     data-target="2436"     — target number to count to
+     data-suffix="%"        — optional suffix after number
+     data-prefix="₱"       — optional prefix before number
+     data-duration="1500"   — animation duration in ms (default: 1500)
+     data-separator=","     — thousands separator (default: ",")
+
+   Elements without data-target are ignored.
+   Each counter animates once and will not repeat.
+
+   WHAT IS IN HERE:
+     · IntersectionObserver-based viewport detection
+     · Ease-out cubic animation loop via requestAnimationFrame
+     · Number formatting with configurable separator
+     · Graceful fallback for unsupported browsers
+
+   WHAT IS NOT IN HERE:
+     · Counter element styles        → admin.css / main.css
+     · Dashboard layout or data      → dashboard.js
+
+   REQUIRED IMPORTS:
+     · None — standalone IIFE, no dependencies
+
+   QUICK REFERENCE:
+     Entry point     → initCounters() (auto-runs on DOMContentLoaded)
+     Animate one     → animateCounter(el)
+     Selector        → [data-target]
+     Trigger         → 25% visibility threshold
+================================================ */
 
 (function () {
   'use strict';
 
-  // Selects all counter elements on the page
+
+  /* ================================================
+     CONFIG
+  ================================================ */
+
   const SELECTOR = '[data-target]';
 
-  /**
-   * Easing function — ease out cubic
-   */
+
+  /* ================================================
+     UTILITIES
+  ================================================ */
+
+  /* Ease-out cubic — decelerates toward the end of the animation */
   function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
   }
 
-  /**
-   * Format a number with commas (or custom separator)
-   */
+  /* Formats a floored number with a configurable thousands separator */
   function formatNumber(value, separator) {
     if (!separator && separator !== '') separator = ',';
     return Math.floor(value).toLocaleString('en-US').replace(/,/g, separator);
   }
 
-  /**
-   * Animate a single counter element
-   */
+
+  /* ================================================
+     ANIMATE COUNTER
+     Runs a single requestAnimationFrame loop for
+     one counter element. Guarded by data-animated
+     to ensure it only runs once per element.
+  ================================================ */
+
   function animateCounter(el) {
-    // Already animated? Skip
     if (el.dataset.animated === 'true') return;
     el.dataset.animated = 'true';
 
@@ -69,7 +93,7 @@
       if (progress < 1) {
         requestAnimationFrame(step);
       } else {
-        // Ensure we land exactly on target
+        /* Snap to exact target value on completion */
         el.textContent = prefix + formatNumber(target, separator) + suffix;
       }
     }
@@ -77,14 +101,20 @@
     requestAnimationFrame(step);
   }
 
-  /**
-   * Set up IntersectionObserver to trigger counters when in view
-   */
+
+  /* ================================================
+     INIT
+     Observes all counter elements and triggers
+     animation when each enters the viewport.
+     Falls back to immediate animation if
+     IntersectionObserver is unavailable.
+  ================================================ */
+
   function initCounters() {
     const elements = document.querySelectorAll(SELECTOR);
     if (!elements.length) return;
 
-    // If IntersectionObserver not supported, animate immediately
+    /* Fallback: animate all immediately if observer not supported */
     if (!('IntersectionObserver' in window)) {
       elements.forEach(animateCounter);
       return;
@@ -95,20 +125,26 @@
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             animateCounter(entry.target);
-            observer.unobserve(entry.target); // run once
+            observer.unobserve(entry.target);
           }
         });
       },
-      { threshold: 0.25 } // trigger when 25% visible
+      { threshold: 0.25 },
     );
 
     elements.forEach((el) => observer.observe(el));
   }
 
-  // Run after DOM is ready
+
+  /* ================================================
+     BOOT
+     Defers init until the DOM is fully parsed.
+  ================================================ */
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initCounters);
   } else {
     initCounters();
   }
+
 })();

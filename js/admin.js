@@ -1,21 +1,71 @@
-// js/admin.js
+/* ================================================
+   admin.js — BarangayConnect
+   Admin dashboard logic for the pending user approval page.
+   Runs only for authenticated users with role "admin".
+
+   WHAT IS IN HERE:
+     · Auth guard — redirects non-admins to index
+     · loadPendingUsers — real-time snapshot of pending accounts,
+       with live search filtering by name, email, and resident ID
+     · buildCard — renders a single applicant card with ID photos,
+       detail grid, and approve / reject action buttons
+     · approveUser — sets status to active, scrubs verification data,
+       cleans up Storage photos
+     · rejectUser  — deletes Storage photos and user document;
+       Cloud Function handles Auth + userIndex cleanup
+
+   WHAT IS NOT IN HERE:
+     · Firebase config and auth/db instances  → firebase-config.js
+     · Storage photo deletion utility         → storage.js
+     · Firestore collection / doc path refs   → db-paths.js
+     · ID lightbox logic                      → invoked via window.openLightbox
+
+   REQUIRED IMPORTS:
+     · ./firebase-config.js          (auth, db)
+     · ./storage.js                  (deleteIdPhotos)
+     · ./db-paths.js                 (usersCol, userDoc, userIndexDoc)
+     · firebase-firestore.js@10.12.0 (query, where, onSnapshot, updateDoc,
+                                      deleteDoc, serverTimestamp, getDoc, deleteField)
+     · firebase-auth.js@10.12.0      (onAuthStateChanged)
+
+   QUICK REFERENCE:
+     Auth guard         → onAuthStateChanged (top-level, runs on load)
+     Snapshot listener  → loadPendingUsers(barangay, currentUid)
+     Card builder       → buildCard(user) → HTMLElement
+     Approve handler    → window.approveUser(uid, barangay, name)
+     Reject handler     → window.rejectUser(uid, barangay, name)
+================================================ */
+
+
+// ================================================
+// IMPORTS
+// ================================================
 
 import { auth, db } from './firebase-config.js';
 import { deleteIdPhotos } from './storage.js';
 import { usersCol, userDoc, userIndexDoc } from './db-paths.js';
+
 import {
   query, where, onSnapshot,
   updateDoc, deleteDoc, serverTimestamp, getDoc,
-  deleteField
+  deleteField,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 import {
-  onAuthStateChanged
+  onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 
-// =====================================================
-// GUARD: Admins only. Fetches their barangay for scoping.
-// =====================================================
+// ================================================
+// AUTH GUARD
+// ================================================
+
+/*
+   Runs on page load. Redirects to index if the user is not
+   authenticated, has no userIndex entry, or is not an admin.
+   On success, scopes the page to the admin's barangay.
+*/
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) { window.location.href = '../index.html'; return; }
 
@@ -29,9 +79,19 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 
-// =====================================================
-// LOAD PENDING USERS — real-time, by barangay
-//  =====================================================
+// ================================================
+// LOAD PENDING USERS
+// ================================================
+
+/*
+   Opens a real-time snapshot of all pending users for the given barangay.
+   Updates the pending count badge, sorts results alphabetically (current
+   admin first), and delegates rendering to renderFiltered().
+
+   Search strips dashes before comparing so partial IDs like "BAN2024"
+   match formatted strings like "BRY-BAN-2024-00001".
+*/
+
 let allUsers = [];
 
 function loadPendingUsers(barangay, currentUid) {
@@ -40,22 +100,18 @@ function loadPendingUsers(barangay, currentUid) {
   const loadingState = document.getElementById('loadingState');
   const searchInput  = document.getElementById('pendingSearch');
 
+  /* Filters allUsers by the current search term and re-renders the list */
   function renderFiltered(term) {
     container.innerHTML = '';
 
-    // No search term — show everything, or defer to the real empty state
     if (!term) {
-      if (allUsers.length === 0) {
-        emptyState.hidden = false;
-        return;
-      }
+      if (allUsers.length === 0) { emptyState.hidden = false; return; }
       emptyState.hidden = true;
       allUsers.forEach(user => container.appendChild(buildCard(user)));
       return;
     }
 
-    // Strip dashes from the term too, so "BAN2024" and "00001" both match
-    // "BRY-BAN-2024-00001" without the user needing to type exact formatting
+    /* Strip dashes from both sides so "BAN2024" matches "BRY-BAN-2024-00001" */
     const termClean = term.replace(/-/g, '');
 
     const filtered = allUsers.filter(u => {
@@ -65,10 +121,10 @@ function loadPendingUsers(barangay, currentUid) {
       const idClean = id.replace(/-/g, '');
 
       return (
-        name.includes(term)      ||
-        mail.includes(term)      ||
-        id.includes(term)        ||   // exact with dashes: "BRY-BAN"
-        idClean.includes(termClean)   // without dashes:    "ban2024" or "00001"
+        name.includes(term)         ||
+        mail.includes(term)         ||
+        id.includes(term)           ||
+        idClean.includes(termClean)
       );
     });
 
@@ -85,23 +141,22 @@ function loadPendingUsers(barangay, currentUid) {
       renderFiltered(searchInput.value.trim().toLowerCase());
     });
   }
-  
-  const q = query(
-    usersCol(barangay),
-    where('status', '==', 'pending')
-  );
+
+  /* Real-time listener — scoped to pending status for this barangay */
+  const q = query(usersCol(barangay), where('status', '==', 'pending'));
 
   onSnapshot(q, (snapshot) => {
     loadingState.hidden = true;
 
+    /* Update all pending count badges */
     const badge = document.getElementById('pendingBadgeCount');
     if (badge) {
-      badge.textContent   = snapshot.size;
+      badge.textContent  = snapshot.size;
       badge.style.display = snapshot.size > 0 ? 'inline' : 'none';
 
       const subBadge = document.getElementById('pendingSubBadge');
       if (subBadge) {
-        subBadge.textContent = snapshot.size;
+        subBadge.textContent  = snapshot.size;
         subBadge.style.display = snapshot.size > 0 ? 'inline' : 'none';
       }
     }
@@ -115,6 +170,8 @@ function loadPendingUsers(barangay, currentUid) {
     emptyState.hidden = true;
 
     allUsers = snapshot.docs.map(d => ({ uid: d.id, _barangay: barangay, ...d.data() }));
+
+    /* Sort alphabetically; surface the current admin's own entry first */
     allUsers.sort((a, b) => {
       if (a.uid === currentUid) return -1;
       if (b.uid === currentUid) return  1;
@@ -123,34 +180,44 @@ function loadPendingUsers(barangay, currentUid) {
       return aName.localeCompare(bName);
     });
 
-    // Re-apply whatever the admin has typed when the list refreshes live
+    /* Re-apply the active search term after a live list refresh */
     const term = searchInput?.value.trim().toLowerCase() ?? '';
     renderFiltered(term);
   });
 }
 
 
-// =====================================================
+// ================================================
 // BUILD APPLICANT CARD
-// =====================================================
-function buildCard(user) {
-  const card = document.createElement('div');
-  card.className = 'applicant-card';
-  card.id = `card-${user.uid}`;
+// ================================================
 
-  // Store both photo URLs on the card element so the lightbox
-  // can read them without embedding long Firebase URLs in onclick strings.
+/*
+   Constructs and returns the DOM element for a single pending applicant.
+   ID photo URLs are stored on dataset.idurls so the lightbox can read
+   them without embedding long Firebase URLs inside onclick strings.
+*/
+
+function buildCard(user) {
+  const card    = document.createElement('div');
+  card.className = 'applicant-card';
+  card.id        = `card-${user.uid}`;
+
   card.dataset.idurls = JSON.stringify([
     { url: user.idFrontURL || '', label: 'Front of ID' },
     { url: user.idBackURL  || '', label: 'Back of ID'  },
   ]);
 
   const dob = user.dob
-    ? new Date(user.dob).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(user.dob).toLocaleDateString('en-PH', {
+        year: 'numeric', month: 'long', day: 'numeric',
+      })
     : '—';
 
   const createdAt = user.createdAt?.toDate?.()
-    ?.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    ?.toLocaleDateString('en-PH', {
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
     ?? '—';
 
   const frontThumb = user.idFrontURL
@@ -244,10 +311,18 @@ function buildCard(user) {
 }
 
 
-// =====================================================
+// ================================================
 // APPROVE USER
-// Sets status → active, scrubs all verification data.
-// =====================================================
+// ================================================
+
+/*
+   Sets status → active and scrubs all verification fields from the
+   user document. Updates userIndex, then deletes Storage photos.
+   The Cloud Function also handles photo cleanup as a safety net —
+   whichever runs first, the other becomes a no-op.
+   Card disappears automatically via the onSnapshot listener.
+*/
+
 window.approveUser = async function(uid, barangay, name) {
   if (!confirm(`Approve ${name}? They will be able to sign in immediately.`)) return;
 
@@ -260,7 +335,6 @@ window.approveUser = async function(uid, barangay, name) {
     await updateDoc(userDoc(barangay, uid), {
       status:     'active',
       approvedAt: serverTimestamp(),
-      // Scrub verification data — no longer needed after approval
       idNumber:   deleteField(),
       idType:     deleteField(),
       idFrontURL: deleteField(),
@@ -272,21 +346,17 @@ window.approveUser = async function(uid, barangay, name) {
       status: 'active',
     });
 
-    // Also delete the Storage photos (belt-and-suspenders alongside the
-    // Cloud Function path — whichever runs first, the other is a no-op)
     try {
       await deleteIdPhotos(barangay, uid);
     } catch (storageErr) {
-      // Non-fatal — photos may already have been cleaned up by CF
+      /* Non-fatal — photos may already be gone via Cloud Function */
       console.warn('Storage cleanup on approval:', storageErr.message);
     }
 
-    // Card disappears via onSnapshot
-
   } catch (err) {
     console.error('Approve failed:', err);
-    btn.disabled   = false;
-    btn.innerHTML  = '<i data-lucide="check-circle"></i> Approve';
+    btn.disabled  = false;
+    btn.innerHTML = '<i data-lucide="check-circle"></i> Approve';
     feedback.textContent = 'Failed to approve. Try again.';
     feedback.style.color = 'red';
     lucide.createIcons({ el: btn });
@@ -294,10 +364,17 @@ window.approveUser = async function(uid, barangay, name) {
 };
 
 
-// =====================================================
+// ================================================
 // REJECT USER
-// Deletes photos + doc. Cloud Function cleans up Auth account.
-// =====================================================
+// ================================================
+
+/*
+   Deletes Storage photos then the user document.
+   Deleting the document triggers the Cloud Function which
+   removes the Auth account and userIndex entry.
+   Card disappears automatically via the onSnapshot listener.
+*/
+
 window.rejectUser = async function(uid, barangay, name) {
   if (!confirm(`Reject ${name}? This will permanently delete their application.`)) return;
 
@@ -307,15 +384,13 @@ window.rejectUser = async function(uid, barangay, name) {
   btn.textContent = 'Rejecting…';
 
   try {
-    await deleteIdPhotos(barangay, uid);     // storage.js — barangay-scoped paths
-    await deleteDoc(userDoc(barangay, uid)); // triggers CF → deletes Auth + userIndex
-
-    // Card disappears via onSnapshot
+    await deleteIdPhotos(barangay, uid);
+    await deleteDoc(userDoc(barangay, uid));
 
   } catch (err) {
     console.error('Reject failed:', err);
-    btn.disabled   = false;
-    btn.innerHTML  = '<i data-lucide="x-circle"></i> Reject';
+    btn.disabled  = false;
+    btn.innerHTML = '<i data-lucide="x-circle"></i> Reject';
     feedback.textContent = 'Failed to reject. Try again.';
     feedback.style.color = 'red';
     lucide.createIcons({ el: btn });

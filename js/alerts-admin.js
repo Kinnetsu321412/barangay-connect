@@ -1,24 +1,82 @@
-// js/alerts-admin.js
+/* ================================================
+   alerts-admin.js — BarangayConnect
+   Admin interface for broadcasting and managing site-wide alerts.
+   Runs only for authenticated users; scoped to their barangay.
 
-import { auth, db }          from './firebase-config.js';
-import { userIndexDoc, barangayId as toBid } from './db-paths.js';
+   WHAT IS IN HERE:
+     · Severity design token maps and label strings
+     · Module-level state (countdown timer, current collection ref, form visibility)
+     · injectConfirmModal     — lazily injects the two-step publish modal into the DOM
+     · showPublishConfirm     — returns a Promise; resolves on publish, rejects on cancel
+     · renderAlertForm        — toggles between the collapsed button and the full form
+     · handleCreateAlert      — reads form, runs the confirm flow, writes to Firestore
+     · initAlertsAdmin        — bootstraps the snapshot listener and form for a barangay
+     · renderAlertList        — renders the full list of alert management rows
+     · buildAlertRow          — builds a single alert row element with toggle / delete actions
+     · toggleAlert            — flips the active flag on an alert document
+     · deleteAlert            — permanently removes an alert document
+     · esc                    — HTML-escapes strings for safe innerHTML interpolation
+     · showAdminToast         — appends a transient toast to #toastContainer
+
+   WHAT IS NOT IN HERE:
+     · Firebase config and db instance         → firebase-config.js
+     · Firestore path helpers                  → db-paths.js
+     · Global modal / frame styles             → frames.css
+     · Resident-facing alert banner rendering  → alerts.js
+
+   REQUIRED IMPORTS:
+     · ./firebase-config.js          (auth, db)
+     · ./db-paths.js                 (userIndexDoc, barangayId as toBid)
+     · firebase-firestore.js@10.12.0 (collection, onSnapshot, addDoc, updateDoc,
+                                      deleteDoc, doc, serverTimestamp, Timestamp,
+                                      orderBy, query, getDoc)
+     · firebase-auth.js@10.12.0      (onAuthStateChanged)
+
+   QUICK REFERENCE:
+     Bootstrap          → onAuthStateChanged (top-level, runs on load)
+     Init per barangay  → initAlertsAdmin(barangay)
+     Confirm flow       → showPublishConfirm(alertData) → Promise
+     Form toggle        → window.showAlertForm() / window.hideAlertForm()
+     Row actions        → window.toggleAlert(id, barangayId, newState)
+                          window.deleteAlert(id, barangay)
+================================================ */
+
+
+// ================================================
+// IMPORTS
+// ================================================
+
+import { auth, db }                           from './firebase-config.js';
+import { userIndexDoc, barangayId as toBid }  from './db-paths.js';
+
 import {
   collection, onSnapshot, addDoc, updateDoc, deleteDoc,
   doc, serverTimestamp, Timestamp, orderBy, query,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  onAuthStateChanged,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 
-// ── Severity → design token maps ────────────────────────────────
+// ================================================
+// CONSTANTS — Severity Maps
+// ================================================
+
+/* Maps severity keys to design token sets for inline styling */
 const SEVERITY = {
   red:    { bg: 'var(--red-100)',  text: 'var(--red-900)',     border: 'var(--red)'          },
   orange: { bg: 'var(--amber-50)', text: 'var(--amber-950)',   border: 'var(--orange-hover)' },
   green:  { bg: 'var(--green-50)', text: 'var(--success-800)', border: 'var(--green-dark)'   },
   blue:   { bg: 'var(--blue-50)',  text: 'var(--blue-800)',    border: 'var(--blue-600)'     },
 };
+
+/* Fallback tokens used when a severity key is unrecognised */
 const SEVERITY_FALLBACK = {
   bg: 'var(--gray-100)', text: 'var(--gray-700)', border: 'var(--gray-400)',
 };
+
+/* Human-readable labels rendered in the publish confirm summary */
 const SEVERITY_LABELS = {
   red:    '🔴 Red — Emergency',
   orange: '🟠 Orange — Advisory',
@@ -26,14 +84,34 @@ const SEVERITY_LABELS = {
   blue:   '🔵 Blue — Info',
 };
 
+
+// ================================================
+// CONSTANTS — Countdown Ring
+// ================================================
+
 const COUNTDOWN_SECS     = 5;
-const RING_CIRCUMFERENCE = 163.4; // 2π × r(26)
-let _countdownTimer      = null;
-let _currentCol = null;
-let _alertFormVisible = false;
+const RING_CIRCUMFERENCE = 163.4;   // 2π × r(26) — kept for reference
+const RING_R             = 30;
+const RING_CIRC          = 2 * Math.PI * RING_R;  // 188.5 — used by the ring animation
 
 
-// ── Inject the two-step confirm modal once ───────────────────────
+// ================================================
+// MODULE STATE
+// ================================================
+
+let _countdownTimer   = null;   // setInterval handle for the publish countdown
+let _currentCol       = null;   // Firestore collection ref, set by initAlertsAdmin
+let _alertFormVisible = false;  // tracks whether the create form is expanded
+
+
+// ================================================
+// CONFIRM MODAL — Injection
+// ================================================
+
+/*
+   Lazily injects the two-step publish modal into the document body.
+   Safe to call multiple times — exits early if the modal already exists.
+*/
 
 function injectConfirmModal() {
   if (document.getElementById('alertPublishModal')) return;
@@ -118,9 +196,9 @@ function injectConfirmModal() {
               ">5</span>
             </div>
             <p style="
-              font-size:  var(--text-sm);
-              color:      var(--text-muted);
-              margin:     0;
+              font-size: var(--text-sm);
+              color:     var(--text-muted);
+              margin:    0;
             ">
               Auto-publishing in <strong id="apmCountLabel">5</strong>s…
             </p>
@@ -146,13 +224,22 @@ function injectConfirmModal() {
 }
 
 
-// ── Two-step confirm — returns a Promise ─────────────────────────
-// Step 1: show warning + summary, wait for "Proceed" or "Cancel"
-// Step 2: show countdown, auto-publish at 0 or on "Publish Now"
-// Rejecting at any point means the admin cancelled — nothing is written.
+// ================================================
+// CONFIRM MODAL — Two-Step Publish Flow
+// ================================================
 
-const RING_R   = 30;
-const RING_CIRC = 2 * Math.PI * RING_R; // 188.5
+/*
+   Returns a Promise that resolves when the admin confirms publication
+   (either via "Publish Now" or countdown expiry) and rejects on cancel.
+
+   Step 1 — displays a broadcast warning and alert summary.
+            Admin must click "I Understand, Proceed" to continue.
+   Step 2 — shows a 5-second countdown ring; auto-resolves at zero.
+            Admin can still cancel or skip ahead with "Publish Now".
+
+   Nothing is written to Firestore here — the caller (handleCreateAlert)
+   awaits this Promise and writes only on resolve.
+*/
 
 function showPublishConfirm(alertData) {
   injectConfirmModal();
@@ -171,17 +258,17 @@ function showPublishConfirm(alertData) {
     const proceedBtn = document.getElementById('apmProceedBtn');
     const nowBtn     = document.getElementById('apmPublishNowBtn');
 
-    // ── Reset to step 1 ──
+    /* Reset to step 1 */
     step1.hidden = false;
     step2.hidden = true;
 
-    // Colour icon to match severity=
+    /* Colour the icon to match severity */
     icon.className = 'modal__icon';
     if      (alertData.severity === 'red')   icon.classList.add('modal__icon--admin');
     else if (alertData.severity === 'green') icon.classList.add('modal__icon--resident');
     else                                     icon.classList.add('modal__icon--officer');
 
-    // ── Populate the warning summary ──
+    /* Build expiry line for the summary block */
     const expiryLine = alertData.expiresAt
       ? `<br>⏱ Auto-expires: <strong>${alertData.expiresAt.toDate().toLocaleString('en-PH', {
           month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -244,7 +331,7 @@ function showPublishConfirm(alertData) {
     modal.classList.add('visible');
 
 
-    // ── Step 1 handlers ──────────────────────────────────────────
+    // ---- Step 1 handlers ----
 
     function onCancel() {
       cleanup();
@@ -252,7 +339,6 @@ function showPublishConfirm(alertData) {
     }
 
     function onProceed() {
-      // Move to step 2 — start the countdown
       step1.hidden = true;
       step2.hidden = false;
       startCountdown();
@@ -266,12 +352,11 @@ function showPublishConfirm(alertData) {
     }, { once: true });
 
 
-    // ── Step 2: countdown ────────────────────────────────────────
+    // ---- Step 2: countdown ----
 
     function startCountdown() {
       let remaining = COUNTDOWN_SECS;
 
-      // Reset ring
       ring.style.strokeDasharray  = String(RING_CIRC);
       ring.style.strokeDashoffset = '0';
       ring.style.stroke           = 'var(--orange)';
@@ -287,7 +372,7 @@ function showPublishConfirm(alertData) {
         const progress = (COUNTDOWN_SECS - remaining) / COUNTDOWN_SECS;
         ring.style.strokeDashoffset = String(RING_CIRC * progress);
 
-        // Turn red in the last 2 seconds as a visual warning
+        /* Turn red in the last 2 seconds as a visual urgency cue */
         if (remaining <= 2) {
           ring.style.stroke    = 'var(--red)';
           countNum.style.color = 'var(--red)';
@@ -301,8 +386,8 @@ function showPublishConfirm(alertData) {
 
       _countdownTimer = setInterval(tick, 1000);
 
-      cancelBtn2.addEventListener('click', onCancel,       { once: true });
-      nowBtn.addEventListener(    'click', onPublishNow,   { once: true });
+      cancelBtn2.addEventListener('click', onCancel,     { once: true });
+      nowBtn.addEventListener(    'click', onPublishNow, { once: true });
     }
 
     function onPublishNow() {
@@ -311,22 +396,23 @@ function showPublishConfirm(alertData) {
     }
 
 
-    // ── Shared cleanup ───────────────────────────────────────────
+    // ---- Shared cleanup ----
 
     function cleanup() {
       clearInterval(_countdownTimer);
       _countdownTimer = null;
 
-      // Reset visual state for next open
+      /* Reset visual state for the next open */
       ring.style.stroke    = 'var(--orange)';
       countNum.style.color = 'var(--orange-hover)';
 
       modal.classList.remove('visible');
 
-      // Belt-and-suspenders listener removal
-      // (most are {once:true} but cancel on step2 may fire after
-      // countdown already cleaned up — safe to call removeEventListener
-      // on a listener that no longer exists)
+      /*
+         Belt-and-suspenders listener removal. Most listeners use {once:true},
+         but cancelBtn2 may fire after the countdown already cleaned up —
+         safe to call removeEventListener on a listener that no longer exists.
+      */
       cancelBtn1.removeEventListener('click', onCancel);
       cancelBtn2.removeEventListener('click', onCancel);
       proceedBtn.removeEventListener('click', onProceed);
@@ -335,6 +421,16 @@ function showPublishConfirm(alertData) {
   });
 }
 
+
+// ================================================
+// ALERT FORM — Render, Show, Hide
+// ================================================
+
+/*
+   Renders either the collapsed "Publish New Alert" trigger button
+   or the full create form, depending on _alertFormVisible.
+   Called by initAlertsAdmin on load and by show/hideAlertForm.
+*/
 
 function renderAlertForm(col) {
   const wrap = document.getElementById('alertCreateFormWrap');
@@ -430,19 +526,29 @@ function renderAlertForm(col) {
     ?.addEventListener('submit', (e) => { e.preventDefault(); handleCreateAlert(col); });
 }
 
+/* Expands the create form and scrolls it into view */
 window.showAlertForm = function() {
   _alertFormVisible = true;
-  // col is captured via closure in initAlertsAdmin — re-call renderAlertForm with it
   renderAlertForm(_currentCol);
   document.getElementById('alertCreateFormWrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+/* Collapses the create form back to the trigger button */
 window.hideAlertForm = function() {
   _alertFormVisible = false;
   renderAlertForm(_currentCol);
 };
 
-// ── Create alert ─────────────────────────────────────────────────
+
+// ================================================
+// ALERT FORM — Create Handler
+// ================================================
+
+/*
+   Reads and validates the form fields, runs the two-step publish confirm,
+   and writes the new alert to Firestore on resolve.
+   The form stays populated if the admin cancels the confirm flow.
+*/
 
 async function handleCreateAlert(col) {
   const btn = document.getElementById('alertCreateBtn');
@@ -465,11 +571,11 @@ async function handleCreateAlert(col) {
     source: 'admin', active: true, dismissible, expiresAt,
   };
 
-  // ── Show two-step confirm before touching Firestore ──────────
+  /* Run two-step confirm before touching Firestore */
   try {
     await showPublishConfirm(alertData);
   } catch {
-    return; // Cancelled — form stays populated, nothing written
+    return; // Admin cancelled — form stays populated, nothing written
   }
 
   btn.disabled = true;
@@ -494,10 +600,19 @@ async function handleCreateAlert(col) {
 }
 
 
-// ── Bootstrap ────────────────────────────────────────────────────
+// ================================================
+// BOOTSTRAP
+// ================================================
+
+/*
+   Resolves the admin's barangay from userIndex, then initialises
+   the snapshot listener and form. Dynamic import of getDoc avoids
+   a circular dependency with the top-level imports.
+*/
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
+
   const { getDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
   const snap = await getDoc(userIndexDoc(user.uid));
   if (!snap.exists()) return;
@@ -509,8 +624,8 @@ onAuthStateChanged(auth, async (user) => {
 function initAlertsAdmin(barangay) {
   const col = collection(db, 'barangays', toBid(barangay), 'siteAlerts');
   _currentCol = col;
-  const q = query(col, orderBy('createdAt', 'desc'));
 
+  const q = query(col, orderBy('createdAt', 'desc'));
   onSnapshot(q, (snap) => renderAlertList(barangay, snap.docs));
 
   renderAlertForm(col);
@@ -522,14 +637,21 @@ function initAlertsAdmin(barangay) {
 }
 
 
-// ── Render alert list ────────────────────────────────────────────
+// ================================================
+// ALERT LIST — Render
+// ================================================
+
+/*
+   Renders all alert management rows into #alertsList.
+   Shows an empty state when the snapshot contains no documents.
+   Note: the empty-state innerHTML must be set explicitly here —
+   the initial "Loading…" placeholder is never auto-cleared by the snapshot.
+*/
 
 function renderAlertList(barangay, docs) {
   const container = document.getElementById('alertsList');
   if (!container) return;
 
-  // ← This was the bug: the initial "Loading…" innerHTML was never
-  //   cleared when the snapshot returned zero documents.
   if (!docs.length) {
     container.innerHTML = `
       <div style="
@@ -564,7 +686,14 @@ function renderAlertList(barangay, docs) {
 }
 
 
-// ── Build a single alert management row ─────────────────────────
+// ================================================
+// ALERT LIST — Build Row
+// ================================================
+
+/*
+   Constructs and returns the DOM element for a single alert management row.
+   Includes severity pill, title, message, metadata, and toggle / delete buttons.
+*/
 
 function buildAlertRow(barangay, id, d) {
   const sev     = SEVERITY[d.severity] ?? SEVERITY_FALLBACK;
@@ -575,8 +704,9 @@ function buildAlertRow(barangay, id, d) {
     : 'No expiry';
   const created = d.createdAt?.toDate?.()
     ?.toLocaleString('en-PH', {
-      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-    }) ?? '—';
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+      })
+    ?? '—';
 
   const row = document.createElement('div');
   row.style.cssText = `
@@ -670,23 +800,24 @@ function buildAlertRow(barangay, id, d) {
 }
 
 
-// ── Toggle / Delete ──────────────────────────────────────────────
+// ================================================
+// ALERT ACTIONS — Toggle / Delete
+// ================================================
 
+/* Flips the active flag on an alert document */
 window.toggleAlert = async function(id, barangayId, newState) {
   try {
     await updateDoc(doc(db, 'barangays', barangayId, 'siteAlerts', id), {
       active: newState,
     });
-    showAdminToast(
-      newState ? 'Alert reactivated.' : 'Alert deactivated.',
-      'success',
-    );
+    showAdminToast(newState ? 'Alert reactivated.' : 'Alert deactivated.', 'success');
   } catch (err) {
     console.error('Toggle failed:', err);
     showAdminToast('Could not update alert.', 'error');
   }
 };
 
+/* Permanently removes an alert document after a native confirm */
 window.deleteAlert = async function(id, barangay) {
   if (!confirm('Permanently delete this alert? This cannot be undone.')) return;
   try {
@@ -699,26 +830,31 @@ window.deleteAlert = async function(id, barangay) {
 };
 
 
-// ── Escape helper ────────────────────────────────────────────────
+// ================================================
+// UTILITIES
+// ================================================
 
+/* HTML-escapes a value for safe use in innerHTML interpolation */
 function esc(str) {
   return String(str ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;');
 }
 
-
-// ── Toast ────────────────────────────────────────────────────────
-
+/* Appends a transient toast to #toastContainer; auto-removes after 3.5s */
 function showAdminToast(message, type = 'success') {
   const container = document.getElementById('toastContainer');
   if (!container) return;
-  const toast = document.createElement('div');
+
+  const toast     = document.createElement('div');
   toast.className = `toast toast--${type}`;
   toast.innerHTML = `
     <i data-lucide="${type === 'success' ? 'check' : 'x-circle'}"></i>
     ${esc(message)}
   `;
+
   container.appendChild(toast);
   lucide.createIcons({ el: toast });
   setTimeout(() => toast.remove(), 3500);

@@ -1,35 +1,82 @@
-// js/profile.js
-// =====================================================
-// Profile page — Firebase auth + Firestore integration.
-//
-// DEMO FALLBACK LOGIC:
-//   · Opens from file:// → always demo (no Firebase access)
-//   · Auth resolves with no user → redirect to login
-//   · Firebase error / timeout (4 s) → demo mode with banner
-//   · Logged-in active user → full Firebase mode
-//
-// COLLECTIONS USED (all barangay-scoped):
-//   barangays/{bId}/reports          – where('uid','==',uid), status != 'resolved'
-//   barangays/{bId}/documentRequests – where('uid','==',uid)
-//   barangays/{bId}/announcements    – orderBy createdAt desc, limit 5
-// =====================================================
+/* ================================================
+   profile.js — BarangayConnect
+   Profile page controller. Handles Firebase auth
+   resolution, Firestore data subscriptions, and
+   all page rendering for the resident profile view.
+
+   DEMO FALLBACK LOGIC:
+     · Opened via file://          → always demo (no Firebase access)
+     · Auth resolves, no user      → redirect to login
+     · Firebase error / 4s timeout → demo mode with banner
+     · Logged-in active user       → full Firebase mode
+
+   WHAT IS IN HERE:
+     · Demo data constants (user, reports, docs, announcements)
+     · Auth resolution with timeout fallback
+     · Page init — hero, drawer, ID card, sign-out
+     · Real-time reports subscription and renderer
+     · Real-time document requests subscription and renderer
+     · Real-time announcements subscription and renderer
+     · Stat card updates
+     · Demo mode banner
+     · Shared utility functions (setEl, esc, fmtDate, relTime, etc.)
+
+   WHAT IS NOT IN HERE:
+     · ID card component rendering  → id-card.js (window.renderIDCard)
+     · Weather widget logic         → weather.js
+     · Navbar auth and role pill    → nav-auth.js
+     · Firebase config              → firebase-config.js
+     · Firestore path helpers       → db-paths.js
+
+   REQUIRED IMPORTS:
+     · ./firebase-config.js          (auth, db)
+     · ./db-paths.js                 (userDoc, userIndexDoc, barangayId)
+     · ./weather.js                  (loadWeather)
+     · ./nav-auth.js                 (initNavAuth)
+     · firebase-firestore.js@10.12.0 (getDoc, collection, query, where,
+                                      orderBy, limit, onSnapshot)
+     · firebase-auth.js@10.12.0      (onAuthStateChanged, signOut)
+     · Lucide Icons                  — loaded before this script
+
+   QUICK REFERENCE:
+     Entry point       → IS_LOCAL check at module root
+     Page hydration    → initPage(userData, isDemo)
+     Reports           → subscribeReports(barangay, uid) / renderReports(reports)
+     Documents         → subscribeDocuments(barangay, uid) / renderDocuments(docs)
+     Announcements     → subscribeAnnouncements(barangay) / renderAnnouncements(items)
+     Stat cards        → updateStatCards(reports, announcements)
+
+   COLLECTIONS USED (all barangay-scoped):
+     barangays/{bId}/reports          — where('uid','==',uid), status != 'resolved'
+     barangays/{bId}/documentRequests — where('uid','==',uid)
+     barangays/{bId}/announcements    — orderBy createdAt desc, limit 5
+================================================ */
+
+
+/* ================================================
+   IMPORTS
+================================================ */
 
 import { auth, db } from './firebase-config.js';
 import { userDoc, userIndexDoc, barangayId } from './db-paths.js';
+
 import {
   getDoc,
   collection, query, where, orderBy, limit, onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 import {
   onAuthStateChanged, signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { loadWeather } from './weather.js';
-import { initNavAuth } from './nav-auth.js';
+
+import { loadWeather }  from './weather.js';
+import { initNavAuth }  from './nav-auth.js';
 
 
-// =====================================================
-// DEMO DATA
-// =====================================================
+/* ================================================
+   DEMO DATA
+================================================ */
+
 const DEMO_USER = {
   uid:              'demo-uid-000001',
   fullName:         'Juan dela Cruz',
@@ -48,7 +95,7 @@ const DEMO_USER = {
 };
 
 const DEMO_REPORTS = [
-  { id: 'CON-2025-0498', category: 'Flooded Road', categoryColor: 'blue',  location: 'Rizal St. near Elem. School',     status: 'inprogress', createdAt: new Date('2025-06-01') },
+  { id: 'CON-2025-0498', category: 'Flooded Road', categoryColor: 'blue',  location: 'Rizal St. near Elem. School',   status: 'inprogress', createdAt: new Date('2025-06-01') },
   { id: 'CON-2025-0471', category: 'Garbage',       categoryColor: 'amber', location: 'Corner Bonifacio & Mabini St.', status: 'reviewing',  createdAt: new Date('2025-05-28') },
 ];
 
@@ -66,15 +113,19 @@ const DEMO_ANNOUNCEMENTS = [
 ];
 
 
-// =====================================================
-// ENTRY POINT
-// =====================================================
+/* ================================================
+   ENTRY POINT
+   file:// always uses demo. Otherwise, auth is
+   resolved with a 4-second fallback to demo mode.
+================================================ */
+
 const IS_LOCAL = window.location.protocol === 'file:';
 
 if (IS_LOCAL) {
   initPage(DEMO_USER, true);
 } else {
   let resolved = false;
+
   const fallbackTimer = setTimeout(() => {
     if (!resolved) {
       resolved = true;
@@ -95,11 +146,19 @@ if (IS_LOCAL) {
 
     try {
       const indexSnap = await getDoc(userIndexDoc(firebaseUser.uid));
-      if (!indexSnap.exists()) { await signOut(auth); window.location.href = '../index.html'; return; }
+      if (!indexSnap.exists()) {
+        await signOut(auth);
+        window.location.href = '../index.html';
+        return;
+      }
 
       const { barangay, status, role } = indexSnap.data();
 
-      if (status !== 'active') { await signOut(auth); window.location.href = '../index.html'; return; }
+      if (status !== 'active') {
+        await signOut(auth);
+        window.location.href = '../index.html';
+        return;
+      }
 
       const userSnap = await getDoc(userDoc(barangay, firebaseUser.uid));
       const userData = {
@@ -122,54 +181,59 @@ if (IS_LOCAL) {
 }
 
 
-// =====================================================
-// INIT PAGE — populates static hero / drawer / ID card
-// =====================================================
+/* ================================================
+   INIT PAGE
+   Populates the hero, profile drawer, ID card,
+   and sign-out button. In demo mode, also renders
+   all section content from static demo data.
+================================================ */
+
 function initPage(userData, isDemo) {
-  // ── Body role class (controls navbar officer/admin links) ────
   const role = userData.role || 'resident';
+
+  /* Body role class controls navbar officer/admin link visibility */
   document.body.className = `role-${role}`;
   document.body.removeAttribute('data-role-init');
 
-  // ── Hero greeting (Title Case) ───────────────────────────────
-  const h = new Date().getHours();
+  /* ── Hero ── */
+  const h        = new Date().getHours();
   const greeting = h < 12 ? 'Good Morning, ' : h < 18 ? 'Good Afternoon, ' : 'Good Evening, ';
   const heroGreetEl = document.getElementById('heroGreet');
   if (heroGreetEl) heroGreetEl.textContent = greeting;
 
-  // ── Hero fields ──────────────────────────────────────────────
-  const firstName = (userData.fullName || `${userData.firstName || ''}`).split(' ')[0] || 'Resident';
+  const firstName     = (userData.fullName || `${userData.firstName || ''}`).split(' ')[0] || 'Resident';
   const barangayLabel = [userData.barangay, userData.municipality, userData.province].filter(Boolean).join(', ');
-  const sinceYear = extractYear(userData.createdAt);
+  const sinceYear     = extractYear(userData.createdAt);
+  const muniSuffix    = userData.municipality ? ', ' + esc(userData.municipality) : '';
 
-  setEl('heroName', esc(firstName) + '.');
-  setEl('heroBarangay', 'Barangay ' + esc(barangayLabel));
-  setEl('heroSince', sinceYear);
-  const muniSuffix = userData.municipality ? ', ' + esc(userData.municipality) : '';
-  setEl('widgetLocation', 'Brgy. ' + esc(userData.barangay || '') + muniSuffix);
+  setEl('heroName',      esc(firstName) + '.');
+  setEl('heroBarangay',  'Barangay ' + esc(barangayLabel));
+  setEl('heroSince',     sinceYear);
+  setEl('widgetLocation','Brgy. ' + esc(userData.barangay || '') + muniSuffix);
   loadWeather(userData.municipality, userData.province);
 
-  // ── Profile drawer ───────────────────────────────────────────
-  const displayName = userData.fullName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Guest';
-  const initials    = displayName.split(' ').slice(0, 2).map(n => n[0] || '').join('').toUpperCase() || '??';
-  const idNumber    = userData.residentIdNumber || '—';
+  /* ── Profile drawer ── */
+  const displayName = userData.fullName
+    || `${userData.firstName || ''} ${userData.lastName || ''}`.trim()
+    || 'Guest';
+  const initials = displayName.split(' ').slice(0, 2).map(n => n[0] || '').join('').toUpperCase() || '??';
+  const idNumber = userData.residentIdNumber || '—';
 
-  setEl('drawerAvatar', esc(initials));
-  setEl('drawerName',   esc(displayName));
-  setEl('drawerRole',   esc(roleLabel(role)) + ' · Barangay ' + esc(userData.barangay || ''));
-  setEl('drawerIdNumber',
-    '<i data-lucide="id-card"></i> ' + esc(idNumber));
+  setEl('drawerAvatar',   esc(initials));
+  setEl('drawerName',     esc(displayName));
+  setEl('drawerRole',     esc(roleLabel(role)) + ' · Barangay ' + esc(userData.barangay || ''));
+  setEl('drawerIdNumber', '<i data-lucide="id-card"></i> ' + esc(idNumber));
 
   const drawerEl = document.getElementById('profileDrawer');
   if (drawerEl) lucide.createIcons({ el: drawerEl });
 
-  // ── Digital ID card ──────────────────────────────────────────
+  /* ── Digital ID card ── */
   if (typeof window.renderIDCard === 'function') {
     window.renderIDCard(userData, 'idCardContainer');
     window.renderIDCard(userData, 'idCardModalContainer');
   }
 
-  // ── Sign-out confirm button ──────────────────────────────────
+  /* ── Sign-out confirm ── */
   const confirmBtn = document.getElementById('confirmSignOutBtn');
   if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
@@ -180,7 +244,7 @@ function initPage(userData, isDemo) {
     });
   }
 
-  // ── Demo banner ──────────────────────────────────────────────
+  /* ── Demo mode ── */
   if (isDemo) {
     s('weatherTemp', '32°');
     s('weatherDesc', 'Partly Cloudy');
@@ -193,15 +257,16 @@ function initPage(userData, isDemo) {
 }
 
 
-// =====================================================
-// REPORTS — real-time subscription
-// =====================================================
+/* ================================================
+   REPORTS — subscription and renderer
+================================================ */
+
 function subscribeReports(barangay, uid) {
   const bId = barangayId(barangay);
 
   const q = query(
     collection(db, 'barangays', bId, 'reports'),
-    where('uid', '==', uid),
+    where('uid',    '==', uid),
     where('status', 'in', ['pending', 'reviewing', 'inprogress']),
     orderBy('createdAt', 'desc'),
     limit(10)
@@ -263,9 +328,10 @@ function renderReports(reports) {
 }
 
 
-// =====================================================
-// DOCUMENTS — real-time subscription
-// =====================================================
+/* ================================================
+   DOCUMENTS — subscription and renderer
+================================================ */
+
 function subscribeDocuments(barangay, uid) {
   const bId = barangayId(barangay);
 
@@ -328,9 +394,10 @@ function renderDocuments(docs) {
 }
 
 
-// =====================================================
-// ANNOUNCEMENTS — real-time subscription
-// =====================================================
+/* ================================================
+   ANNOUNCEMENTS — subscription and renderer
+================================================ */
+
 function subscribeAnnouncements(barangay) {
   const bId = barangayId(barangay);
 
@@ -372,11 +439,11 @@ function renderAnnouncements(announcements) {
   };
 
   list.innerHTML = announcements.map(a => {
-    const cfg        = COLOR_MAP[a.category] || { color: 'blue', icon: 'megaphone' };
-    const color      = a.color || cfg.color;
-    const icon       = a.icon  || cfg.icon;
-    const accentMod  = color === 'orange' ? 'post-row--orange' : `post-row--${color}`;
-    const tagColor   = color === 'orange' ? 'amber' : color;
+    const cfg       = COLOR_MAP[a.category] || { color: 'blue', icon: 'megaphone' };
+    const color     = a.color || cfg.color;
+    const icon      = a.icon  || cfg.icon;
+    const accentMod = color === 'orange' ? 'post-row--orange' : `post-row--${color}`;
+    const tagColor  = color === 'orange' ? 'amber' : color;
 
     return `<div class="post-row post-row--accented ${accentMod}">
       <div class="post-row__tags">
@@ -392,9 +459,12 @@ function renderAnnouncements(announcements) {
 }
 
 
-// =====================================================
-// STAT CARDS
-// =====================================================
+/* ================================================
+   STAT CARDS
+   Accepts null for either argument to update only
+   the relevant card without touching the other.
+================================================ */
+
 function updateStatCards(reports, announcements) {
   if (reports !== null) {
     const active     = reports.length;
@@ -412,15 +482,18 @@ function updateStatCards(reports, announcements) {
     const urgent = announcements.filter(a =>
       a.color === 'red' || a.category === 'Safety' || a.category === 'Health'
     ).length;
+
     setEl('statAnnouncements',    announcements.length);
     setEl('statAnnouncementsSub', urgent > 0 ? `${urgent} marked urgent` : 'No urgent announcements');
   }
 }
 
 
-// =====================================================
-// DEMO BANNER
-// =====================================================
+/* ================================================
+   DEMO BANNER
+   Fixed pill shown when the page runs in demo mode.
+================================================ */
+
 function showDemoBanner() {
   const banner = document.createElement('div');
   banner.style.cssText = [
@@ -435,50 +508,70 @@ function showDemoBanner() {
 }
 
 
-// =====================================================
-// HELPERS
-// =====================================================
+/* ================================================
+   UTILITIES
+================================================ */
+
+/* Sets innerHTML of an element by id */
 function setEl(id, html) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = String(html);
 }
 
+/* Sets textContent of an element by id */
 function s(id, v) {
   const el = document.getElementById(id);
   if (el) el.textContent = String(v);
 }
 
-function esc(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/* Escapes a value for safe inline HTML use */
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
+/* Maps a role key to its display label */
 function roleLabel(role) {
   return { resident: 'Resident', officer: 'Barangay Officer', admin: 'Admin' }[role] || 'Resident';
 }
 
+/* Maps a report category name to its tag color token */
 function tagColorForCategory(cat) {
-  return { 'Flooded Road': 'blue', Garbage: 'amber', Noise: 'amber', Fire: 'red', Safety: 'red', Health: 'red' }[cat] || 'blue';
+  return {
+    'Flooded Road': 'blue',
+    Garbage:        'amber',
+    Noise:          'amber',
+    Fire:           'red',
+    Safety:         'red',
+    Health:         'red',
+  }[cat] || 'blue';
 }
 
+/* Extracts the year from a Firestore timestamp or Date */
 function extractYear(ts) {
   if (!ts) return '—';
   const d = ts?.toDate?.() ?? new Date(ts);
   return isNaN(d) ? '—' : d.getFullYear();
 }
 
+/* Formats a Firestore timestamp or Date to a locale date string */
 function fmtDate(ts, opts = { year: 'numeric', month: 'short', day: 'numeric' }) {
   if (!ts) return '—';
   const d = ts?.toDate?.() ?? new Date(ts);
   return isNaN(d) ? '—' : d.toLocaleDateString('en-PH', opts);
 }
 
+/* Formats a Date into a human-readable relative time string */
 function relTime(date) {
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins <  1)  return 'Just now';
-  if (mins < 60)  return `${mins}m ago`;
+  if (mins <  1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs  < 24)  return hrs === 1 ? '1 hour ago' : `${hrs} hours ago`;
+  if (hrs  < 24) return hrs === 1 ? '1 hour ago' : `${hrs} hours ago`;
   const days = Math.floor(hrs / 24);
   if (days === 1) return 'Yesterday';
   return date.toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' });

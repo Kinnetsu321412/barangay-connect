@@ -1,36 +1,91 @@
-// js/roles-admin.js
-// =====================================================
-// Users & Roles tab — scoped to admin's barangay.
-// Firestore path: barangays/{barangayId}/users/{uid}
-// =====================================================
+/* ================================================
+   roles-admin.js — BarangayConnect
+   Admin panel module for managing users and roles,
+   scoped to the authenticated admin's barangay.
+   Handles real-time user listing, role assignment,
+   post limit overrides, and household grouping.
+
+   Firestore path:
+     barangays/{barangayId}/users/{uid}
+
+   WHAT IS IN HERE:
+     · Auth-gated initialization with admin role check
+     · Real-time user list subscription and rendering
+     · Role assignment modal with admin confirmation guard
+     · Filter and search by role, name, email, or ID
+     · Household grouping bar with filter support
+     · Per-resident post limit override controls
+     · Today's post count display per resident
+     · Status indicator (online / recently active / offline)
+     · JS tooltip system for role action buttons
+     · Toast notification system
+
+   WHAT IS NOT IN HERE:
+     · Reported post moderation        → reported-posts-admin.js
+     · Reported comment moderation     → reported-comments-admin.js
+     · Admin panel layout and styles   → admin.css
+     · Firebase config                 → firebase-config.js
+     · Firestore path helpers          → db-paths.js
+
+   REQUIRED IMPORTS:
+     · ./firebase-config.js           (auth, db)
+     · ./db-paths.js                  (usersCol, userDoc, userIndexDoc)
+     · firebase-firestore.js@10.12.0  (query, where, onSnapshot,
+                                       updateDoc, serverTimestamp, getDoc)
+     · firebase-auth.js@10.12.0       (onAuthStateChanged)
+     · Lucide Icons                   — loaded before this script
+
+   QUICK REFERENCE:
+     Init                → onAuthStateChanged (auto-runs on import)
+     Tab switching       → window.switchTab(tab)
+     Role filter         → window.setRoleFilter(role, btn)
+     Search              → window.filterUsers()
+     Role modal          → window.openRoleModal(...)
+     Confirm role change → window.confirmRoleChange()
+     Post limit save     → window.savePostLimit(uid)
+     Household filter    → window.setHouseholdFilter(id)
+     Badge element       → #reportedPostsBadge
+     List element        → #usersTable
+================================================ */
+
+
+/* ================================================
+   IMPORTS
+================================================ */
 
 import { auth, db } from './firebase-config.js';
 import { usersCol, userDoc, userIndexDoc } from './db-paths.js';
+
 import {
   query, where, onSnapshot,
-  updateDoc, serverTimestamp, getDoc
+  updateDoc, serverTimestamp, getDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 import {
-  onAuthStateChanged
+  onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 
-// =====================================================
-// STATE
-// =====================================================
-let allUsers          = [];
-let currentFilter     = 'all';
-let currentSearch     = '';
-let adminBarangay     = '';
-let adminUid          = '';
+/* ================================================
+   MODULE STATE
+================================================ */
+
+let allUsers         = [];
+let currentFilter    = 'all';
+let currentSearch    = '';
+let adminBarangay    = '';
+let adminUid         = '';
 let currentHousehold = '';
-let pendingChange     = null;
+let pendingChange    = null;
 
 
-// =====================================================
-// TAB SWITCHING
-// =====================================================
-window.switchTab = function(tab) {
+/* ================================================
+   TAB SWITCHING
+   Activates the selected panel and tab button,
+   deactivating all others.
+================================================ */
+
+window.switchTab = function (tab) {
   document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(`panel-${tab}`).classList.add('active');
@@ -38,9 +93,13 @@ window.switchTab = function(tab) {
 };
 
 
-// =====================================================
-// INIT
-// =====================================================
+/* ================================================
+   INIT — auth-gated, admin-only
+   Resolves the barangay ID, writes lastSeen for
+   the admin, then starts the user subscription.
+   Silently exits for non-admin roles.
+================================================ */
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
 
@@ -50,7 +109,7 @@ onAuthStateChanged(auth, async (user) => {
   adminUid      = user.uid;
   adminBarangay = indexSnap.data().barangay || '';
 
-  // Write lastSeen for the admin themselves
+  /* Record admin's last active timestamp */
   try {
     await updateDoc(userDoc(adminBarangay, user.uid), {
       lastSeen: serverTimestamp(),
@@ -63,54 +122,63 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 
-// =====================================================
-// LOAD USERS
-// =====================================================
-function loadUsers() {
-  const table = document.getElementById('usersTable');
+/* ================================================
+   LOAD USERS
+   Subscribes in real time to all active users in
+   the admin's barangay and triggers a re-render
+   on every change.
+================================================ */
 
+function loadUsers() {
   const q = query(
     usersCol(adminBarangay),
-    where('status', '==', 'active')
+    where('status', '==', 'active'),
   );
 
   onSnapshot(q, (snapshot) => {
     allUsers = [];
+
     snapshot.forEach((docSnap) => {
       const d = docSnap.data();
       allUsers.push({
-        uid:        docSnap.id,
-        fullName:   d.fullName ?? `${d.firstName ?? ''} ${d.lastName ?? ''}`.trim(),
-        email:      d.email    ?? '',
-        phone:      d.phone ?? '',
-        role:       d.role     ?? 'resident',
-        barangay:   d.barangay ?? '',
-        residentIdNumber: d.residentIdNumber ?? '—',
-        streetAddress: d.streetAddress ?? '',
-        householdId:   d.householdId   ?? '',
-        createdAt:  d.createdAt,
-        lastSeen:   d.lastSeen  ?? null,
-        superAdmin: d.superAdmin === true,
+        uid:               docSnap.id,
+        fullName:          d.fullName ?? `${d.firstName ?? ''} ${d.lastName ?? ''}`.trim(),
+        email:             d.email    ?? '',
+        phone:             d.phone    ?? '',
+        role:              d.role     ?? 'resident',
+        barangay:          d.barangay ?? '',
+        residentIdNumber:  d.residentIdNumber ?? '—',
+        streetAddress:     d.streetAddress    ?? '',
+        householdId:       d.householdId      ?? '',
+        createdAt:         d.createdAt,
+        lastSeen:          d.lastSeen  ?? null,
+        superAdmin:        d.superAdmin === true,
         postLimitOverride: typeof d.postLimitOverride === 'number' ? d.postLimitOverride : null,
       });
     });
+
     renderUsers();
   });
 }
 
 
-// =====================================================
-// RENDER
-// =====================================================
+/* ================================================
+   RENDER
+   Applies active role filter, search query, and
+   household filter to the user list, then builds
+   and injects all user rows.
+================================================ */
+
 function renderUsers() {
   const table = document.getElementById('usersTable');
-  let list = [...allUsers];
+  let list    = [...allUsers];
 
+  /* Role filter */
   if (currentFilter !== 'all') list = list.filter(u => u.role === currentFilter);
 
-  if (currentSearch) 
-  {
-    const q = currentSearch.toLowerCase();
+  /* Search filter — matches name, email, or resident ID */
+  if (currentSearch) {
+    const q      = currentSearch.toLowerCase();
     const qClean = q.replace(/-/g, '');
     list = list.filter(u => {
       const id      = (u.residentIdNumber ?? '').toLowerCase();
@@ -124,6 +192,7 @@ function renderUsers() {
     });
   }
 
+  /* Sort: current admin first, then alphabetically */
   list.sort((a, b) => {
     if (a.uid === adminUid) return -1;
     if (b.uid === adminUid) return  1;
@@ -136,23 +205,31 @@ function renderUsers() {
     return;
   }
 
+  /* Household filter applied after sort */
   if (currentHousehold) {
     list = list.filter(u => u.householdId === currentHousehold);
   }
 
   table.innerHTML = list.map(u => buildUserRow(u)).join('');
+
   list.filter(u => u.role === 'resident').forEach(u => {
     loadTodayPostCount(u.uid, adminBarangay);
   });
+
   buildHouseholdBar();
   lucide.createIcons({ el: table });
-  initTooltips();   // attach JS tooltips after each render
+  initTooltips();
 }
 
 
-// =====================================================
-// BUILD USER ROW
-// =====================================================
+/* ================================================
+   BUILD USER ROW
+   Constructs the full HTML for a single user row,
+   including avatar, contact info, role badge,
+   status indicator, role action buttons, and the
+   post limit accordion for residents.
+================================================ */
+
 function buildUserRow(user) {
   const isMe         = user.uid === adminUid;
   const isSuperAdmin = user.superAdmin === true;
@@ -166,23 +243,30 @@ function buildUserRow(user) {
   const { statusClass, statusLabel } = getStatusInfo(user.lastSeen);
 
   const youChip = isMe
-    ? `<span class="you-chip" title="You cannot change your own role"><i data-lucide="user-check"></i> You</span>`
+    ? `<span class="you-chip" title="You cannot change your own role">
+         <i data-lucide="user-check"></i> You
+       </span>`
     : '';
 
   const superBadge = isSuperAdmin
-    ? `<span class="super-badge" title="Protected — cannot be modified by any admin"><i data-lucide="crown"></i> Protected</span>`
+    ? `<span class="super-badge" title="Protected — cannot be modified by any admin">
+         <i data-lucide="crown"></i> Protected
+       </span>`
     : '';
 
+  /* Builds a single role action button with appropriate state and tooltip */
   const makeBtn = (role, icon) => {
-    const isCurrent  = user.role === role;
+    const isCurrent    = user.role === role;
     const currentClass = isCurrent ? `current-role current-role--${role}` : '';
     const colorClass   = `role-action-btn--${role}`;
     let tooltip;
     let disabled = '';
+
     if (isSuperAdmin)   { disabled = 'disabled'; tooltip = 'Protected — cannot be modified'; }
     else if (isMe)      { disabled = 'disabled'; tooltip = "This is you — you can't change your own role"; }
     else if (isCurrent) { disabled = 'disabled'; tooltip = `Already ${roleDisplayName(role)}`; }
     else                { tooltip = `Set as ${roleDisplayName(role)}`; }
+
     return `<button
       class="role-action-btn ${colorClass} ${currentClass}"
       data-tooltip="${tooltip}"
@@ -198,18 +282,24 @@ function buildUserRow(user) {
         <div class="user-avatar user-avatar--${user.role}">${initials}</div>
         <div style="min-width:0;">
           <div class="user-name">
-            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">${escapeHtml(user.fullName)}</span>
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;">
+              ${escapeHtml(user.fullName)}
+            </span>
             ${youChip}${superBadge}
           </div>
           <div class="user-since">Since ${joinDate}</div>
-          <div style="font-size:0.72rem;color:#aaa;margin-top:2px;font-family:monospace;">${escapeHtml(user.residentIdNumber)}</div>
+          <div style="font-size:0.72rem;color:#aaa;margin-top:2px;font-family:monospace;">
+            ${escapeHtml(user.residentIdNumber)}
+          </div>
         </div>
       </div>
 
       <div style="min-width:0;display:flex;flex-direction:column;gap:3px;overflow:hidden;">
-        <span style="font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#333;">${escapeHtml(user.email)}</span>
+        <span style="font-size:0.82rem;font-weight:500;white-space:nowrap;overflow:hidden;
+          text-overflow:ellipsis;color:#333;">${escapeHtml(user.email)}</span>
         <span style="font-size:0.78rem;color:#999;">${escapeHtml(user.phone || '—')}</span>
-        <span style="font-size:0.75rem;color:#bbb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(user.streetAddress || '—')}</span>
+        <span style="font-size:0.75rem;color:#bbb;white-space:nowrap;overflow:hidden;
+          text-overflow:ellipsis;">${escapeHtml(user.streetAddress || '—')}</span>
       </div>
 
       <div class="role-badge ${roleBadgeClass}">
@@ -258,7 +348,8 @@ function buildUserRow(user) {
                 onmouseout="this.style.background='#1a3a1a'">
                 Save
               </button>
-              <span id="plimit-status-${user.uid}" style="font-size:.72rem;color:#22c55e;font-weight:600;"></span>
+              <span id="plimit-status-${user.uid}"
+                style="font-size:.72rem;color:#22c55e;font-weight:600;"></span>
             </div>
           </details>`
         : `<span style="font-size:.72rem;color:#aaa;">Unlimited posts (${user.role})</span>`}
@@ -267,22 +358,23 @@ function buildUserRow(user) {
     </div>`;
 }
 
-// =====================================================
-//                  JS TOOLTIP
-// =====================================================
+
+/* ================================================
+   TOOLTIPS
+   Attaches hover-based tooltip positioning to all
+   elements with a data-tooltip attribute. Called
+   after each render to reflect the updated DOM.
+================================================ */
+
 function initTooltips() {
   const tip = document.getElementById('adminTooltip');
 
   document.querySelectorAll('[data-tooltip]').forEach(el => {
-    // Remove old listeners by cloning (clean slate each render)
-    el.addEventListener('mouseenter', (e) => {
+    el.addEventListener('mouseenter', () => {
       const text = el.getAttribute('data-tooltip');
       if (!text) return;
-
       tip.textContent = text;
       tip.classList.add('visible');
-
-      // Rebuild arrow (textContent clears children)
       positionTooltip(tip, el);
     });
 
@@ -294,22 +386,21 @@ function initTooltips() {
   });
 }
 
+/* Centers the tooltip above the anchor, clamping to viewport edges */
 function positionTooltip(tip, anchor) {
   const rect   = anchor.getBoundingClientRect();
   const tipW   = tip.offsetWidth;
   const tipH   = tip.offsetHeight;
   const margin = 8;
 
-  // Center horizontally above the button
   let left = rect.left + rect.width / 2 - tipW / 2;
   let top  = rect.top - tipH - margin;
 
-  // Clamp to viewport so it never clips
   const vw = window.innerWidth;
-  if (left < margin)        left = margin;
+  if (left < margin)            left = margin;
   if (left + tipW > vw - margin) left = vw - margin - tipW;
 
-  // If it would go above the viewport, flip below
+  /* Flip below anchor if tooltip would clip above the viewport */
   if (top < margin) top = rect.bottom + margin;
 
   tip.style.left = `${left}px`;
@@ -317,39 +408,49 @@ function positionTooltip(tip, anchor) {
 }
 
 
-// =====================================================
-// STATUS
-// =====================================================
+/* ================================================
+   STATUS
+   Resolves a user's online status based on the
+   elapsed time since their lastSeen timestamp.
+================================================ */
+
 function getStatusInfo(lastSeen) {
   if (!lastSeen) return { statusClass: 'status-dot--offline', statusLabel: 'Offline' };
+
   const seenDate   = lastSeen?.toDate?.() ?? new Date(lastSeen);
   const minutesAgo = (Date.now() - seenDate.getTime()) / 60000;
+
   if (minutesAgo <= 5)  return { statusClass: 'status-dot--online',  statusLabel: 'Online' };
   if (minutesAgo <= 60) return { statusClass: 'status-dot--recent',  statusLabel: 'Recently active' };
                         return { statusClass: 'status-dot--offline', statusLabel: 'Offline' };
 }
 
 
-// =====================================================
-// FILTER + SEARCH
-// =====================================================
-window.setRoleFilter = function(role, btn) {
+/* ================================================
+   FILTER + SEARCH
+================================================ */
+
+window.setRoleFilter = function (role, btn) {
   currentFilter = role;
   document.querySelectorAll('.role-filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderUsers();
 };
 
-window.filterUsers = function() {
+window.filterUsers = function () {
   currentSearch = document.getElementById('rolesSearch').value.trim();
   renderUsers();
 };
 
 
-// =====================================================
-// MODAL
-// =====================================================
-window.openRoleModal = function(uid, name, currentRole, newRole, isSuperAdmin, isMe) {
+/* ================================================
+   ROLE MODAL
+   Opens the role assignment confirmation modal.
+   Adds an extra typed confirmation step when
+   promoting a user to admin.
+================================================ */
+
+window.openRoleModal = function (uid, name, currentRole, newRole, isSuperAdmin, isMe) {
   if (currentRole === newRole || isSuperAdmin || isMe) return;
 
   pendingChange = { uid, name, currentRole, newRole };
@@ -393,12 +494,13 @@ window.openRoleModal = function(uid, name, currentRole, newRole, isSuperAdmin, i
   document.getElementById('roleModal').classList.add('visible');
 };
 
-window.closeModal = function() {
+window.closeModal = function () {
   document.getElementById('roleModal').classList.remove('visible');
   pendingChange = null;
 };
 
-window.onAdminConfirmInput = function() {
+/* Validates the typed admin confirmation and enables the confirm button */
+window.onAdminConfirmInput = function () {
   const input = document.getElementById('adminConfirmInput');
   const btn   = document.getElementById('modalConfirmBtn');
   const valid = input.value.trim() === 'CONFIRM ADMIN';
@@ -406,24 +508,27 @@ window.onAdminConfirmInput = function() {
   input.classList.toggle('error', input.value.length > 0 && !valid);
 };
 
-document.getElementById('roleModal').addEventListener('click', function(e) {
+/* Close modal on backdrop click */
+document.getElementById('roleModal').addEventListener('click', function (e) {
   if (e.target === this) closeModal();
 });
 
 
-// =====================================================
-// CONFIRM ROLE CHANGE
-// =====================================================
-window.confirmRoleChange = async function() {
+/* ================================================
+   CONFIRM ROLE CHANGE
+   Writes the new role to both the barangay user
+   doc and the user index doc, then shows a toast.
+================================================ */
+
+window.confirmRoleChange = async function () {
   if (!pendingChange) return;
 
   const { uid, name, newRole } = pendingChange;
   const btn = document.getElementById('modalConfirmBtn');
-  btn.disabled = true;
+  btn.disabled    = true;
   btn.textContent = 'Saving…';
 
   try {
-    // Update both the main doc and the index
     await updateDoc(userDoc(adminBarangay, uid), {
       role:          newRole,
       roleUpdatedAt: serverTimestamp(),
@@ -432,7 +537,6 @@ window.confirmRoleChange = async function() {
 
     closeModal();
     showToast(`${name} is now a ${roleDisplayName(newRole)}.`, 'success');
-
   } catch (err) {
     console.error('Role update failed:', err);
     closeModal();
@@ -441,9 +545,12 @@ window.confirmRoleChange = async function() {
 };
 
 
-// =====================================================
-// TOAST
-// =====================================================
+/* ================================================
+   TOAST
+   Renders a dismissing toast notification in the
+   designated container, auto-removed after 3.5s.
+================================================ */
+
 function showToast(message, type = 'success') {
   const container = document.getElementById('toastContainer');
   const toast     = document.createElement('div');
@@ -454,19 +561,23 @@ function showToast(message, type = 'success') {
   `;
   container.appendChild(toast);
   lucide.createIcons({ el: toast });
+
   setTimeout(() => {
-    toast.style.opacity    = '0';
-    toast.style.transform  = 'translateY(12px)';
+    toast.style.opacity   = '0';
+    toast.style.transform = 'translateY(12px)';
     toast.style.transition = 'opacity 0.3s, transform 0.3s';
     setTimeout(() => toast.remove(), 350);
   }, 3500);
 }
 
 
-// =====================================================
-// HOUSEHOLD
-// =====================================================
-window.setHouseholdFilter = function(id) {
+/* ================================================
+   HOUSEHOLD
+   Builds the household filter bar from users who
+   share a householdId. Hides the bar when empty.
+================================================ */
+
+window.setHouseholdFilter = function (id) {
   currentHousehold = id;
   renderUsers();
 };
@@ -475,19 +586,23 @@ function buildHouseholdBar() {
   const bar = document.getElementById('householdBar');
   if (!bar) return;
 
+  /* Count members per household */
   const counts = {};
   allUsers.forEach(u => {
     if (u.householdId) counts[u.householdId] = (counts[u.householdId] || 0) + 1;
   });
+
+  /* Only show households with 2+ members */
   const grouped = Object.keys(counts).filter(id => counts[id] >= 2);
 
-  // Hide the whole section if nothing to show
   const section = bar.closest('div[style]') ?? bar.parentElement;
+
   if (grouped.length === 0 && !currentHousehold) {
     if (section) section.style.display = 'none';
     bar.innerHTML = '';
     return;
   }
+
   if (section) section.style.display = '';
 
   bar.innerHTML = grouped.map(hid => {
@@ -501,90 +616,143 @@ function buildHouseholdBar() {
     </button>`;
   }).join('') + (currentHousehold
     ? `<button class="role-filter-btn" onclick="setHouseholdFilter('')">
-        <i data-lucide="x"></i> Clear
+         <i data-lucide="x"></i> Clear
        </button>`
     : '');
 
   lucide.createIcons({ el: bar });
 }
 
-window.savePostLimit = async function(uid, _unused) {
+
+/* ================================================
+   POST LIMIT
+   Saves a per-resident daily post limit override
+   to Firestore. Accepts -1 for unlimited.
+================================================ */
+
+window.savePostLimit = async function (uid) {
   const input = document.getElementById(`plimit-${uid}`);
   if (!input) return;
+
   const val = parseInt(input.value, 10);
   if (isNaN(val) || val < -1 || val > 99) {
     input.style.borderColor = '#dc2626';
     setTimeout(() => input.style.borderColor = '#e0e0e0', 1500);
     return;
   }
+
   try {
     const { updateDoc: _up, doc: _d } =
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+
     await _up(_d(db, 'barangays', adminBarangay, 'users', uid), {
       postLimitOverride: val,
     });
+
     input.style.borderColor = '#22c55e';
+
     const statusEl = document.getElementById(`plimit-status-${uid}`);
-    if (statusEl) { statusEl.textContent = 'Saved ✓'; setTimeout(() => statusEl.textContent = '', 2000); }
+    if (statusEl) {
+      statusEl.textContent = 'Saved ✓';
+      setTimeout(() => statusEl.textContent = '', 2000);
+    }
+
     setTimeout(() => input.style.borderColor = '#e0e0e0', 1500);
   } catch (err) {
     console.error('[roles] post limit save:', err);
   }
 };
 
-// =====================================================
-// HELPERS
-// =====================================================
-function getInitials(name) {
-  return name.split(' ').slice(0, 2).map(n => n[0] ?? '').join('').toUpperCase();
-}
-function roleDisplayName(role) {
-  return { resident: 'Resident', officer: 'Barangay Officer', admin: 'Administrator' }[role] ?? role;
-}
-function roleIconName(role) {
-  return { resident: 'user', officer: 'shield', admin: 'settings' }[role] ?? 'user';
-}
-function escapeHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function escapeAttr(str) {
-  return String(str).replace(/'/g,"\\'");
-}
+
+/* ================================================
+   TODAY'S POST COUNT
+   Fetches how many community posts a resident has
+   made today and displays the remaining allowance
+   below the post limit control.
+================================================ */
 
 async function loadTodayPostCount(uid, barangay) {
   const label = document.getElementById(`plimit-today-${uid}`);
   if (!label) return;
+
   try {
     const { collection: _col, query: _q, where: _w, getDocs, limit: _lim } =
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+
     const today = new Date().toISOString().slice(0, 10);
     const start = new Date(today + 'T00:00:00');
     const end   = new Date(today + 'T23:59:59');
+
     const snap  = await getDocs(_q(
       _col(db, 'barangays', barangay, 'communityPosts'),
       _w('authorId', '==', uid),
-      _lim(20)
+      _lim(20),
     ));
+
     const count = snap.docs.filter(d => {
       const t = d.data().createdAt?.toDate?.() ?? new Date(0);
       return t >= start && t <= end;
     }).length;
-    const user = allUsers.find(u => u.uid === uid);
-    let defaultLim = 3;
+
+    /* Resolve effective limit — check barangay settings for default */
+    const user       = allUsers.find(u => u.uid === uid);
+    let defaultLim   = 3;
+
     try {
       const { getDoc: _gd2, doc: _d2 } =
         await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
       const sSnap = await _gd2(_d2(db, 'barangays', barangay, 'meta', 'settings'));
       if (sSnap.exists()) defaultLim = sSnap.data().defaultPostLimit ?? 3;
-    } catch { /* use 3 */ }
-    const lim = user?.postLimitOverride === -1 ? Infinity
-      : user?.postLimitOverride != null ? user.postLimitOverride : defaultLim;
+    } catch { /* fall back to 3 */ }
+
+    const lim = user?.postLimitOverride === -1    ? Infinity
+      : user?.postLimitOverride != null ? user.postLimitOverride
+      : defaultLim;
+
     const remaining = lim === Infinity ? '∞' : Math.max(0, lim - count);
+
     label.textContent = remaining === 0
-  ? 'No posts remaining today'
-  : `${remaining} post${remaining === 1 ? '' : 's'} left today`;
-label.style.color  = remaining === 0 ? '#dc2626' : remaining === 1 ? '#f59e0b' : '#6b7280';
+      ? 'No posts remaining today'
+      : `${remaining} post${remaining === 1 ? '' : 's'} left today`;
+
+    label.style.color = remaining === 0   ? '#dc2626'
+      : remaining === 1 ? '#f59e0b'
+      : '#6b7280';
   } catch {
     label.textContent = '';
   }
+}
+
+
+/* ================================================
+   UTILITIES
+================================================ */
+
+/* Returns up to two uppercase initials from a full name */
+function getInitials(name) {
+  return name.split(' ').slice(0, 2).map(n => n[0] ?? '').join('').toUpperCase();
+}
+
+/* Maps a role key to its display label */
+function roleDisplayName(role) {
+  return { resident: 'Resident', officer: 'Barangay Officer', admin: 'Administrator' }[role] ?? role;
+}
+
+/* Maps a role key to its Lucide icon name */
+function roleIconName(role) {
+  return { resident: 'user', officer: 'shield', admin: 'settings' }[role] ?? 'user';
+}
+
+/* Escapes a value for safe inline HTML use */
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;');
+}
+
+/* Escapes single quotes for use inside HTML attribute values */
+function escapeAttr(str) {
+  return String(str).replace(/'/g, "\\'");
 }

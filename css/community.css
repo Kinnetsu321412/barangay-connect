@@ -1,27 +1,63 @@
-/* ================================================================
+/* ================================================
    community.css — BarangayConnect
-   PAGE-SPECIFIC styles for the COMMUNITY PAGE ONLY.
+   Page-specific styles for the Community page only.
    Import last, after the four shared libraries.
 
-   REQUIRED IMPORT ORDER:
+   WHAT IS IN HERE:
+     · Community hero section
+     · Tab panel system (tab switching, report steps)
+     · Panel layouts: Bulletin, Polls, Calendar,
+       Gallery, Youth Zone, Pet Board
+     · Bulletin filter bar and source segmented control
+     · Post card components: pin bar, urgent bar,
+       author avatar, role badges, action buttons
+     · Image carousel (track, slides, nav, dots)
+     · Reaction system (picker, bubbles, summary)
+     · Comment and reply thread components
+     · Skeleton loader
+     · Toast container positioning
+     · Responsive overrides
+
+   WHAT IS NOT IN HERE:
+     · .btn-*, .form-*, .tag-* base styles → buttons.css / main.css
+     · .post-row base styles               → components.css
+     · Modal / drawer layout               → frames.css
+
+   REQUIRED IMPORTS:
      main.css → buttons.css → components.css → frames.css → community.css
-   ================================================================ */
+
+   QUICK REFERENCE:
+     Hero           → .community-hero > .community-hero__inner
+     Tabs           → .tab-panel (.is-active) / .report-step (.is-active)
+     Bulletin       → .bulletin-filter-bar / .bulletin-list / .bulletin-pagination
+     Post card      → .post-pin-bar / .post-urgent-bar / .post-role-badge
+     Carousel       → .post-carousel > .post-carousel__track > .post-carousel__slide
+     Reactions      → .post-reaction-wrap > .post-react-btn + .reaction-picker
+     Comments       → .comment-thread > .comment-list / .reply-thread > .reply-row
+     Skeleton       → .skeleton + .skeleton--{size}
+     Polls          → .polls-list > .poll-card
+     Calendar       → .calendar-layout (2-col grid)
+     Gallery        → .gallery-grid > .gallery-item
+     Youth          → .youth-programs-grid
+     Pets           → .pets-grid
+================================================ */
 
 
-/* ================================================================
-   COMMUNITY HERO
-   ================================================================ */
+/* ================================================
+   1. COMMUNITY HERO
+================================================ */
+
 .community-hero {
   background: var(--green-dark);
   position: relative;
   overflow: hidden;
   padding-top: calc(var(--navbar-h) + var(--space-2xl));
-  padding-bottom: calc(var(--space-2xl) + 56px); /* extra room for the wave */
-  /* Wave bottom edge */
+  /* Extra bottom padding accommodates the wave edge */
+  padding-bottom: calc(var(--space-2xl) + 56px);
   border-radius: 0 0 48px 48px;
 }
 
-/* Decorative blob — top-right */
+/* Decorative blobs — purely visual, non-interactive */
 .community-hero::before {
   content: '';
   position: absolute;
@@ -34,7 +70,6 @@
   pointer-events: none;
 }
 
-/* Second smaller blob */
 .community-hero::after {
   content: '';
   position: absolute;
@@ -77,35 +112,30 @@
   margin: 0;
 }
 
+/* Tab bar inside the hero — allows wrapping on narrow screens */
 .community-tabs {
   margin-top: var(--space-sm);
   flex-wrap: wrap;
 }
 
 
-/* ================================================================
-   TAB PANEL SYSTEM
-   ================================================================ */
-.tab-panel {
-  display: none;
-}
+/* ================================================
+   2. TAB PANEL SYSTEM
+================================================ */
 
-.tab-panel.is-active {
-  display: block;
-}
+/* Only the active panel is visible */
+.tab-panel         { display: none; }
+.tab-panel.is-active { display: block; }
 
 /* Multi-step report steps inside modals */
-.report-step {
-  display: none;
-}
-.report-step.is-active {
-  display: block;
-}
+.report-step           { display: none; }
+.report-step.is-active { display: block; }
 
 
-/* ================================================================
-   MAIN CONTENT AREA
-   ================================================================ */
+/* ================================================
+   3. MAIN CONTENT AREA
+================================================ */
+
 .community-main {
   min-height: 60vh;
 }
@@ -120,984 +150,11 @@
 }
 
 
-/* ================================================================
-   BULLETIN PANEL
-   ================================================================ */
-.bulletin-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-xs);
-}
-
-.bulletin-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-/* Override .post-row to be card-style (white box) like the screenshots */
-.bulletin-list .post-row {
-  background: var(--white);
-  border-top: 1px solid var(--gray-100);
-  border-right: 1px solid var(--gray-100);
-  border-bottom: none;
-  border-left: 3.5px solid var(--gray-300);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-lg);
-  padding-left: calc(var(--space-lg) - 3.5px);
-  transition: box-shadow var(--transition), transform var(--transition);
-}
-
-.bulletin-list .post-row:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-/* Accented posts inside card */
-.bulletin-list .post-row--accented {
-  padding-left: calc(var(--space-lg) - 4px);
-  border-radius: var(--radius-lg);
-  margin-bottom: 0;
-}
-
-
-/* ================================================================
-   POLLS PANEL
-   ================================================================ */
-.polls-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.poll-card {
-  background: var(--white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--gray-100);
-  padding: var(--space-xl);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.poll-card__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-md);
-}
-
-.poll-card__question {
-  font-family: var(--font-display);
-  font-weight: var(--fw-extrabold);
-  font-size: var(--text-xl);
-  color: var(--text-dark);
-  line-height: var(--lh-snug);
-  flex: 1;
-}
-
-/* When .poll-card__question is a direct child (not inside header) */
-.poll-card > .poll-card__question {
-  margin-bottom: calc(var(--space-sm) * -0.5);
-}
-
-.poll-card__meta {
-  font-size: var(--text-sm);
-  color: var(--gray-400);
-  font-weight: var(--fw-medium);
-}
-
-.polls-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  padding-top: var(--space-sm);
-}
-
-.polls-pagination__btn {
-  width: 36px !important;
-  height: 36px !important;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-
-/* ================================================================
-   CALENDAR PANEL
-   ================================================================ */
-.calendar-layout {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: var(--space-xl);
-  align-items: start;
-}
-
-.calendar-layout__cal {
-  width: 100%;
-}
-
-.calendar-layout__events {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-
-/* ================================================================
-   GALLERY PANEL
-   ================================================================ */
-.gallery-filters-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.gallery-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-}
-
-.gallery-photo-count {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: var(--fw-semibold);
-  color: var(--gray-500);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.gallery-photo-count [data-lucide],
-.gallery-photo-count svg {
-  width: 15px;
-  height: 15px;
-}
-
-/* 4-column masonry grid */
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: 220px;
-  gap: var(--space-md);
-}
-
-.gallery-item {
-  overflow: hidden;
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-}
-
-.gallery-item--tall {
-  grid-row: span 2;
-}
-
-.gallery-item__img-wrap {
-  position: relative;
-  flex: 1;
-  overflow: hidden;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  background: var(--gray-100);
-  min-height: 0;
-}
-
-/* For standalone items where no caption, img-wrap takes full height */
-.gallery-item:not(:has(.gallery-item__caption)) .gallery-item__img-wrap {
-  border-radius: var(--radius-lg);
-}
-
-.gallery-item__img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform 0.4s ease;
-}
-
-.gallery-item:hover .gallery-item__img {
-  transform: scale(1.04);
-}
-
-/* Tag overlaid at bottom-left of photo */
-.gallery-item__tag {
-  position: absolute;
-  bottom: var(--space-sm);
-  left: var(--space-sm);
-  z-index: 2;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.14);
-}
-
-.gallery-item__caption {
-  padding: var(--space-sm) var(--space-sm) 0;
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: var(--fw-semibold);
-  color: var(--text-dark);
-  background: var(--white);
-  border: 1px solid var(--gray-100);
-  border-top: none;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  padding: var(--space-sm) var(--space-md);
-  box-shadow: var(--shadow-sm);
-}
-
-
-/* ================================================================
-   YOUTH ZONE PANEL
-   ================================================================ */
-.youth-programs-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-lg);
-  margin-top: var(--space-sm);
-}
-
-
-/* ================================================================
-   PET BOARD PANEL
-   ================================================================ */
-.pets-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-  flex-wrap: wrap;
-}
-
-.pets-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-}
-
-.pets-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--space-lg);
-}
-
-
-/* ================================================================
-   RESPONSIVE
-   ================================================================ */
-@media (max-width: 1024px) {
-  .pets-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .gallery-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .gallery-item--tall {
-    grid-row: span 1;
-  }
-}
-
-@media (max-width: 900px) {
-  .calendar-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .youth-programs-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .community-hero {
-    padding-top: calc(var(--navbar-h) + var(--space-xl));
-    padding-bottom: calc(var(--space-xl) + 40px);
-  }
-}
-
-/* ================================================================
-   BULLETIN POST CARDS — community-specific overrides
-   ================================================================ */
-
-/* Community posts (resident-submitted) get a subtle gray left border */
-.post-row--community {
-  background: var(--gray-50);
-}
-
-/* Pinned bar above the post title */
-.post-pin-bar {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-family: var(--font-display);
-  font-size: var(--text-2xs);
-  font-weight: var(--fw-bold);
-  color: var(--orange-hover);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-
-.post-pin-bar [data-lucide],
-.post-pin-bar svg { width: 11px; height: 11px; }
-
-/* Urgent banner inside a post card */
-.post-urgent-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--red-50);
-  border: 1px solid var(--red-200);
-  border-radius: var(--radius-sm);
-  padding: 5px 10px;
-  margin-bottom: 4px;
-  font-family: var(--font-display);
-  font-size: var(--text-2xs);
-  font-weight: var(--fw-bold);
-  color: var(--red);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.post-urgent-bar [data-lucide],
-.post-urgent-bar svg { width: 13px; height: 13px; flex-shrink: 0; }
-
-/* "edited" label after timestamp */
-.post-edited-label {
-  font-size: var(--text-2xs);
-  color: var(--gray-400);
-  font-style: italic;
-}
-
-/* Author avatar initials circle */
-.post-author-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--gray-200);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-2xs);
-  font-weight: var(--fw-bold);
-  color: var(--gray-500);
-}
-
-/* Role micro-badge next to author name */
-.post-role-badge {
-  display: inline-flex;
-  align-items: center;
-  font-family: var(--font-display);
-  font-size: var(--text-2xs);
-  font-weight: var(--fw-semibold);
-  padding: 1px 5px;
-  border-radius: var(--radius-xs);
-  border: 1px solid transparent;
-  margin-left: 4px;
-  white-space: nowrap;
-}
-
-.post-role-badge--official {
-  color: var(--green-900);
-  background: var(--green-50);
-  border-color: var(--green-200);
-}
-
-.post-role-badge--admin {
-  color: var(--red);
-  background: var(--red-50);
-  border-color: var(--red-200);
-}
-
-.post-role-badge--officer {
-  color: var(--red);
-  background: var(--red-50);
-  border-color: var(--red-200);
-}
-
-.post-role-badge--resident {
-  color: var(--gray-500);
-  background: var(--gray-50);
-  border-color: var(--gray-100);
-}
-
-/* Inline action icon buttons (edit, delete, report, flag) */
-.post-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--gray-300);
-  padding: 2px 4px;
-  border-radius: var(--radius-xs);
-  transition: color var(--transition);
-  font-size: var(--text-xs);
-  line-height: 1;
-}
-
-.post-action-btn [data-lucide],
-.post-action-btn svg { width: 12px; height: 12px; pointer-events: none; }
-
-.post-action-btn:hover { color: var(--gray-700); }
-.post-action-btn--danger:hover { color: var(--red); }
-
-/* Comment toggle button inside the post footer */
-.post-comment-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--gray-400);
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  padding: 4px 6px;
-  border-radius: var(--radius-sm);
-  transition: color var(--transition), background var(--transition);
-}
-
-.post-comment-toggle [data-lucide],
-.post-comment-toggle svg { width: 14px; height: 14px; pointer-events: none; }
-
-.post-comment-toggle:hover {
-  color: var(--text-dark);
-  background: var(--gray-50);
-}
-
-
-/* ================================================================
-   IMAGE CAROUSEL
-   ================================================================ */
-.post-carousel {
-  position: relative;
-  margin: var(--space-sm) 0;
-}
-
-.post-carousel__track {
-  display: flex;
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  gap: 0;
-}
-
-.post-carousel__img {
-  min-width: 100%;
-  max-height: 220px;
-  object-fit: cover;
-  scroll-snap-align: start;
-  display: block;
-  flex-shrink: 0;
-}
-
-.post-carousel__dots {
-  display: flex;
-  justify-content: center;
-  gap: 5px;
-  margin-top: var(--space-xs);
-}
-
-.post-carousel__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  background: var(--gray-200);
-  padding: 0;
-  transition: background var(--transition);
-}
-
-.post-carousel__dot.is-active {
-  background: var(--green-dark);
-}
-
-
-/* ================================================================
-   REACTION BAR — post-level
-   ================================================================ */
-.post-reactions {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-}
-
-/* The main like/react button */
-.reaction-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  min-width: 48px;
-  transition: color var(--transition);
-  font-size: var(--text-base-sm);
-}
-
-.reaction-emoji-display {
-  font-size: var(--text-base);
-  line-height: 1;
-}
-
-.reaction-count-display {
-  font-size: var(--text-xs);
-  color: var(--gray-500);
-  min-width: 16px;
-}
-
-/* Floating emoji picker */
-.reaction-picker {
-  display: none;
-  position: absolute;
-  bottom: 110%;
-  left: 0;
-  background: var(--white);
-  border-radius: var(--radius-full);
-  padding: 5px 8px;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--gray-100);
-  flex-direction: row;
-  gap: 2px;
-  z-index: 100;
-  white-space: nowrap;
-}
-
-.reaction-picker.is-open {
-  display: flex;
-}
-
-.reaction-picker__btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.3rem;
-  padding: 3px 4px;
-  border-radius: var(--radius-sm);
-  transition: transform var(--transition);
-  line-height: 1;
-}
-
-.reaction-picker__btn:hover {
-  transform: scale(1.3);
-}
-
-/* Reaction summary inside count display */
-.reaction-summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: var(--text-xs);
-  color: var(--gray-500);
-}
-
-.reaction-summary__emojis { font-size: var(--text-sm); line-height: 1; }
-.reaction-summary__empty  { font-size: var(--text-xs); color: var(--gray-400); }
-
-
-/* ================================================================
-   SKELETON LOADER
-   ================================================================ */
-@keyframes skeletonPulse {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.skeleton {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: skeletonPulse 1.4s ease infinite;
-  border-radius: var(--radius-xs);
-}
-
-.skeleton--text-sm  { height: 14px; }
-.skeleton--text-md  { height: 18px; }
-.skeleton--tag      { width: 60px;  height: 22px; border-radius: var(--radius-full); }
-.skeleton--title    { width: 75%;   height: 18px; }
-.skeleton--body     { width: 100%;  height: 14px; }
-.skeleton--body-sm  { width: 85%;   height: 14px; }
-.skeleton--time     { width: 80px;  height: 22px; margin-left: auto; }
-
-
-/* ================================================================
-   BULLETIN PAGINATION NAV
-   ================================================================ */
-.bulletin-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-md);
-  padding: var(--space-lg) 0;
-}
-
-.bulletin-pagination__label {
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  color: var(--gray-500);
-  font-weight: var(--fw-medium);
-}
-
-/* Uses .btn .btn--outline .btn--sm from buttons.css — no extra styles needed */
-
-
-/* ================================================================
-   COMMENT THREAD
-   ================================================================ */
-.comment-thread {
-  display: none;
-  margin-top: var(--space-md);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--gray-100);
-}
-
-.comment-list {
-  max-height: 220px;
-  overflow-y: auto;
-  margin-bottom: var(--space-sm);
-  padding-right: 2px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.comment-empty {
-  color: var(--gray-400);
-  font-size: var(--text-sm);
-  padding: var(--space-sm) 0;
-  text-align: center;
-}
-
-.comment-input-row {
-  display: flex;
-  gap: var(--space-sm);
-  align-items: center;
-}
-
-.comment-input {
-  flex: 1;
-  padding: 7px 11px;
-  border: 1.5px solid var(--gray-200);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  outline: none;
-  background: var(--gray-50);
-  transition: border-color var(--transition), background var(--transition);
-  font-family: var(--font-body);
-}
-
-.comment-input:focus {
-  border-color: var(--gray-400);
-  background: var(--white);
-}
-
-.comment-submit-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: var(--green-dark);
-  color: var(--white);
-  border: none;
-  cursor: pointer;
-  transition: background var(--transition);
-}
-
-.comment-submit-btn:hover { background: var(--green-hover); }
-
-.comment-submit-btn [data-lucide],
-.comment-submit-btn svg { width: 13px; height: 13px; pointer-events: none; }
-
-/* Individual comment row */
-.comment-row {
-  padding: var(--space-sm) 0;
-  border-bottom: 1px solid var(--gray-50);
-}
-
-.comment-row:last-child { border-bottom: none; }
-
-.comment-row__top {
-  display: flex;
-  gap: 9px;
-  align-items: flex-start;
-}
-
-.comment-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--gray-200);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-family: var(--font-display);
-  font-size: var(--text-2xs);
-  font-weight: var(--fw-bold);
-  color: var(--gray-500);
-  margin-top: 1px;
-}
-
-.comment-avatar--sm {
-  width: 20px;
-  height: 20px;
-}
-
-.comment-content { flex: 1; min-width: 0; }
-
-.comment-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
-  flex-wrap: wrap;
-}
-
-.comment-author {
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: var(--fw-bold);
-  color: var(--gray-700);
-}
-
-.comment-time {
-  font-size: var(--text-2xs);
-  color: var(--gray-400);
-}
-
-.comment-body {
-  font-size: var(--text-sm);
-  color: var(--gray-600);
-  margin: 0;
-  line-height: var(--lh-snug);
-  word-break: break-word;
-}
-
-.comment-actions {
-  margin-left: 33px;
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
-}
-
-/* View replies / Reply / Like / Delete inside comment actions */
-.comment-action-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: var(--font-display);
-  font-size: var(--text-xs);
-  color: var(--gray-400);
-  padding: 0;
-  transition: color var(--transition);
-  line-height: 1;
-}
-
-.comment-action-btn:hover { color: var(--text-dark); }
-.comment-action-btn--danger:hover { color: var(--red); }
-
-.comment-like-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--gray-300);
-  font-size: var(--text-xs);
-  padding: 2px;
-  transition: color var(--transition);
-}
-
-.comment-like-btn [data-lucide],
-.comment-like-btn svg { width: 12px; height: 12px; pointer-events: none; }
-
-.comment-like-btn.is-liked { color: var(--red); }
-
-/* Reply thread (indented) */
-.reply-thread {
-  margin-left: 33px;
-  margin-top: var(--space-xs);
-  display: none;
-}
-
-.reply-row {
-  padding: 5px 0 5px var(--space-sm);
-  border-left: 2px solid var(--gray-100);
-  margin-bottom: 3px;
-}
-
-.reply-row__top {
-  display: flex;
-  gap: 7px;
-  align-items: flex-start;
-}
-
-.reply-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.reply-body {
-  font-size: var(--text-xs);
-  color: var(--gray-600);
-  margin: 2px 0 0;
-  line-height: var(--lh-snug);
-  word-break: break-word;
-}
-
-/* Reply input box */
-.reply-input-box {
-  display: none;
-  margin-left: 33px;
-  margin-top: var(--space-xs);
-}
-
-.reply-input-box--nested {
-  margin-left: 20px;
-}
-
-.reply-input-row {
-  display: flex;
-  gap: var(--space-xs);
-  align-items: center;
-}
-
-.reply-input {
-  flex: 1;
-  padding: 5px 9px;
-  border: 1.5px solid var(--gray-200);
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  outline: none;
-  background: var(--gray-50);
-  font-family: var(--font-body);
-  transition: border-color var(--transition);
-}
-
-.reply-input:focus { border-color: var(--gray-400); }
-
-.reply-submit-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-sm);
-  background: var(--green-dark);
-  color: var(--white);
-  border: none;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: background var(--transition);
-}
-
-.reply-submit-btn--sm { width: 24px; height: 24px; }
-
-.reply-submit-btn:hover { background: var(--green-hover); }
-
-.reply-submit-btn [data-lucide],
-.reply-submit-btn svg { width: 11px; height: 11px; pointer-events: none; }
-
-
-/* ================================================================
-   TOAST (supplement to main.css .toast)
-   — toast container positioning
-   ================================================================ */
-.toast-container {
-  position: fixed;
-  bottom: var(--space-lg);
-  right: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  z-index: 2000;
-  pointer-events: none;
-}
-
-.toast-container .toast { pointer-events: all; }
-
-
-/* ================================================================
-   RESPONSIVE (continued from above)
-   ================================================================ */
-@media (max-width: 640px) {
-  .community-hero__inner {
-    padding: 0 var(--space-md);
-  }
-
-  .community-panel-inner {
-    padding: var(--space-xl) var(--space-md);
-  }
-
-  .pets-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .gallery-grid {
-    grid-template-columns: 1fr;
-    grid-auto-rows: 200px;
-  }
-
-  .youth-programs-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .community-tabs {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: var(--space-xs);
-    scrollbar-width: none;
-  }
-  .community-tabs::-webkit-scrollbar { display: none; }
-
-  .pets-toolbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .gallery-filters-row {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  /* Bulletin filter bar stacks on mobile */
-  .bulletin-filter-bar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-sm);
-  }
-
-  .bulletin-source-seg { align-self: flex-start; }
-}
-
-
-/* ================================================================
-   BULLETIN FILTER BAR — merged single row
-   Categories left, source segmented control right
-   ================================================================ */
+/* ================================================
+   4. BULLETIN PANEL
+================================================ */
+
+/* ---- Filter bar — categories left, source control right ---- */
 .bulletin-filter-bar {
   display: flex;
   align-items: center;
@@ -1139,12 +196,16 @@
   font-weight: var(--fw-semibold);
   color: var(--gray-500);
   cursor: pointer;
-  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
   white-space: nowrap;
+  transition: background var(--transition), color var(--transition), box-shadow var(--transition);
 }
 
 .bulletin-source-seg__btn [data-lucide],
-.bulletin-source-seg__btn svg { width: 11px; height: 11px; flex-shrink: 0; }
+.bulletin-source-seg__btn svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+}
 
 .bulletin-source-seg__btn:hover {
   color: var(--text-dark);
@@ -1154,16 +215,56 @@
 .bulletin-source-seg__btn.is-active {
   background: var(--white);
   color: var(--text-dark);
-  box-shadow: var(--shadow-sm);
   font-weight: var(--fw-bold);
+  box-shadow: var(--shadow-sm);
 }
 
+/* ---- Legacy filter row (kept for compatibility) ---- */
+.bulletin-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
 
-/* ================================================================
-   POST CARD — social media style footer
-   ================================================================ */
+/* ---- Post list ---- */
+.bulletin-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
 
-/* Override the default post-row__footer to be social-style */
+/* Override .post-row to render as card-style */
+.bulletin-list .post-row {
+  background: var(--white);
+  border-top: 1px solid var(--gray-100);
+  border-right: 1px solid var(--gray-100);
+  border-bottom: none;
+  border-left: 3.5px solid var(--gray-300);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-lg);
+  padding-left: calc(var(--space-lg) - 3.5px);
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+
+.bulletin-list .post-row:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.bulletin-list .post-row--accented {
+  padding-left: calc(var(--space-lg) - 4px);
+  border-radius: var(--radius-lg);
+  margin-bottom: 0;
+}
+
+/* Community resident posts — white card, no tint */
+.bulletin-list .post-row.post-row--community {
+  background: var(--white);
+}
+
+/* ---- Social-style post footer ---- */
 .bulletin-list .post-row__footer {
   display: flex;
   align-items: center;
@@ -1191,7 +292,7 @@
   overflow: hidden;
 }
 
-/* Right cluster — actions */
+/* Right cluster — action buttons */
 .post-footer__right {
   display: flex;
   align-items: center;
@@ -1199,7 +300,229 @@
   flex-shrink: 0;
 }
 
-/* Single react button — Facebook style */
+/* ---- Category left-border accent colors ---- */
+.bulletin-list .post-row--accented.post-row--green {
+  border-left: 4px solid #1B4B27 !important;
+  background: linear-gradient(to right, rgba(27,75,39,0.03) 0%, transparent 60%);
+}
+
+.bulletin-list .post-row--accented.post-row--blue {
+  border-left: 4px solid #3b82f6 !important;
+  background: linear-gradient(to right, rgba(59,130,246,0.04) 0%, transparent 60%);
+}
+
+.bulletin-list .post-row--accented.post-row--orange {
+  border-left: 4px solid #FFA135 !important;
+  background: linear-gradient(to right, rgba(255,161,53,0.04) 0%, transparent 60%);
+}
+
+.bulletin-list .post-row--accented.post-row--red {
+  border-left: 4px solid #dc2626 !important;
+  background: linear-gradient(to right, rgba(220,38,38,0.04) 0%, transparent 60%);
+}
+
+.bulletin-list .post-row--accented.post-row--purple {
+  border-left: 4px solid #7c3aed !important;
+}
+
+.bulletin-list .post-row--accented.post-row--teal {
+  border-left: 4px solid #0f766e !important;
+}
+
+/* ---- Standalone border-color overrides (without accented) ---- */
+.post-row--blue   { border-left-color: #1d4ed8; }
+.post-row--green  { border-left-color: #15803d; }
+.post-row--red    { border-left-color: #dc2626; }
+.post-row--orange { border-left-color: #d97706; }
+.post-row--gray   { border-left-color: #9ca3af; }
+
+/* ---- Tag color variants ---- */
+.tag--blue   { background: #dbeafe; color: #1d4ed8; }
+.tag--green  { background: #dcfce7; color: #15803d; }
+.tag--red    { background: #fee2e2; color: #dc2626; }
+.tag--amber  { background: #fef3c7; color: #d97706; }
+.tag--gray   { background: #f3f4f6; color: #6b7280; }
+.tag--purple { background: #f3e8ff; color: #7c3aed; }
+.tag--teal   { background: #ccfbf1; color: #0f766e; }
+
+/* ---- Bulletin pagination ---- */
+/* Buttons use .btn .btn--outline .btn--sm from buttons.css */
+.bulletin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-lg) 0;
+}
+
+.bulletin-pagination__label {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--gray-500);
+}
+
+
+/* ================================================
+   5. POST CARD COMPONENTS
+================================================ */
+
+/* ---- Pin bar — shown above pinned post titles ---- */
+.post-pin-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-bold);
+  color: var(--orange-hover);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.post-pin-bar [data-lucide],
+.post-pin-bar svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* ---- Urgent banner inside a post card ---- */
+.post-urgent-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  margin-bottom: 4px;
+  background: var(--red-50);
+  border: 1px solid var(--red-200);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-bold);
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.post-urgent-bar [data-lucide],
+.post-urgent-bar svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* ---- "Edited" label after timestamp ---- */
+.post-edited-label {
+  font-size: var(--text-2xs);
+  color: var(--gray-400);
+  font-style: italic;
+}
+
+/* ---- Author avatar initials circle ---- */
+.post-author-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-bold);
+  color: var(--gray-500);
+}
+
+/* ---- Role micro-badge next to author name ---- */
+.post-role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  margin-left: 4px;
+  border-radius: var(--radius-xs);
+  border: 1px solid transparent;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+
+.post-role-badge--official {
+  color: var(--green-900);
+  background: var(--green-50);
+  border-color: var(--green-200);
+}
+
+.post-role-badge--admin,
+.post-role-badge--officer {
+  color: var(--red);
+  background: var(--red-50);
+  border-color: var(--red-200);
+}
+
+.post-role-badge--resident {
+  color: var(--gray-500);
+  background: var(--gray-50);
+  border-color: var(--gray-100);
+}
+
+/* ---- Inline post action buttons (edit, delete, flag) ---- */
+.post-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--gray-300);
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  font-size: var(--text-xs);
+  line-height: 1;
+  transition: color var(--transition);
+}
+
+.post-action-btn [data-lucide],
+.post-action-btn svg {
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+.post-action-btn:hover       { color: var(--gray-700); }
+.post-action-btn--danger:hover { color: var(--red); }
+
+/* ---- Comment toggle button ---- */
+.post-comment-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--gray-400);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition), background var(--transition);
+}
+
+.post-comment-toggle [data-lucide],
+.post-comment-toggle svg {
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
+
+.post-comment-toggle:hover {
+  color: var(--text-dark);
+  background: var(--gray-50);
+}
+
+/* ---- Reaction button (Facebook-style) ---- */
 .post-react-btn {
   display: inline-flex;
   align-items: center;
@@ -1213,10 +536,10 @@
   font-size: var(--text-sm);
   font-weight: var(--fw-semibold);
   color: var(--gray-500);
-  transition: background var(--transition), border-color var(--transition), color var(--transition);
-  position: relative;
   white-space: nowrap;
   line-height: 1;
+  position: relative;
+  transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
 
 .post-react-btn:hover {
@@ -1232,14 +555,13 @@
   font-weight: var(--fw-bold);
 }
 
-/* Big emoji on the button — YOUR reaction or default 🤍 */
+/* The emoji on the button — user's own reaction or default */
 .post-react-btn__emoji {
-  font-size: 1.05rem;
+  font-size: 1rem;
   line-height: 1;
   flex-shrink: 0;
 }
 
-/* Count area — inline flex so bubbles sit next to number */
 .post-react-btn__count {
   display: inline-flex;
   align-items: center;
@@ -1247,6 +569,7 @@
   font-size: var(--text-xs);
 }
 
+/* ---- Comment button ---- */
 .post-comment-btn {
   display: inline-flex;
   align-items: center;
@@ -1270,9 +593,13 @@
 }
 
 .post-comment-btn [data-lucide],
-.post-comment-btn svg { width: 14px; height: 14px; pointer-events: none; }
+.post-comment-btn svg {
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+}
 
-/* ··· more button */
+/* ---- ··· more button ---- */
 .post-more-btn {
   display: inline-flex;
   align-items: center;
@@ -1287,9 +614,9 @@
   font-size: 1.1rem;
   font-weight: var(--fw-bold);
   line-height: 1;
-  transition: background var(--transition), color var(--transition);
-  position: relative;
   letter-spacing: 1px;
+  position: relative;
+  transition: background var(--transition), color var(--transition);
 }
 
 .post-more-btn:hover {
@@ -1297,7 +624,7 @@
   color: var(--text-dark);
 }
 
-/* Inline action row that slides in when ··· is clicked */
+/* Inline action row revealed when ··· is clicked */
 .post-action-row {
   display: none;
   align-items: center;
@@ -1305,14 +632,16 @@
   animation: actionRowIn 0.15s ease both;
 }
 
-.post-action-row.is-open { display: inline-flex; }
+.post-action-row.is-open {
+  display: inline-flex;
+}
 
 @keyframes actionRowIn {
   from { opacity: 0; transform: translateX(6px); }
   to   { opacity: 1; transform: translateX(0); }
 }
 
-/* Individual action icon buttons inside the row */
+/* Individual icon buttons inside the action row */
 .post-action-icon {
   display: inline-flex;
   align-items: center;
@@ -1328,58 +657,20 @@
 }
 
 .post-action-icon [data-lucide],
-.post-action-icon svg { width: 13px; height: 13px; pointer-events: none; }
-
-.post-action-icon:hover { background: var(--gray-100); color: var(--text-dark); }
-.post-action-icon--danger:hover { background: var(--red-50); color: var(--red); }
-
-/* Reaction picker — anchored above the react button */
-.post-reaction-wrap {
-  position: relative;
-  display: inline-flex;
+.post-action-icon svg {
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
 }
 
-.reaction-picker {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--white);
-  border-radius: var(--radius-full);
-  padding: 5px 8px;
-  box-shadow: var(--shadow-lg), 0 0 0 1px var(--gray-100);
-  flex-direction: row;
-  gap: 2px;
-  z-index: 300;
-  white-space: nowrap;
-  animation: pickerIn 0.15s ease both;
-}
-
-.reaction-picker.is-open { display: flex; }
-
-@keyframes pickerIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(4px) scale(0.95); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1); }
-}
-
-.reaction-picker__btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1.3rem;
-  padding: 3px 4px;
-  border-radius: var(--radius-sm);
-  transition: transform 0.12s ease;
-  line-height: 1;
-}
-
-.reaction-picker__btn:hover { transform: scale(1.35) translateY(-2px); }
+.post-action-icon:hover          { background: var(--gray-100); color: var(--text-dark); }
+.post-action-icon--danger:hover  { background: var(--red-50);   color: var(--red); }
 
 
-/* ================================================================
-   IMAGE CAROUSEL — proper scaling
-   ================================================================ */
+/* ================================================
+   6. IMAGE CAROUSEL
+================================================ */
+
 .post-carousel {
   position: relative;
   margin: var(--space-sm) 0;
@@ -1392,10 +683,23 @@
   display: flex;
   width: 100%;
   overflow: hidden;
+  border-radius: var(--radius-md);
   scroll-snap-type: x mandatory;
   scroll-behavior: smooth;
+  gap: 0;
 }
 
+/* Legacy single-image element */
+.post-carousel__img {
+  min-width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  scroll-snap-align: start;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Slide wrapper — constrains image height, shows hover overlay */
 .post-carousel__slide {
   min-width: 100%;
   width: 100%;
@@ -1422,21 +726,25 @@
   transition: transform 0.3s ease;
 }
 
-.post-carousel__slide:hover img { transform: scale(1.02); }
+.post-carousel__slide:hover img {
+  transform: scale(1.02);
+}
 
+/* Subtle dark overlay on hover */
 .post-carousel__slide::after {
   content: '';
   position: absolute;
   inset: 0;
   background: transparent;
-  transition: background 0.2s ease;
   pointer-events: none;
+  transition: background 0.2s ease;
 }
 
 .post-carousel__slide:hover::after {
   background: var(--overlay-black-06);
 }
 
+/* ---- Prev / Next nav buttons ---- */
 .post-carousel__nav {
   position: absolute;
   top: 0;
@@ -1446,40 +754,44 @@
   align-items: center;
   justify-content: center;
   border: none;
-  cursor: pointer;
+  background: transparent;
   color: var(--white);
+  cursor: pointer;
   z-index: 10;
   transition: background var(--transition);
-  background: transparent;
 }
 
 .post-carousel__nav--prev {
   left: 0;
   cursor: w-resize;
-  background: transparent;
 }
 
 .post-carousel__nav--next {
   right: 0;
   cursor: e-resize;
-  background: transparent;
 }
 
-.post-carousel__nav--prev:hover {
- background: rgba(0,0,0,0.05);
-}
-
+.post-carousel__nav--prev:hover,
 .post-carousel__nav--next:hover {
   background: rgba(0,0,0,0.05);
 }
 
 .post-carousel__nav svg,
-.post-carousel__nav [data-lucide] { width: 18px; height: 18px; stroke-width: 2.5; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.post-carousel__nav [data-lucide] {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
+  pointer-events: none;
+  /* Ensure visibility over light images */
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
 
+/* ---- Dot indicators ---- */
 .post-carousel__dots {
   display: flex;
   justify-content: center;
   gap: 5px;
+  margin-top: var(--space-xs);
   padding: var(--space-xs) 0 2px;
 }
 
@@ -1499,40 +811,68 @@
   transform: scale(1.2);
 }
 
-/* ================================================================
-   POST CARDS — category color coding (reference: screenshot)
-   Left border + subtle bg tint per category
-   ================================================================ */
-.bulletin-list .post-row--accented.post-row--green  {
-  border-left-color: var(--green-dark);
-  background: linear-gradient(to right, rgba(27,75,39,0.03) 0%, transparent 60%);
-}
-.bulletin-list .post-row--accented.post-row--blue   {
-  border-left-color: var(--blue-500);
-  background: linear-gradient(to right, rgba(59,130,246,0.04) 0%, transparent 60%);
-}
-.bulletin-list .post-row--accented.post-row--orange {
-  border-left-color: var(--orange);
-  background: linear-gradient(to right, rgba(255,161,53,0.04) 0%, transparent 60%);
-}
-.bulletin-list .post-row--accented.post-row--red    {
-  border-left-color: var(--red);
-  background: linear-gradient(to right, rgba(220,38,38,0.04) 0%, transparent 60%);
-}
-/* Community posts keep subtle gray */
-.bulletin-list .post-row.post-row--community {
-  background: var(--white);
+
+/* ================================================
+   7. REACTION SYSTEM
+================================================ */
+
+/* Wrapper anchors the picker above the react button */
+.post-reaction-wrap {
+  position: relative;
+  display: inline-flex;
 }
 
-/* ================================================================
-   REACTION BUBBLES — Facebook-style stacked emoji + count
-   ================================================================ */
+/* Floating emoji picker */
+.reaction-picker {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-full);
+  padding: 5px 8px;
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--gray-100);
+  flex-direction: row;
+  gap: 2px;
+  z-index: 300;
+  white-space: nowrap;
+  animation: pickerIn 0.15s ease both;
+}
+
+.reaction-picker.is-open {
+  display: flex;
+}
+
+@keyframes pickerIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1); }
+}
+
+.reaction-picker__btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  padding: 3px 4px;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+  transition: transform 0.12s ease;
+}
+
+.reaction-picker__btn:hover {
+  transform: scale(1.35) translateY(-2px);
+}
+
+/* ---- Reaction bubbles — Facebook-style stacked emoji + count ---- */
 .reaction-summary-wrap {
   display: inline-flex;
   align-items: center;
   gap: 5px;
 }
 
+/* Single emoji bubble */
 .reaction-bubble {
   display: inline-flex;
   align-items: center;
@@ -1549,7 +889,7 @@
   position: relative;
 }
 
-/* When inside a is-reacted button, adapt border color */
+/* Adapt border color when inside a reacted state */
 .post-react-btn.is-reacted .reaction-bubble {
   border-color: var(--red-100);
 }
@@ -1565,45 +905,725 @@
   color: var(--red);
 }
 
-/* The emoji display on the button itself (what YOU reacted) */
-.post-react-btn__emoji {
-  font-size: 1rem;
-  line-height: 1;
-  flex-shrink: 0;
+/* ---- Legacy reaction bar elements (kept for compatibility) ---- */
+.post-reactions {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
 }
 
-.post-react-btn__count {
+.reaction-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  min-width: 48px;
+  font-size: var(--text-base-sm);
+  transition: color var(--transition);
+}
+
+.reaction-emoji-display {
+  font-size: var(--text-base);
+  line-height: 1;
+}
+
+.reaction-count-display {
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+  min-width: 16px;
+}
+
+.reaction-summary {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  font-size: var(--text-xs);
+  color: var(--gray-500);
 }
 
-/* ── Category pill colors ── */
-.tag--blue   { background:#dbeafe; color:#1d4ed8; }
-.tag--green  { background:#dcfce7; color:#15803d; }
-.tag--red    { background:#fee2e2; color:#dc2626; }
-.tag--amber  { background:#fef3c7; color:#d97706; }
-.tag--gray   { background:#f3f4f6; color:#6b7280; }
+.reaction-summary__emojis { font-size: var(--text-sm); line-height: 1; }
+.reaction-summary__empty  { font-size: var(--text-xs); color: var(--gray-400); }
 
-/* ── Left border accent colors ── */
-.post-row--blue   { border-left-color:#1d4ed8; }
-.post-row--green  { border-left-color:#15803d; }
-.post-row--red    { border-left-color:#dc2626; }
-.post-row--orange { border-left-color:#d97706; }
-.post-row--gray   { border-left-color:#9ca3af; }
 
-.bulletin-list .post-row--accented.post-row--red    { border-left: 4px solid #dc2626 !important; }
-.bulletin-list .post-row--accented.post-row--green  { border-left: 4px solid #1B4B27 !important; }
-.bulletin-list .post-row--accented.post-row--orange { border-left: 4px solid #FFA135 !important; }
-.bulletin-list .post-row--accented.post-row--blue   { border-left: 4px solid #3b82f6 !important; }
+/* ================================================
+   8. COMMENT THREAD
+================================================ */
 
-.tag--purple { background:#f3e8ff; color:#7c3aed; }
-.tag--teal   { background:#ccfbf1; color:#0f766e; }
+/* Hidden by default; JS toggles visibility */
+.comment-thread {
+  display: none;
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--gray-100);
+}
 
-.bulletin-list .post-row--accented.post-row--purple { border-left: 4px solid #7c3aed !important; }
-.bulletin-list .post-row--accented.post-row--teal   { border-left: 4px solid #0f766e !important; }
+.comment-list {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-bottom: var(--space-sm);
+  padding-right: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
 
-/* Navbar scrolled state — gray instead of white */
+.comment-empty {
+  padding: var(--space-sm) 0;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--gray-400);
+}
+
+/* ---- Comment input row ---- */
+.comment-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.comment-input {
+  flex: 1;
+  padding: 7px 11px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  outline: none;
+  background: var(--gray-50);
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.comment-input:focus {
+  border-color: var(--gray-400);
+  background: var(--white);
+}
+
+.comment-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--green-dark);
+  color: var(--white);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.comment-submit-btn:hover {
+  background: var(--green-hover);
+}
+
+.comment-submit-btn [data-lucide],
+.comment-submit-btn svg {
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
+}
+
+/* ---- Individual comment row ---- */
+.comment-row {
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--gray-50);
+}
+
+.comment-row:last-child {
+  border-bottom: none;
+}
+
+.comment-row__top {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+
+.comment-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-family: var(--font-display);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-bold);
+  color: var(--gray-500);
+}
+
+.comment-avatar--sm {
+  width: 20px;
+  height: 20px;
+}
+
+.comment-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+  flex-wrap: wrap;
+}
+
+.comment-author {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-bold);
+  color: var(--gray-700);
+}
+
+.comment-time {
+  font-size: var(--text-2xs);
+  color: var(--gray-400);
+}
+
+.comment-body {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--gray-600);
+  line-height: var(--lh-snug);
+  word-break: break-word;
+}
+
+/* ---- Comment actions (Reply, Like, Delete) ---- */
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-left: 33px;
+  margin-top: 4px;
+}
+
+.comment-action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: var(--text-xs);
+  color: var(--gray-400);
+  padding: 0;
+  line-height: 1;
+  transition: color var(--transition);
+}
+
+.comment-action-btn:hover          { color: var(--text-dark); }
+.comment-action-btn--danger:hover  { color: var(--red); }
+
+.comment-like-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--gray-300);
+  font-size: var(--text-xs);
+  padding: 2px;
+  transition: color var(--transition);
+}
+
+.comment-like-btn [data-lucide],
+.comment-like-btn svg {
+  width: 12px;
+  height: 12px;
+  pointer-events: none;
+}
+
+.comment-like-btn.is-liked {
+  color: var(--red);
+}
+
+/* ---- Reply thread (indented under comment) ---- */
+.reply-thread {
+  display: none;
+  margin-left: 33px;
+  margin-top: var(--space-xs);
+}
+
+.reply-row {
+  padding: 5px 0 5px var(--space-sm);
+  margin-bottom: 3px;
+  border-left: 2px solid var(--gray-100);
+}
+
+.reply-row__top {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+}
+
+.reply-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.reply-body {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--gray-600);
+  line-height: var(--lh-snug);
+  word-break: break-word;
+}
+
+/* ---- Reply input box ---- */
+.reply-input-box {
+  display: none;
+  margin-left: 33px;
+  margin-top: var(--space-xs);
+}
+
+.reply-input-box--nested {
+  margin-left: 20px;
+}
+
+.reply-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.reply-input {
+  flex: 1;
+  padding: 5px 9px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-xs);
+  outline: none;
+  background: var(--gray-50);
+  transition: border-color var(--transition);
+}
+
+.reply-input:focus {
+  border-color: var(--gray-400);
+}
+
+.reply-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--green-dark);
+  color: var(--white);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.reply-submit-btn--sm {
+  width: 24px;
+  height: 24px;
+}
+
+.reply-submit-btn:hover {
+  background: var(--green-hover);
+}
+
+.reply-submit-btn [data-lucide],
+.reply-submit-btn svg {
+  width: 11px;
+  height: 11px;
+  pointer-events: none;
+}
+
+
+/* ================================================
+   9. SKELETON LOADER
+================================================ */
+
+@keyframes skeletonPulse {
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: var(--radius-xs);
+  animation: skeletonPulse 1.4s ease infinite;
+}
+
+.skeleton--text-sm { height: 14px; }
+.skeleton--text-md { height: 18px; }
+.skeleton--tag     { width: 60px;  height: 22px; border-radius: var(--radius-full); }
+.skeleton--title   { width: 75%;   height: 18px; }
+.skeleton--body    { width: 100%;  height: 14px; }
+.skeleton--body-sm { width: 85%;   height: 14px; }
+.skeleton--time    { width: 80px;  height: 22px; margin-left: auto; }
+
+
+/* ================================================
+   10. TOAST CONTAINER
+   Positioning supplement to main.css .toast.
+================================================ */
+
+.toast-container {
+  position: fixed;
+  bottom: var(--space-lg);
+  right: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  z-index: 2000;
+  pointer-events: none;
+}
+
+/* Re-enable pointer events on individual toasts */
+.toast-container .toast {
+  pointer-events: all;
+}
+
+
+/* ================================================
+   11. POLLS PANEL
+================================================ */
+
+.polls-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.poll-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-xl);
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.poll-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.poll-card__question {
+  flex: 1;
+  font-family: var(--font-display);
+  font-weight: var(--fw-extrabold);
+  font-size: var(--text-xl);
+  color: var(--text-dark);
+  line-height: var(--lh-snug);
+}
+
+/* When question is a direct child of the card (no header wrapper) */
+.poll-card > .poll-card__question {
+  margin-bottom: calc(var(--space-sm) * -0.5);
+}
+
+.poll-card__meta {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--gray-400);
+}
+
+/* ---- Polls pagination ---- */
+.polls-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding-top: var(--space-sm);
+}
+
+/* Force circular shape on pagination buttons */
+.polls-pagination__btn {
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* ================================================
+   12. CALENDAR PANEL
+================================================ */
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.calendar-layout__cal {
+  width: 100%;
+}
+
+.calendar-layout__events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+
+/* ================================================
+   13. GALLERY PANEL
+================================================ */
+
+/* ---- Filter row ---- */
+.gallery-filters-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.gallery-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.gallery-photo-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--gray-500);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gallery-photo-count [data-lucide],
+.gallery-photo-count svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ---- 4-column masonry grid ---- */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 220px;
+  gap: var(--space-md);
+}
+
+.gallery-item {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.gallery-item--tall {
+  grid-row: span 2;
+}
+
+.gallery-item__img-wrap {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--gray-100);
+  min-height: 0;
+}
+
+/* Full-radius when there's no caption below */
+.gallery-item:not(:has(.gallery-item__caption)) .gallery-item__img-wrap {
+  border-radius: var(--radius-lg);
+}
+
+.gallery-item__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.gallery-item:hover .gallery-item__img {
+  transform: scale(1.04);
+}
+
+/* Category tag overlaid at bottom-left of photo */
+.gallery-item__tag {
+  position: absolute;
+  bottom: var(--space-sm);
+  left: var(--space-sm);
+  z-index: 2;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.14);
+}
+
+.gallery-item__caption {
+  padding: var(--space-sm) var(--space-md);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-dark);
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+
+/* ================================================
+   14. YOUTH ZONE PANEL
+================================================ */
+
+.youth-programs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+  margin-top: var(--space-sm);
+}
+
+
+/* ================================================
+   15. PET BOARD PANEL
+================================================ */
+
+.pets-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.pets-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.pets-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+}
+
+
+/* ================================================
+   16. MISCELLANEOUS
+================================================ */
+
+/* Navbar override — gray tint when not transparent (community page scroll) */
 .navbar:not(.navbar--transparent) {
   background: var(--gray-50) !important;
+}
+
+
+/* ================================================
+   17. RESPONSIVE OVERRIDES
+================================================ */
+
+@media (max-width: 1024px) {
+  .pets-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Prevent tall items from double-spanning at narrow widths */
+  .gallery-item--tall {
+    grid-row: span 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .youth-programs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .community-hero {
+    padding-top: calc(var(--navbar-h) + var(--space-xl));
+    padding-bottom: calc(var(--space-xl) + 40px);
+  }
+}
+
+@media (max-width: 640px) {
+  .community-hero__inner {
+    padding: 0 var(--space-md);
+  }
+
+  .community-panel-inner {
+    padding: var(--space-xl) var(--space-md);
+  }
+
+  .pets-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: 200px;
+  }
+
+  .youth-programs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Allow horizontal scroll on tab bar — hide scrollbar visually */
+  .community-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: var(--space-xs);
+    scrollbar-width: none;
+  }
+
+  .community-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pets-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gallery-filters-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Bulletin filter bar stacks on mobile */
+  .bulletin-filter-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-sm);
+  }
+
+  .bulletin-source-seg {
+    align-self: flex-start;
+  }
 }

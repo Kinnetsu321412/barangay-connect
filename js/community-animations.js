@@ -1,25 +1,52 @@
-// js/community-animations.js
-// =====================================================
-// GSAP animations for the Community page.
-// Mirrors the spirit of home-animations.js.
-//
-// HOW TO USE:
-//   Add at the bottom of community.html before </body>:
-//
-//   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-//   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-//   <script src="../js/community-animations.js" defer></script>
-// =====================================================
+/* ================================================
+   community-animations.js — BarangayConnect
+   GSAP entrance and interaction animations for
+   the Community page. Mirrors the spirit of
+   home-animations.js.
+
+   WHAT IS IN HERE:
+     · Hero staggered entrance timeline on load
+     · Hero border-radius scroll curve (ScrollTrigger)
+     · Tab-switch panel reveal and card stagger
+     · Card hover springs (pet, program, post-row)
+     · Filter pill hover springs
+     · FAB bouncy entrance and hover pulse
+     · Bulletin MutationObserver for injected post rows
+     · Modal open/close elastic patch (wraps openModal / closeModal)
+
+   WHAT IS NOT IN HERE:
+     · Tab switching logic               → community.js
+     · Modal open/close base functions   → community.js
+     · Animation for the home page       → home-animations.js
+     · Page styles                       → community.css
+
+   REQUIRED IMPORTS:
+     · GSAP 3.12.5        (gsap.min.js via CDN)
+     · ScrollTrigger 3.12.5 (ScrollTrigger.min.js via CDN)
+
+   QUICK REFERENCE:
+     Entry point      → init() (called on DOMContentLoaded or immediately)
+     Panel animation  → animatePanelCards(panelId, delay?)
+     Hover wiring     → wireCardHovers(root)
+     Card selectors   → PANEL_CARDS map (keyed by tab panel ID)
+================================================ */
 
 (function () {
+
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
 
   gsap.registerPlugin(ScrollTrigger);
 
+  /* Bail out entirely if the user prefers reduced motion */
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduced) return;
 
-  /* ── Card selectors per panel ───────────────────────────────── */
+
+  // ================================================
+  // CONFIGURATION
+  // ================================================
+
+  /* Maps each tab panel ID to its card selector for staggered entrance */
   const PANEL_CARDS = {
     'tab-bulletin':  'article.post-row',
     'tab-polls':     '.poll-card',
@@ -29,11 +56,16 @@
     'tab-pets':      '.pet-card',
   };
 
-  /* ════════════════════════════════════════════════════════════
-     Animate cards inside a panel — called on tab switch AND
-     once on init for the default active panel.
+
+  // ================================================
+  // PANEL ANIMATION
+  // ================================================
+
+  /*
+     Fades the panel in and staggers its cards upward.
      Uses fromTo so GSAP never leaves elements at opacity:0.
-  ════════════════════════════════════════════════════════════ */
+     Called on tab switch and once on init for the default active panel.
+  */
   function animatePanelCards(panelId, delay = 0.08) {
     const panel = document.getElementById(panelId);
     if (!panel) return;
@@ -41,7 +73,6 @@
     const sel   = PANEL_CARDS[panelId] ?? '';
     const cards = sel ? panel.querySelectorAll(sel) : [];
 
-    // Panel itself fades in
     gsap.fromTo(panel,
       { opacity: 0, y: 16 },
       { opacity: 1, y: 0, duration: 0.36, ease: 'power3.out', clearProps: 'opacity,y' }
@@ -62,9 +93,14 @@
   }
 
 
-  /* ════════════════════════════════════════════════════════════
-     Wire hover springs on cards — safe to call multiple times
-  ════════════════════════════════════════════════════════════ */
+  // ================================================
+  // HOVER SPRINGS
+  // ================================================
+
+  /*
+     Attaches GSAP hover springs to unwired cards within a root element.
+     Guards with [data-hover] so it is safe to call multiple times.
+  */
   function wireCardHovers(root) {
     root.querySelectorAll('.pet-card:not([data-hover])')
       .forEach(c => {
@@ -95,11 +131,13 @@
   }
 
 
+  // ================================================
+  // INIT
+  // ================================================
+
   function init() {
 
-    /* ════════════════════════════════════════════════════════
-       HERO — staggered entrance on load
-    ════════════════════════════════════════════════════════ */
+    /* ── Hero: staggered entrance on load ─────────────────────── */
     const heroTl = gsap.timeline({ delay: 0.08 });
 
     heroTl
@@ -117,24 +155,20 @@
       }, '-=0.50');
 
 
-    /* ════════════════════════════════════════════════════════
-       HERO — border-radius curves as you scroll away
-    ════════════════════════════════════════════════════════ */
+    /* ── Hero: border-radius curves as the page scrolls away ──── */
     gsap.to('.community-hero', {
       borderRadius: '0 0 80px 80px',
       ease: 'none',
       scrollTrigger: {
-        trigger:  '.community-main',
-        start:    'top 95%',
-        end:      'top 60%',
-        scrub:    1.2,
+        trigger: '.community-main',
+        start:   'top 95%',
+        end:     'top 60%',
+        scrub:   1.2,
       }
     });
 
 
-    /* ════════════════════════════════════════════════════════
-       INITIAL active panel — animate on first load
-    ════════════════════════════════════════════════════════ */
+    /* ── Initial active panel: animate on first load ───────────── */
     const activePanel = document.querySelector('.tab-panel.is-active');
     if (activePanel) {
       animatePanelCards(activePanel.id, 0.55);
@@ -142,9 +176,7 @@
     }
 
 
-    /* ════════════════════════════════════════════════════════
-       TAB BUTTON — hover spring
-    ════════════════════════════════════════════════════════ */
+    /* ── Tab buttons: hover spring ─────────────────────────────── */
     document.querySelectorAll('.community-tabs .btn--category').forEach(btn => {
       btn.addEventListener('mouseenter', () =>
         gsap.to(btn, { y: -4, scale: 1.05, duration: 0.28, ease: 'back.out(2.5)' }));
@@ -153,11 +185,12 @@
     });
 
 
-    /* ════════════════════════════════════════════════════════
-       TAB SWITCH — panel reveal + card stagger
-       Uses requestAnimationFrame so the panel's display:block
-       from the existing click handler has already applied.
-    ════════════════════════════════════════════════════════ */
+    /* ── Tab switch: panel reveal + card stagger + filter pills ── */
+    /*
+       Uses requestAnimationFrame so the panel's display:block from
+       the existing click handler has already been applied before
+       animatePanelCards reads layout.
+    */
     document.querySelectorAll('[data-tab]').forEach(btn => {
       btn.addEventListener('click', () => {
         requestAnimationFrame(() => {
@@ -172,8 +205,12 @@
             if (pills.length) {
               gsap.fromTo(pills,
                 { x: -14, opacity: 0 },
-                { x: 0, opacity: 1, duration: 0.36, ease: 'power2.out', stagger: 0.04,
-                  clearProps: 'opacity,x' }
+                {
+                  x: 0, opacity: 1,
+                  duration: 0.36, ease: 'power2.out',
+                  stagger: 0.04,
+                  clearProps: 'opacity,x',
+                }
               );
             }
           }
@@ -182,9 +219,11 @@
     });
 
 
-    /* ════════════════════════════════════════════════════════
-       BULLETIN — MutationObserver: animate injected post rows
-    ════════════════════════════════════════════════════════ */
+    /* ── Bulletin: MutationObserver for injected post rows ─────── */
+    /*
+       Debounced 80 ms so a batch of DOM mutations triggers one animation
+       pass rather than one per node.
+    */
     const bulletinList = document.getElementById('bulletinList');
     if (bulletinList) {
       let _animTimer = null;
@@ -213,9 +252,7 @@
     }
 
 
-    /* ════════════════════════════════════════════════════════
-       FILTER PILLS — hover spring (global, community main)
-    ════════════════════════════════════════════════════════ */
+    /* ── Filter pills: hover spring (community main, global) ───── */
     document.querySelectorAll('.community-main .btn--filter').forEach(btn => {
       btn.addEventListener('mouseenter', () =>
         gsap.to(btn, { scale: 1.07, duration: 0.20, ease: 'back.out(3)' }));
@@ -224,9 +261,7 @@
     });
 
 
-    /* ════════════════════════════════════════════════════════
-       FAB — bouncy entrance + hover pulse
-    ════════════════════════════════════════════════════════ */
+    /* ── FAB: bouncy entrance + hover pulse ────────────────────── */
     gsap.from('.btn--fab', {
       scale: 0, rotation: -45, opacity: 0,
       duration: 0.55, ease: 'back.out(3)',
@@ -243,11 +278,11 @@
     }
 
 
-    /* ════════════════════════════════════════════════════════
-       MODAL — elastic drop-in / scale-out
-       setTimeout(0) so module scripts that define openModal
-       and closeModal run first before we wrap them.
-    ════════════════════════════════════════════════════════ */
+    /* ── Modal: elastic drop-in / scale-out ────────────────────── */
+    /*
+       Wrapped in setTimeout(0) so module scripts that define openModal
+       and closeModal have already run before we patch them.
+    */
     setTimeout(function patchModals() {
       const _origOpen  = window.openModal;
       const _origClose = window.closeModal;
@@ -256,6 +291,7 @@
         const overlay = document.getElementById(id);
         if (overlay) {
           overlay.classList.add('is-open');
+
           const modal = overlay.querySelector('.modal');
           if (modal) {
             gsap.fromTo(modal,
@@ -264,6 +300,7 @@
                 duration: 0.42, ease: 'back.out(2)', clearProps: 'all' }
             );
           }
+
           gsap.fromTo(overlay,
             { opacity: 0 },
             { opacity: 1, duration: 0.26, ease: 'power2.out', clearProps: 'opacity' }
@@ -278,12 +315,16 @@
           if (typeof _origClose === 'function') _origClose(id);
           return;
         }
-        const modal = overlay.querySelector('.modal');
+
+        const modal  = overlay.querySelector('.modal');
         const finish = () => {
           overlay.classList.remove('is-open');
           if (modal) gsap.set(modal, { clearProps: 'all' });
         };
-        if (modal) gsap.to(modal, { y: 18, scale: 0.95, opacity: 0, duration: 0.20, ease: 'power2.in' });
+
+        if (modal) {
+          gsap.to(modal, { y: 18, scale: 0.95, opacity: 0, duration: 0.20, ease: 'power2.in' });
+        }
         gsap.to(overlay, { opacity: 0, duration: 0.22, ease: 'power2.in', onComplete: finish });
 
         if (typeof _origClose === 'function') _origClose(id);
@@ -292,6 +333,10 @@
 
   } // end init()
 
+
+  // ================================================
+  // ENTRY POINT
+  // ================================================
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

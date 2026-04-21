@@ -1,50 +1,93 @@
-// js/alerts.js
-// ─────────────────────────────────────────────────────────────────
-// Shared alert banner system. Add to EVERY page:
-//   <script type="module" src="js/alerts.js"></script>
-//   (adjust path depth as needed — "../js/alerts.js" etc.)
-//
-// Sources:
-//   1. Firestore siteAlerts — admin-created, real-time via onSnapshot
-//   2. USGS Earthquake API  — free, no key, polls every 5 min
-//      covers Philippines bounding box, mag ≥ 4.5
-//
-// Dismiss state lives in sessionStorage — survives page navigation
-// within a tab, clears when the tab closes.
-// ─────────────────────────────────────────────────────────────────
+/* ================================================
+   alerts.js — BarangayConnect
+   Shared alert banner system. Attach to every page via:
+     <script type="module" src="js/alerts.js"></script>
+     (adjust path depth as needed — "../js/alerts.js" etc.)
 
-import { auth, db }          from './firebase-config.js';
+   WHAT IS IN HERE:
+     · USGS Earthquake API polling (Philippines bbox, mag ≥ 4.5, every 5 min)
+     · Firestore real-time listener for admin-created siteAlerts
+     · Curfew schedule listener with age-based filtering
+     · Banner stack DOM injection and per-banner render/remove helpers
+     · Session-persistent dismiss state (localStorage)
+     · Alert sound playback mapped by severity
+     · createTestAlert — dev/console helper for writing a test alert
+
+   WHAT IS NOT IN HERE:
+     · Admin create / toggle / delete UI     → alerts-admin.js
+     · Firebase config and db instance       → firebase-config.js
+     · Firestore path helpers                → db-paths.js
+     · Global alert banner styles            → frames.css (or equivalent)
+
+   REQUIRED IMPORTS:
+     · ./firebase-config.js          (auth, db)
+     · ./db-paths.js                 (userIndexDoc, barangayId as toBid, userDoc)
+     · firebase-firestore.js@10.12.0 (collection, query, where, onSnapshot,
+                                      getDoc, addDoc, Timestamp)
+     · firebase-auth.js@10.12.0      (onAuthStateChanged)
+
+   QUICK REFERENCE:
+     Bootstrap              → onAuthStateChanged (top-level, runs on load)
+     Firestore listener     → listenAlerts(barangay)
+     Curfew listener        → listenCurfews(barangay, userDob)
+     USGS poller            → pollUsgs()
+     Banner render/remove   → renderBanner(id, opts) / removeBanner(id)
+     Dev helper             → window.createTestAlert(barangayName?)
+================================================ */
+
+
+// ================================================
+// IMPORTS
+// ================================================
+
+import { auth, db }                                   from './firebase-config.js';
 import { userIndexDoc, barangayId as toBid, userDoc } from './db-paths.js';
+
 import {
-  collection, query, where, onSnapshot, getDoc, addDoc, Timestamp,
+  collection, query, where, onSnapshot,
+  getDoc, addDoc, Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 
-// ── Config ───────────────────────────────────────────────────────
+// ================================================
+// CONSTANTS — Polling and Lookback
+// ================================================
 
-const USGS_POLL_MS  = 5 * 60 * 1000; // 5 minutes
-const USGS_LOOKBACK = 6 * 60 * 60 * 1000; // only show quakes < 6h old
+const USGS_POLL_MS  = 5 * 60 * 1000;      // re-poll every 5 minutes
+const USGS_LOOKBACK = 6 * 60 * 60 * 1000; // ignore quakes older than 6 hours
 const STORAGE_KEY   = 'bc_dismissed_alerts';
 
-// ── Alert sounds ─────────────────────────────────────────────────
-// Add your files to assets/sounds/ and map them by severity.
-// Adjust the path depth if alerts.js is used on pages in subdirectories
-// e.g. '../assets/sounds/...' for pages one level deep.
+
+// ================================================
+// CONSTANTS — Alert Sounds
+// ================================================
+
+/*
+   Add audio files to assets/sounds/ and map them by severity key.
+   Adjust path depth if alerts.js is consumed by pages in subdirectories
+   (e.g. '../assets/sounds/...' for pages one level deep).
+*/
 
 const ALERT_SOUNDS = {
-  red:    new Audio('../assets/sounds/alert-red.mp3'),    // emergency — loud/urgent
-  orange: new Audio('../assets/sounds/alert-orange.mp3'), // advisory — moderate
-  green:  new Audio('../assets/sounds/alert-green.mp3'),  // resolved — soft chime
-  blue:   new Audio('../assets/sounds/alert-blue.mp3'),   // info — subtle
+  red:    new Audio('../assets/sounds/alert-red.mp3'),    // emergency — loud / urgent
+  orange: new Audio('../assets/sounds/alert-orange.mp3'), // advisory  — moderate
+  green:  new Audio('../assets/sounds/alert-green.mp3'),  // resolved  — soft chime
+  blue:   new Audio('../assets/sounds/alert-blue.mp3'),   // info      — subtle
 };
 
-// Preload so there's no delay on first play
+/* Preload so there is no delay on first playback */
 Object.values(ALERT_SOUNDS).forEach(a => { a.preload = 'auto'; });
 
-// Severity → CSS class + Lucide icon
+
+// ================================================
+// CONSTANTS — Severity Map
+// ================================================
+
+/* Maps severity keys to CSS modifier class and Lucide icon name */
 const SEVERITY_MAP = {
   red:    { cls: 'alert-banner--red',    icon: 'siren'          },
   orange: { cls: 'alert-banner--orange', icon: 'triangle-alert' },
@@ -52,18 +95,43 @@ const SEVERITY_MAP = {
   blue:   { cls: 'alert-banner--blue',   icon: 'info'           },
 };
 
+
+// ================================================
+// MODULE STATE
+// ================================================
+
+let _unsubFirestore = null; // onSnapshot unsubscribe handle for siteAlerts
+let _curfewTimer    = null; // setInterval handle for per-minute curfew checks
+let _lastUsgsId     = localStorage.getItem('bc_usgs_last') || null; // dedup last USGS event
+
+
+// ================================================
+// SOUND PLAYBACK
+// ================================================
+
+/*
+   Plays the sound mapped to the given severity key.
+   Browsers block autoplay until the user has interacted with the page —
+   if playback is rejected the banner still renders; failure is silent.
+*/
+
 function playAlertSound(severity) {
   const audio = ALERT_SOUNDS[severity];
   if (!audio) return;
 
-  // Browsers block autoplay until the user has interacted with the page.
-  // If it fails silently that's fine — the banner still shows.
   audio.currentTime = 0; // rewind so repeated alerts replay from the start
   audio.play().catch(() => {});
 }
 
 
-// ── Session-dismissed set ────────────────────────────────────────
+// ================================================
+// DISMISS STATE — localStorage
+// ================================================
+
+/*
+   Dismissed alert IDs are persisted in localStorage so they survive
+   page navigation within the same browser session.
+*/
 
 function getDismissed() {
   try { return new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
@@ -77,9 +145,15 @@ function saveDismissed(id) {
 }
 
 
-// ── Banner stack container ───────────────────────────────────────
-// Injected as the very first child of <body>, above the static
-// .alert-banner that may already exist in the HTML.
+// ================================================
+// BANNER STACK — DOM Container
+// ================================================
+
+/*
+   Injects the sticky banner stack container once, positioned immediately
+   after the navbar (or prepended to body as a fallback).
+   Subsequent calls return the existing element.
+*/
 
 function getStack() {
   let el = document.getElementById('js-alert-stack');
@@ -97,15 +171,18 @@ function getStack() {
     if (navbar) {
       navbar.insertAdjacentElement('afterend', el);
     } else {
-      document.body.prepend(el); // fallback for pages without a navbar
+      document.body.prepend(el);
     }
   }
   return el;
 }
 
 
-// ── Render a single banner ───────────────────────────────────────
+// ================================================
+// BANNER — Render / Remove
+// ================================================
 
+/* Renders a single alert banner into the stack; skips if already dismissed or present */
 function renderBanner(id, { severity = 'blue', title, message, dismissible = true }) {
   if (getDismissed().has(id))               return;
   if (document.getElementById(`jsa-${id}`)) return;
@@ -136,26 +213,38 @@ function renderBanner(id, { severity = 'blue', title, message, dismissible = tru
   getStack().prepend(div);
   if (window.lucide) lucide.createIcons({ el: div });
 
-  // ← Play sound after banner is in the DOM
   playAlertSound(severity);
 }
 
+/* Removes a banner from the DOM by its logical ID */
 function removeBanner(id) {
   document.getElementById(`jsa-${id}`)?.remove();
 }
 
+
+// ================================================
+// UTILITIES
+// ================================================
+
+/* HTML-escapes a value for safe use in innerHTML interpolation */
 function esc(str) {
   return String(str ?? '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    .replace(/&/g,  '&amp;')
+    .replace(/</g,  '&lt;')
+    .replace(/>/g,  '&gt;')
+    .replace(/"/g,  '&quot;');
 }
 
 
-// ── Firestore real-time listener ─────────────────────────────────
-// onSnapshot = instant push to every open tab the moment admin
-// creates, edits, or deactivates an alert.
+// ================================================
+// FIRESTORE LISTENER — siteAlerts
+// ================================================
 
-let _unsubFirestore = null;
+/*
+   Opens a real-time onSnapshot listener scoped to the user's barangay.
+   Instantly reflects admin create / edit / deactivate actions across all
+   open tabs. Re-subscribing replaces the previous listener.
+*/
 
 function listenAlerts(barangay) {
   if (_unsubFirestore) { _unsubFirestore(); }
@@ -170,121 +259,137 @@ function listenAlerts(barangay) {
     snap.forEach(docSnap => {
       const d = docSnap.data();
 
-      // Respect expiresAt — treat as inactive if past
+      /* Treat as inactive if a hard expiry has passed */
       if (d.expiresAt && d.expiresAt.toDate() < now) return;
 
       activeIds.add(docSnap.id);
       renderBanner(docSnap.id, d);
     });
 
-    // Remove banners for alerts deleted/deactivated in Firestore
+    /* Remove banners for alerts deleted or deactivated in Firestore */
     document.querySelectorAll('[id^="jsa-"]').forEach(el => {
-      const rawId = el.id.slice(4); // strip "jsa-"
-      if (rawId.startsWith('usgs-')) return; // USGS handled separately
+      const rawId = el.id.slice(4); // strip "jsa-" prefix
+      if (rawId.startsWith('usgs-')) return; // USGS banners are managed separately
       if (!activeIds.has(rawId)) el.remove();
     });
   });
 }
 
-// ── Curfew banner listener ────────────────────────────────────────
-// Checks active curfew schedules every minute and shows/hides a banner.
 
-let _curfewTimer = null;
+// ================================================
+// FIRESTORE LISTENER — Curfew Schedules
+// ================================================
+
+/*
+   Subscribes to active curfew schedules and re-evaluates every minute.
+   Supports weekly, once, and manual schedule types with overnight windows.
+   Optionally filters by the resident's age when affects targets a subset.
+*/
 
 function listenCurfews(barangay, userDob = null) {
   const col = collection(db, 'barangays', toBid(barangay), 'curfewSchedules');
   const q   = query(col, where('active', '==', true));
 
+  /* Derives the resident's current age from an ISO date string (YYYY-MM-DD) */
   function getUserAge() {
-  if (!userDob) return null;
-  const today = new Date(), birth = new Date(userDob + 'T00:00:00');
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
+    if (!userDob) return null;
+    const today = new Date(), birth = new Date(userDob + 'T00:00:00');
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
+  }
 
   onSnapshot(q, (snap) => {
     if (_curfewTimer) clearInterval(_curfewTimer);
     const schedules = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     function check() {
-      const now    = new Date();
-      const today  = now.toISOString().slice(0, 10);
-      const hhmm   = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-      const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][now.getDay()];
+      const now     = new Date();
+      const today   = now.toISOString().slice(0, 10);
+      const hhmm    = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()];
       console.log('[curfew check]', { hhmm, dayName, schedules });
+
       let active = null;
 
       for (const s of schedules) {
         if (s.type === 'weekly') {
-          if (!(s.days||[]).includes(dayName)) continue;
-          if ((s.exceptions||[]).includes(today)) continue;
+          if (!(s.days || []).includes(dayName))    continue;
+          if ((s.exceptions || []).includes(today)) continue;
         } else if (s.type === 'once') {
           if (s.date !== today) continue;
         } else {
-          // manual — already filtered by active:true above, so always show
-          active = s; break;
+          /* manual — already filtered by active:true, so always show */
+          active = s;
+          break;
         }
-        // Check time window (handles overnight: e.g. 22:00–05:00)
-        const crosses = s.endTime < s.startTime;
+
+        /* Handles overnight windows (e.g. 22:00 – 05:00) */
+        const crosses  = s.endTime < s.startTime;
         const inWindow = crosses
           ? (hhmm >= s.startTime || hhmm < s.endTime)
           : (hhmm >= s.startTime && hhmm < s.endTime);
+
         if (inWindow) { active = s; break; }
       }
 
       if (active) {
         const age = getUserAge();
-        //console.log('[curfew]', { affects: active.affects, age, userDob });
-        
-        const shouldSkip = (() => {
-        if (!age) return false;
-        if (active.affects === 'Minors Only' && age >= 18) return true;
-        if (active.affects?.startsWith('Ages ')) {
-          const parts = active.affects.replace('Ages ', '').split('-');
-          const min = Number(parts[0]), max = Number(parts[1]);
-          if (age < min || age > max) return true;
-        }
-        return false;
-      })();
 
-      if (shouldSkip) {
-        removeBanner('curfew-active');
-      } else {
-        removeBanner('curfew-active');
-        renderBanner('curfew-active', {
-          severity: 'orange',
-          title: `Curfew in effect — ${active.name}`,
-          message: `${active.startTime} – ${active.endTime}. ${
-            active.affects?.toLowerCase() === 'minors only'
-              ? 'Minors must be accompanied by a guardian.'
-              : 'All residents must observe curfew hours.'
-          }`,
-          dismissible: false,
-        });
-      }
+        /* Determine whether this curfew applies to the current resident */
+        const shouldSkip = (() => {
+          if (!age) return false;
+          if (active.affects === 'Minors Only' && age >= 18) return true;
+          if (active.affects?.startsWith('Ages ')) {
+            const parts = active.affects.replace('Ages ', '').split('-');
+            const min = Number(parts[0]), max = Number(parts[1]);
+            if (age < min || age > max) return true;
+          }
+          return false;
+        })();
+
+        if (shouldSkip) {
+          removeBanner('curfew-active');
+        } else {
+          removeBanner('curfew-active');
+          renderBanner('curfew-active', {
+            severity:    'orange',
+            title:       `Curfew in effect — ${active.name}`,
+            message:     `${active.startTime} – ${active.endTime}. ${
+              active.affects?.toLowerCase() === 'minors only'
+                ? 'Minors must be accompanied by a guardian.'
+                : 'All residents must observe curfew hours.'
+            }`,
+            dismissible: false,
+          });
+        }
       } else {
         removeBanner('curfew-active');
       }
     }
+
     check();
-    _curfewTimer = setInterval(check, 60_000); // re-check every minute
+    _curfewTimer = setInterval(check, 60_000); // re-evaluate every minute
   });
 }
 
 
-// ── USGS Earthquake polling ──────────────────────────────────────
-// Scoped to the Philippines bounding box, mag ≥ 4.5.
-// Renders locally (sessionStorage dedup). Does NOT write to Firestore —
-// admins can create a proper alert from the admin panel if needed.
-//
-// Optional: add OpenWeatherMap weather alerts below this function.
-// API: https://api.openweathermap.org/data/3.0/onecall
-//      Add 'alerts' to the exclude param and parse res.alerts[].
-//      Requires a free API key at openweathermap.org.
+// ================================================
+// USGS EARTHQUAKE POLLING
+// ================================================
 
-let _lastUsgsId = localStorage.getItem('bc_usgs_last') || null;
+/*
+   Polls the USGS FDSN Event API on a 5-minute interval.
+   Scoped to the Philippines bounding box (lat 5.5–21.5, lon 115–127), mag ≥ 4.5.
+   Deduplicates against the last seen event ID stored in localStorage.
+   Renders locally only — does not write to Firestore.
+
+   Optional extension: OpenWeatherMap weather alerts via the One Call API
+   (https://api.openweathermap.org/data/3.0/onecall). Add 'alerts' to the
+   exclude param, parse res.alerts[], and call renderBanner for each entry.
+   Requires a free API key from openweathermap.org.
+*/
 
 async function pollUsgs() {
   const since = new Date(Date.now() - USGS_LOOKBACK).toISOString().slice(0, 19);
@@ -296,7 +401,7 @@ async function pollUsgs() {
     `&starttime=${since}&orderby=time&limit=1`;
 
   try {
-    const res  = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) return;
 
     const json = await res.json();
@@ -304,7 +409,7 @@ async function pollUsgs() {
 
     const { id, properties: p } = json.features[0];
 
-    if (id === _lastUsgsId) return; // same event, skip
+    if (id === _lastUsgsId) return; // same event as last poll — skip
     _lastUsgsId = id;
     localStorage.setItem('bc_usgs_last', id);
 
@@ -322,13 +427,19 @@ async function pollUsgs() {
     });
 
   } catch {
-    // Network error — fail silently, never break the page
+    /* Network error — fail silently, never break the page */
   }
 }
 
 
-// ── Test helper (admin console / dev only) ───────────────────────
-// Usage from browser console: createTestAlert()
+// ================================================
+// DEV HELPER — Test Alert (Admin Console Only)
+// ================================================
+
+/*
+   Writes a temporary test alert to Firestore for the given barangay.
+   Usage from the browser console: createTestAlert()
+*/
 
 window.createTestAlert = async function (barangayName = 'Bancod') {
   const bid = toBid(barangayName);
@@ -346,16 +457,24 @@ window.createTestAlert = async function (barangayName = 'Bancod') {
     createdBy:   'admin-test',
   });
   console.log('[test] Alert written:', ref.id);
-}
+};
 
-// ── Bootstrap ───────────────────────────────────────────────────
+
+// ================================================
+// BOOTSTRAP
+// ================================================
+
+/*
+   USGS polling starts unconditionally — no login required.
+   Firestore listeners (siteAlerts, curfewSchedules) are scoped to the
+   authenticated user's barangay, resolved from their userIndex document.
+*/
 
 onAuthStateChanged(auth, async (user) => {
-  // USGS runs regardless of login state
   await pollUsgs();
   setInterval(pollUsgs, USGS_POLL_MS);
 
-  if (!user) return; // Firestore alerts need barangay scope
+  if (!user) return;
 
   try {
     const snap = await getDoc(userIndexDoc(user.uid));
@@ -364,13 +483,15 @@ onAuthStateChanged(auth, async (user) => {
     const { barangay } = snap.data();
     listenAlerts(barangay);
 
-    // Fetch DOB for age-based curfew filtering
+    /* Fetch DOB for age-based curfew filtering */
     let userDob = null;
     try {
       const fullSnap = await getDoc(userDoc(barangay, user.uid));
       if (fullSnap.exists()) userDob = fullSnap.data().dob ?? null;
-    } catch (e) {}
+    } catch { /* non-fatal — curfew will show for all ages if DOB is unavailable */ }
+
     listenCurfews(barangay, userDob);
+
   } catch (err) {
     console.warn('[alerts.js] Firestore subscription failed:', err.message);
   }

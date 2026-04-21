@@ -1,21 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 
+<!--
+  ================================================
+  community.html — BarangayConnect
+  Community Hub page for Barangay Bancod residents.
+  Displays tabbed panels: Bulletin, Polls, Calendar,
+  Gallery, Youth Zone, and Pet Board. Entry point
+  for resident-facing community interaction features.
+
+  WHAT IS IN HERE:
+    · Navbar (shared layout, role-gated links)
+    · Community Hero section with tab navigation strip
+    · Tab panels: Bulletin, Polls, Calendar, Gallery, Youth Zone, Pet Board
+    · Modals: Pet Report, Bullying Report, New Post, Sign-out Confirm
+    · Profile Drawer (avatar slide-in panel)
+    · Site Footer (shared)
+
+  WHAT IS NOT IN HERE:
+    · Bulletin post rendering logic (→ bulletin.js, community-posts.js)
+    · Auth/role management (→ nav-auth.js, profile.js)
+    · Page animations (→ community-animations.js)
+    · Design tokens, reset, navbar, footer styles (→ main.css)
+    · Button variants (→ buttons.css)
+    · Badges, tags, banners, stat components (→ components.css)
+    · Post cards, modals, calendar, pet cards, drawers (→ frames.css)
+    · Hero layout, tab panels, gallery grid, section spacing (→ community.css)
+
+  REQUIRED IMPORTS:
+    · main.css, buttons.css, components.css, frames.css, community.css
+    · lucide (CDN), nav-auth.js, bulletin.js, community-posts.js
+    · profile.js, community-animations.js, gsap + ScrollTrigger (CDN)
+
+  QUICK REFERENCE:
+    · Tab panels:   #tab-bulletin, #tab-polls, #tab-calendar,
+                    #tab-gallery, #tab-youth, #tab-pets
+    · Modals:       #petReportModal, #bullyingModal, #newPostModal, #signoutModal
+    · Profile:      #profileDrawer, #drawerBackdrop
+    · FAB:          .btn--fab (opens #newPostModal)
+  ================================================
+-->
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Community</title>
 
   <!--
-    ═══════════════════════════════════════════════
+    ─────────────────────────────────────────────
     CSS IMPORT ORDER — DO NOT CHANGE
-    ═══════════════════════════════════════════════
+    ─────────────────────────────────────────────
     main.css        → tokens, reset, navbar, footer, form inputs
     buttons.css     → .btn and all clickable variants
     components.css  → badges, tags, banners, stat components
     frames.css      → post cards, modals, cal, pet cards, drawers
     community.css   → THIS PAGE ONLY — hero layout, tab panels,
-                      gallery grid, section spacing.
+                      gallery grid, section spacing
   -->
   <link rel="stylesheet" href="../css/main.css" />
   <link rel="stylesheet" href="../css/buttons.css" />
@@ -27,6 +67,13 @@
   <script type="module" src="../js/nav-auth.js"></script>
 </head>
 
+<!--
+  ─────────────────────────────────────────────
+  ROLE CLASS on <body> controls which navbar
+  items are visible. JS sets this after auth.
+  Values: role-resident | role-officer | role-admin
+  Default for this page: role-guest
+-->
 <body class="role-guest" data-role-init="pending">
 
 
@@ -42,43 +89,63 @@
         <span class="navbar__logo-text">BarangayConnect</span>
       </a>
 
-      <!-- Desktop nav links -->
+      <!--
+        Desktop nav links.
+        Active page gets .is-active. Role-gated items use
+        .navbar__item--officer or .navbar__item--admin and
+        auto-show/hide based on the <body> role class.
+      -->
       <ul class="navbar__nav" style="list-style-type: none;">
         <li><a href="home.html"      class="navbar__link">Home</a></li>
         <li><a href="community.html" class="navbar__link is-active">Community</a></li>
         <li><a href="services.html"  class="navbar__link">Services</a></li>
         <li><a href="profile.html"   class="navbar__link">My Barangay</a></li>
-        <li class="navbar__item--officer"><a class="navbar__link navbar__link--officer">Officer Panel</a></li>
+        <li class="navbar__item--officer">
+          <a class="navbar__link navbar__link--officer">Officer Panel</a>
+        </li>
         <li class="navbar__item--admin">
           <a href="../admin.html" class="navbar__link navbar__link--admin">Admin Panel</a>
         </li>
       </ul>
 
-      <!-- Actions -->
+      <!-- Right-side actions -->
       <div class="navbar__actions">
+
+        <!--
+          Role pill — modifier reflects logged-in user role:
+            .navbar__role--resident (green outline)
+            .navbar__role--officer  (orange outline)
+            .navbar__role--admin    (red outline)
+        -->
         <span class="navbar__role navbar__role--resident" id="navRole">Resident</span>
+
+        <!-- Bell — remove .navbar__bell-dot when no notifications -->
         <button class="navbar__bell" aria-label="Notifications" id="bellBtn">
           <i data-lucide="bell"></i>
           <span class="navbar__bell-dot"></span>
         </button>
+
+        <!-- Avatar — replace icon with <img> when user has a photo -->
         <button class="navbar__avatar" aria-label="Open profile" id="avatarBtn">
           <i data-lucide="user"></i>
         </button>
+
+        <!-- Mobile hamburger (auto-shows on small screens via CSS) -->
         <button class="navbar__hamburger" aria-label="Open menu" id="hamburgerBtn">
           <i data-lucide="menu"></i>
         </button>
-      </div>
 
+      </div>
     </div><!-- /navbar__inner -->
 
-    <!-- Mobile drawer -->
+    <!-- Mobile drawer (toggled by JS adding .is-open) -->
     <div class="navbar__mobile-drawer" id="mobileDrawer">
       <a href="home.html"      class="navbar__link">Home</a>
       <a href="community.html" class="navbar__link is-active">Community</a>
       <a href="services.html"  class="navbar__link">Services</a>
       <a href="profile.html"   class="navbar__link">My Barangay</a>
     </div>
-  </nav>
+  </nav><!-- /navbar -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════
@@ -138,41 +205,43 @@
          TAB PANEL: BULLETIN
          ─────────────────────────────────────────────────────────────
          Filter pills + post list + FAB.
-         Filter pills: .btn--filter from buttons.css.
-         Posts: .post-row / .post-row--accented from frames.css.
-         Reactions: .reaction-bar / .reaction-count from components.css.
-         FAB: .btn .btn--fab from buttons.css.
+         Filter pills:  .btn--filter from buttons.css.
+         Posts:         .post-row / .post-row--accented from frames.css.
+         Reactions:     .reaction-bar / .reaction-count from components.css.
+         FAB:           .btn .btn--fab from buttons.css.
     ──────────────────────────────────────────────────────────────── -->
     <section class="tab-panel tab-panel--bulletin is-active" id="tab-bulletin" role="tabpanel">
       <div class="community-panel-inner">
 
         <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.25rem;">
 
-        <!-- Category pills -->
-        <div class="bulletin-filters" id="bulletinCategoryFilters">
-          <button class="btn btn--filter is-active">All</button>
-          <button class="btn btn--filter">General</button>
-          <button class="btn btn--filter">Announcements</button>
-          <button class="btn btn--filter">Health</button>
-          <button class="btn btn--filter">Infrastructure</button>
-          <button class="btn btn--filter">Safety</button>
-          <button class="btn btn--filter">Events</button>
-        </div>
-        <!-- Source toggle — visually separated row -->
-        <div style="display:flex;align-items:center;gap:.4rem;">
-          <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
-            color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Source</span>
-          <div class="bulletin-source-toggle" style="display:flex;gap:.3rem;">
-            <button class="btn btn--filter bulletin-source-seg__btn is-active" data-source="all">All</button>
-            <button class="btn btn--filter bulletin-source-seg__btn" data-source="official">
-              <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
-            </button>
-            <button class="btn btn--filter bulletin-source-seg__btn" data-source="community">
-              <i data-lucide="users" style="width:11px;height:11px;"></i> Community
-            </button>
+          <!-- Category filter pills -->
+          <div class="bulletin-filters" id="bulletinCategoryFilters">
+            <button class="btn btn--filter is-active">All</button>
+            <button class="btn btn--filter">General</button>
+            <button class="btn btn--filter">Announcements</button>
+            <button class="btn btn--filter">Health</button>
+            <button class="btn btn--filter">Infrastructure</button>
+            <button class="btn btn--filter">Safety</button>
+            <button class="btn btn--filter">Events</button>
           </div>
+
+          <!-- Source toggle — visually separated row -->
+          <div style="display:flex;align-items:center;gap:.4rem;">
+            <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+              color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Source</span>
+            <div class="bulletin-source-toggle" style="display:flex;gap:.3rem;">
+              <button class="btn btn--filter bulletin-source-seg__btn is-active" data-source="all">All</button>
+              <button class="btn btn--filter bulletin-source-seg__btn" data-source="official">
+                <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
+              </button>
+              <button class="btn btn--filter bulletin-source-seg__btn" data-source="community">
+                <i data-lucide="users" style="width:11px;height:11px;"></i> Community
+              </button>
+            </div>
+          </div>
+
         </div>
-      </div>
 
         <!-- Post list — rendered dynamically by bulletin.js -->
         <div class="bulletin-list" id="bulletinList"></div>
@@ -233,7 +302,7 @@
               </label>
             </div>
             <p class="poll-card__meta">312 votes · Results shown</p>
-          </div>
+          </div><!-- /poll-card -->
 
           <!-- Poll 2 — Active, not yet voted -->
           <div class="card poll-card">
@@ -256,7 +325,7 @@
               </label>
             </div>
             <p class="poll-card__meta">188 votes · Tap to vote</p>
-          </div>
+          </div><!-- /poll-card -->
 
           <!-- Poll 3 — Closed, results visible -->
           <div class="card poll-card">
@@ -291,11 +360,11 @@
               </label>
             </div>
             <p class="poll-card__meta">501 votes · Results shown</p>
-          </div>
+          </div><!-- /poll-card -->
 
         </div><!-- /polls-list -->
 
-        <!-- Pagination -->
+        <!-- Pagination controls -->
         <div class="polls-pagination">
           <button class="btn btn--outline btn--sm polls-pagination__btn" aria-label="Previous">
             <i data-lucide="chevron-left"></i>
@@ -326,6 +395,7 @@
           <!-- LEFT: Calendar widget -->
           <div class="calendar-layout__cal">
             <div class="cal">
+
               <div class="cal__header">
                 <span class="cal__month">June 2025</span>
                 <div class="cal__nav">
@@ -387,6 +457,7 @@
                 <!-- Week 6 -->
                 <button class="cal__day">30</button>
               </div>
+
             </div>
           </div><!-- /calendar-layout__cal -->
 
@@ -453,7 +524,6 @@
 
           <div class="gallery-item">
             <div class="gallery-item__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/gallery/medical-mission.jpg" alt="Free Medical Mission" class="gallery-item__img" />
               <span class="gallery-item__tag tag tag--green">Health</span>
             </div>
@@ -462,7 +532,6 @@
 
           <div class="gallery-item">
             <div class="gallery-item__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/gallery/blood-donation.jpg" alt="Blood Donation Drive" class="gallery-item__img" />
               <span class="gallery-item__tag tag tag--green">Health</span>
             </div>
@@ -472,7 +541,6 @@
           <!-- Tall item — spans 2 grid rows -->
           <div class="gallery-item gallery-item--tall">
             <div class="gallery-item__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/gallery/basketball.jpg" alt="Barangay Basketball Tournament" class="gallery-item__img" />
               <span class="gallery-item__tag tag tag--blue">Sports</span>
             </div>
@@ -481,7 +549,6 @@
 
           <div class="gallery-item">
             <div class="gallery-item__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/gallery/fiesta.jpg" alt="Fiesta 2025" class="gallery-item__img" />
               <span class="gallery-item__tag tag tag--amber">Events</span>
             </div>
@@ -490,7 +557,6 @@
 
           <div class="gallery-item">
             <div class="gallery-item__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/gallery/cleanup.jpg" alt="Environmental Clean-Up Drive" class="gallery-item__img" />
               <span class="gallery-item__tag tag tag--green">Environment</span>
             </div>
@@ -499,7 +565,6 @@
 
           <div class="gallery-item">
             <div class="gallery-item__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/gallery/livelihood.jpg" alt="Livelihood Skills Training" class="gallery-item__img" />
               <span class="gallery-item__tag tag tag--amber">Livelihood</span>
             </div>
@@ -508,7 +573,6 @@
 
           <div class="gallery-item">
             <div class="gallery-item__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/gallery/youth-seminar.jpg" alt="Youth Leadership Seminar" class="gallery-item__img" />
               <span class="gallery-item__tag tag tag--gray">Youth</span>
             </div>
@@ -526,8 +590,8 @@
          ─────────────────────────────────────────────────────────────
          .notice-banner .notice-banner--red from components.css at top.
          3-column .youth-programs-grid from community.css below.
-         Cards: .program-card from frames.css.
-         Icon color variants: .program-card__icon--green / --orange / --blue
+         Cards:      .program-card from frames.css.
+         Icon color: .program-card__icon--green / --orange / --blue
          Slots badge: .badge-slots from components.css.
     ──────────────────────────────────────────────────────────────── -->
     <section class="tab-panel tab-panel--youth" id="tab-youth" role="tabpanel">
@@ -545,14 +609,11 @@
           <button class="btn btn--red btn--sm" onclick="openModal('bullyingModal')">Report Now</button>
         </div>
 
-        
-
         <!-- 3-column program cards grid — .youth-programs-grid from community.css -->
         <div class="youth-programs-grid">
 
           <div class="program-card">
             <div class="program-card__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/youth/basketball.jpg" alt="Basketball Summer League" class="program-card__img" />
             </div>
             <div class="program-card__body">
@@ -571,11 +632,10 @@
                 <button class="btn btn--green btn--sm">Register</button>
               </div>
             </div>
-          </div>
+          </div><!-- /program-card -->
 
           <div class="program-card">
             <div class="program-card__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/youth/tutoring.jpg" alt="Bayanihan Homework Hub" class="program-card__img" />
             </div>
             <div class="program-card__body">
@@ -594,11 +654,10 @@
                 <button class="btn btn--green btn--sm">Register</button>
               </div>
             </div>
-          </div>
+          </div><!-- /program-card -->
 
           <div class="program-card">
             <div class="program-card__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/youth/digital-skills.jpeg" alt="Digital Skills Workshop" class="program-card__img" />
             </div>
             <div class="program-card__body">
@@ -617,7 +676,7 @@
                 <button class="btn btn--green btn--sm">Register</button>
               </div>
             </div>
-          </div>
+          </div><!-- /program-card -->
 
         </div><!-- /youth-programs-grid -->
 
@@ -630,14 +689,14 @@
          ─────────────────────────────────────────────────────────────
          .pets-toolbar from community.css: filters left, CTA right.
          .pets-grid from community.css: 4-column card grid.
-         Cards: .pet-card from frames.css.
-         Status overlay: .pet-status .pet-status--missing / --adoption / --found
-         Action: .btn--green (Contact Owner) or .btn--located (disabled)
+         Cards:   .pet-card from frames.css.
+         Status:  .pet-status .pet-status--missing / --adoption / --found
+         Action:  .btn--green (Contact Owner) or .btn--located (disabled)
     ──────────────────────────────────────────────────────────────── -->
     <section class="tab-panel tab-panel--pets" id="tab-pets" role="tabpanel">
       <div class="community-panel-inner">
 
-        <!-- Toolbar: filters + action button -->
+        <!-- Toolbar: filter pills + post action -->
         <div class="pets-toolbar">
           <div class="pets-filters">
             <button class="btn btn--filter is-active">All</button>
@@ -655,7 +714,6 @@
 
           <div class="pet-card">
             <div class="pet-card__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/pets/brownie.jpg" alt="Brownie" class="pet-card__img" />
               <span class="pet-status pet-status--missing">Missing</span>
             </div>
@@ -667,11 +725,10 @@
                 <i data-lucide="phone"></i> Contact Owner
               </button>
             </div>
-          </div>
+          </div><!-- /pet-card -->
 
           <div class="pet-card">
             <div class="pet-card__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/pets/mango.jpg" alt="Mango" class="pet-card__img" />
               <span class="pet-status pet-status--adoption">For Adoption</span>
             </div>
@@ -683,11 +740,10 @@
                 <i data-lucide="phone"></i> Contact Owner
               </button>
             </div>
-          </div>
+          </div><!-- /pet-card -->
 
           <div class="pet-card">
             <div class="pet-card__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/pets/whitey.jpg" alt="Whitey" class="pet-card__img" />
               <span class="pet-status pet-status--found">Found</span>
             </div>
@@ -700,11 +756,10 @@
                 <i data-lucide="map-pin"></i> Location Reported
               </button>
             </div>
-          </div>
+          </div><!-- /pet-card -->
 
           <div class="pet-card">
             <div class="pet-card__img-wrap">
-              <!-- placeholder image -->
               <img src="../assets/images/pets/angel.jpg" alt="Angel" class="pet-card__img" />
               <span class="pet-status pet-status--adoption">For Adoption</span>
             </div>
@@ -716,7 +771,7 @@
                 <i data-lucide="phone"></i> Contact Owner
               </button>
             </div>
-          </div>
+          </div><!-- /pet-card -->
 
         </div><!-- /pets-grid -->
 
@@ -731,9 +786,9 @@
        MODAL — Pet Report
        ───────────────────────────────────────────────────────────────
        .modal-overlay > .modal from frames.css.
-       Header: .modal__header .modal__header--green
-       Report type toggle: .report-type-toggle + .report-type-toggle__btn--*
-       Close: .btn .btn--close .btn--sm .modal__close from buttons.css.
+       Header:      .modal__header .modal__header--green
+       Report type: .report-type-toggle + .report-type-toggle__btn--*
+       Close:       .btn .btn--close .btn--sm .modal__close from buttons.css.
   ══════════════════════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="petReportModal" onclick="closeOnBackdrop(event)">
     <div class="modal">
@@ -752,26 +807,28 @@
         </button>
       </div>
 
+      <!-- Approval / admin / guideline notices (shown contextually via JS) -->
       <div id="newPostApprovalWarning"
-          style="display:none;align-items:center;gap:.5rem;background:#fef9c3;
-            border:1px solid #fde68a;border-radius:8px;padding:.6rem .85rem;
-            font-size:.78rem;color:#854d0e;margin-bottom:.5rem;">
-          <i data-lucide="clock" style="width:14px;height:14px;flex-shrink:0;"></i>
-          Your post will be reviewed by an admin before it appears on the bulletin.
-        </div>
+        style="display:none;align-items:center;gap:.5rem;background:#fef9c3;
+          border:1px solid #fde68a;border-radius:8px;padding:.6rem .85rem;
+          font-size:.78rem;color:#854d0e;margin-bottom:.5rem;">
+        <i data-lucide="clock" style="width:14px;height:14px;flex-shrink:0;"></i>
+        Your post will be reviewed by an admin before it appears on the bulletin.
+      </div>
 
-        <div id="newPostAdminNotice"
+      <div id="newPostAdminNotice"
         style="display:none;align-items:center;gap:.5rem;background:#eff6ff;
           border:1px solid #bfdbfe;border-radius:8px;padding:.6rem .85rem;
           font-size:.78rem;color:#1e40af;margin-bottom:.5rem;">
         <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
-        You're posting as <strong>staff</strong>. For official announcements, use the <a href="../pages/admin-community.html" style="color:#1e40af;font-weight:700;text-decoration:underline;">Admin Panel</a> instead.
+        You're posting as <strong>staff</strong>. For official announcements, use the
+        <a href="../pages/admin-community.html" style="color:#1e40af;font-weight:700;text-decoration:underline;">Admin Panel</a> instead.
       </div>
 
       <div id="newPostGuidelineText"
-          style="display:none;font-size:.75rem;color:#6b7280;padding:.5rem .75rem;
-            background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:.5rem;">
-        </div>
+        style="display:none;font-size:.75rem;color:#6b7280;padding:.5rem .75rem;
+          background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:.5rem;">
+      </div>
 
       <div class="modal__body">
 
@@ -831,95 +888,99 @@
     </div><!-- /modal -->
   </div><!-- /petReportModal -->
 
-  
-          <!-- ═══════════════════════════════════════════════════════════════
+
+  <!-- ═══════════════════════════════════════════════════════════════
        MODAL — Bullying Report
        ───────────────────────────────────────────────────────────────
        .modal-overlay > .modal from frames.css.
-       Header: .modal__header .modal__header--green
-       Report type toggle: .report-type-toggle + .report-type-toggle__btn--*
-       Close: .btn .btn--close .btn--sm .modal__close from buttons.css.
+       Header:         .modal__header .modal__header--red
+       Anonymous toggle: #anonToggle checkbox + toggleAnonFields()
+       Identity fields:  #bullyingIdentityFields (hidden by default)
   ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="bullyingModal" onclick="closeOnBackdrop(event)">
+    <div class="modal">
 
-        <div class="modal-overlay" id="bullyingModal" onclick="closeOnBackdrop(event)">
-      <div class="modal">
-        <div class="modal__header modal__header--red">
-          <div class="modal__header-icon">
-            <i data-lucide="shield-alert"></i>
-          </div>
-          <div class="modal__header-content">
-            <p class="modal__header-label">YOUTH PROTECTION</p>
-            <h2 class="modal__header-title">Report a Bullying Incident</h2>
-            <p class="modal__header-sub">This report is confidential and will only be seen by the Youth Protection Officer.</p>
-          </div>
-          <button class="btn btn--close btn--sm modal__close" aria-label="Close" onclick="closeModal('bullyingModal')">
-            <i data-lucide="x"></i>
-          </button>
+      <div class="modal__header modal__header--red">
+        <div class="modal__header-icon">
+          <i data-lucide="shield-alert"></i>
         </div>
-
-        <!-- Anonymous toggle — sits just below the red header -->
-        <div class="anon-toggle-row">
-          <div class="anon-toggle-row__icon">
-            <i data-lucide="eye-off"></i>
-          </div>
-          <div class="anon-toggle-row__body">
-            <p class="anon-toggle-row__title">Submitting Anonymously</p>
-            <p class="anon-toggle-row__sub">Your identity will not be shared. Tap to add contact.</p>
-          </div>
-          <label class="toggle-wrap">
-            <input type="checkbox" class="toggle-input" id="anonToggle" checked onchange="toggleAnonFields()" />
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-          </label>
+        <div class="modal__header-content">
+          <p class="modal__header-label">YOUTH PROTECTION</p>
+          <h2 class="modal__header-title">Report a Bullying Incident</h2>
+          <p class="modal__header-sub">This report is confidential and will only be seen by the Youth Protection Officer.</p>
         </div>
-
-        <div class="modal__body">
-
-          <!-- Identity fields — hidden by default since anonymous is on -->
-          <div id="bullyingIdentityFields" style="display:none; display:flex; flex-direction:column; gap:var(--space-md);">
-            <div class="form-group">
-              <label class="form-label">Your Name</label>
-              <input type="text" class="form-input" placeholder="e.g. Juan dela Cruz" />
-            </div>
-            <div class="form-group">
-              <label class="form-label">Contact Number</label>
-              <input type="tel" class="form-input" placeholder="e.g. 0917-123-4567" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Who was involved?</label>
-            <input type="text" class="form-input" placeholder="Name(s) of the person(s) involved" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Where did it happen?</label>
-            <input type="text" class="form-input" placeholder="e.g. School, barangay hall, online..." />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Describe what happened</label>
-            <textarea class="form-input" rows="4"
-              placeholder="Please describe the incident in as much detail as you're comfortable sharing..."
-              maxlength="500"
-              oninput="this.closest('.form-group').querySelector('.char-count').textContent = this.value.length + ' / 500'"></textarea>
-            <span class="char-count">0 / 500</span>
-          </div>
-
-        </div>
-
-        <div class="modal__footer">
-          <button class="btn btn--outline" onclick="closeModal('bullyingModal')">Cancel</button>
-          <button class="btn btn--red btn--full">
-            <i data-lucide="send"></i> Submit Report
-          </button>
-        </div>
+        <button class="btn btn--close btn--sm modal__close" aria-label="Close" onclick="closeModal('bullyingModal')">
+          <i data-lucide="x"></i>
+        </button>
       </div>
-    </div>
-    </div>
+
+      <!-- Anonymous toggle — sits just below the red header -->
+      <div class="anon-toggle-row">
+        <div class="anon-toggle-row__icon">
+          <i data-lucide="eye-off"></i>
+        </div>
+        <div class="anon-toggle-row__body">
+          <p class="anon-toggle-row__title">Submitting Anonymously</p>
+          <p class="anon-toggle-row__sub">Your identity will not be shared. Tap to add contact.</p>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" class="toggle-input" id="anonToggle" checked onchange="toggleAnonFields()" />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </label>
+      </div>
+
+      <div class="modal__body">
+
+        <!-- Identity fields — hidden by default (anonymous mode on) -->
+        <div id="bullyingIdentityFields" style="display:none; display:flex; flex-direction:column; gap:var(--space-md);">
+          <div class="form-group">
+            <label class="form-label">Your Name</label>
+            <input type="text" class="form-input" placeholder="e.g. Juan dela Cruz" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contact Number</label>
+            <input type="tel" class="form-input" placeholder="e.g. 0917-123-4567" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Who was involved?</label>
+          <input type="text" class="form-input" placeholder="Name(s) of the person(s) involved" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Where did it happen?</label>
+          <input type="text" class="form-input" placeholder="e.g. School, barangay hall, online..." />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Describe what happened</label>
+          <textarea class="form-input" rows="4"
+            placeholder="Please describe the incident in as much detail as you're comfortable sharing..."
+            maxlength="500"
+            oninput="this.closest('.form-group').querySelector('.char-count').textContent = this.value.length + ' / 500'"></textarea>
+          <span class="char-count">0 / 500</span>
+        </div>
+
+      </div><!-- /modal__body -->
+
+      <div class="modal__footer">
+        <button class="btn btn--outline" onclick="closeModal('bullyingModal')">Cancel</button>
+        <button class="btn btn--red btn--full">
+          <i data-lucide="send"></i> Submit Report
+        </button>
+      </div>
+
+    </div><!-- /modal -->
+  </div><!-- /bullyingModal -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════
        MODAL — New Post (Bulletin)
        ───────────────────────────────────────────────────────────────
        Triggered by the FAB on the Bulletin panel.
+       Approval warning and admin notice shown contextually via JS.
+       Image previews managed by previewNewPostImages() in module script.
   ══════════════════════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="newPostModal" onclick="closeOnBackdrop(event)">
     <div class="modal">
@@ -933,13 +994,15 @@
           <h2 class="modal__header-title">New Post</h2>
           <p class="modal__header-sub">Share an update with your barangay</p>
         </div>
-        <button class="btn btn--close btn--sm modal__close" aria-label="Close" onclick="closeModal('newPostModal');resetNewPostModal();">
+        <button class="btn btn--close btn--sm modal__close" aria-label="Close"
+          onclick="closeModal('newPostModal');resetNewPostModal();">
           <i data-lucide="x"></i>
         </button>
       </div>
 
       <div class="modal__body">
 
+        <!-- Approval / admin / guideline notices (shown contextually via JS) -->
         <div id="newPostApprovalWarning"
           style="display:none;align-items:center;gap:.5rem;background:#fef9c3;
             border:1px solid #fde68a;border-radius:8px;padding:.6rem .85rem;
@@ -947,6 +1010,7 @@
           <i data-lucide="clock" style="width:14px;height:14px;flex-shrink:0;"></i>
           Your post will be reviewed by an admin before it appears on the bulletin.
         </div>
+
         <div id="newPostAdminNotice"
           style="display:none;align-items:center;gap:.5rem;background:#eff6ff;
             border:1px solid #bfdbfe;border-radius:8px;padding:.6rem .85rem;
@@ -954,6 +1018,7 @@
           <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
           You're posting as <strong>staff</strong>.
         </div>
+
         <div id="newPostGuidelineText"
           style="display:none;font-size:.75rem;color:#6b7280;padding:.5rem .75rem;
             background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:.5rem;">
@@ -964,31 +1029,34 @@
             Category <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional)</span>
           </label>
           <select class="form-select" id="newPostCategory">
-          <option value="general">General</option>
-          <option value="announcements" class="admin-only-option" style="display:none;">Announcement</option>
-          <option value="health">Health</option>
-          <option value="infrastructure">Infrastructure</option>
-          <option value="safety">Safety</option>
-          <option value="events">Events</option>
-        </select>
+            <option value="general">General</option>
+            <option value="announcements" class="admin-only-option" style="display:none;">Announcement</option>
+            <option value="health">Health</option>
+            <option value="infrastructure">Infrastructure</option>
+            <option value="safety">Safety</option>
+            <option value="events">Events</option>
+          </select>
         </div>
+
         <div class="form-group">
           <label class="form-label">Title</label>
           <input type="text" id="newPostTitle" class="form-input" placeholder="Post title..." />
+
           <div class="form-group">
-          <label class="form-label">
-            What's on your mind?
-            <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional)</span>
-          </label>
-          <div id="postWarningBanner" style="display:none;background:#fef9c3;border:1px solid #fde68a;
-            border-radius:8px;padding:.55rem .75rem;font-size:.78rem;color:#92400e;margin-bottom:.5rem;"></div>
-          <textarea id="newPostBody" class="form-input" rows="4"
-            placeholder="Share something with your barangay…"
-            maxlength="500"
-            oninput="document.getElementById('newPostCharCount').textContent = this.value.length + ' / 500'"></textarea>
-          <span class="char-count" id="newPostCharCount">0 / 500</span>
+            <label class="form-label">
+              What's on your mind?
+              <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional)</span>
+            </label>
+            <div id="postWarningBanner" style="display:none;background:#fef9c3;border:1px solid #fde68a;
+              border-radius:8px;padding:.55rem .75rem;font-size:.78rem;color:#92400e;margin-bottom:.5rem;"></div>
+            <textarea id="newPostBody" class="form-input" rows="4"
+              placeholder="Share something with your barangay…"
+              maxlength="500"
+              oninput="document.getElementById('newPostCharCount').textContent = this.value.length + ' / 500'"></textarea>
+            <span class="char-count" id="newPostCharCount">0 / 500</span>
+          </div>
         </div>
-        </div>
+
         <div class="form-group">
           <label class="form-label">
             Photos <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional · up to 4)</span>
@@ -1009,7 +1077,8 @@
           <div id="newPostImagePreviews"
             style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;"></div>
         </div>
-      </div>
+
+      </div><!-- /modal__body -->
 
       <div class="modal__footer">
         <button class="btn btn--outline" onclick="closeModal('newPostModal');resetNewPostModal();">Cancel</button>
@@ -1018,73 +1087,138 @@
         </button>
       </div>
 
-    </div>
+    </div><!-- /modal -->
   </div><!-- /newPostModal -->
 
-<!-- Profile Drawer -->
-<div class="profile-drawer" id="profileDrawer">
-  <div class="profile-drawer__header">
-    <button class="btn btn--close btn--sm profile-drawer__close" id="drawerCloseBtn" aria-label="Close">
-      <i data-lucide="x"></i>
-    </button>
-    <div class="profile-drawer__avatar" id="drawerAvatar">…</div>
-    <p class="profile-drawer__name" id="drawerName">Loading…</p>
-    <p class="profile-drawer__role" id="drawerRole">—</p>
-    <span class="profile-drawer__id" id="drawerIdNumber">
-      <i data-lucide="id-card"></i> —
-    </span>
-  </div>
-  <nav class="profile-drawer__menu">
-    <a href="profile.html" class="profile-drawer__item">
-      <div class="profile-drawer__item-icon"><i data-lucide="user-pen"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">My Barangay</span>
-        <span class="profile-drawer__item-sub">View your profile and ID</span>
-      </div>
-    </a>
-    <a href="services.html" class="profile-drawer__item">
-      <div class="profile-drawer__item-icon"><i data-lucide="file-text"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">My Documents</span>
-        <span class="profile-drawer__item-sub">Request or track documents</span>
-      </div>
-    </a>
-    <a href="community.html" class="profile-drawer__item">
-      <div class="profile-drawer__item-icon"><i data-lucide="users"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">Community</span>
-        <span class="profile-drawer__item-sub">Bulletin, polls, pet board</span>
-      </div>
-    </a>
-    <button class="profile-drawer__item profile-drawer__item--signout" id="signOutBtn">
-      <div class="profile-drawer__item-icon"><i data-lucide="log-out"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">Sign Out</span>
-      </div>
-    </button>
-  </nav>
-</div>
-<div class="profile-drawer-backdrop" id="drawerBackdrop"></div>
 
-<!-- Sign-out confirm modal -->
-<div class="modal-overlay" id="signoutModal" onclick="this.classList.remove('is-open')">
-  <div class="modal modal--confirm">
-    <div class="modal-confirm__icon"><i data-lucide="log-out"></i></div>
-    <h2 class="modal-confirm__title">Sign out?</h2>
-    <p class="modal-confirm__body">You'll be signed out of your BarangayConnect account on this device.</p>
-    <div class="modal-confirm__footer">
-      <button class="btn btn--outline" onclick="document.getElementById('signoutModal').classList.remove('is-open')">Cancel</button>
-      <button class="btn btn--red btn--full" id="confirmSignOutBtn">Sign Out</button>
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL — Report Post
+       ───────────────────────────────────────────────────────────────
+       Opened programmatically when a resident flags a bulletin post.
+       Reason dropdown + optional description field.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="reportPostModal" onclick="closeOnBackdrop(event)">
+    <div class="modal">
+
+      <div class="modal__header modal__header--red">
+        <div class="modal__header-icon"><i data-lucide="flag"></i></div>
+        <div class="modal__header-content">
+          <p class="modal__header-label">Community Safety</p>
+          <h2 class="modal__header-title">Report Post</h2>
+          <p class="modal__header-sub">Help us keep the community safe</p>
+        </div>
+        <button class="btn btn--close btn--sm modal__close" onclick="closeModal('reportPostModal')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal__body">
+        <div class="form-group">
+          <label class="form-label">Reason</label>
+          <select class="form-select" id="reportCategory">
+            <option value="spam">Spam or misleading</option>
+            <option value="hate">Hate speech or discrimination</option>
+            <option value="harassment">Harassment or bullying</option>
+            <option value="violence">Violence or threats</option>
+            <option value="misinformation">False information</option>
+            <option value="inappropriate">Inappropriate content</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">
+            Additional details
+            <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional)</span>
+          </label>
+          <textarea id="reportDescription" class="form-input" rows="3"
+            placeholder="Describe the issue..." maxlength="300"></textarea>
+        </div>
+      </div>
+
+      <div class="modal__footer">
+        <button class="btn btn--outline" onclick="closeModal('reportPostModal')">Cancel</button>
+        <button class="btn btn--red btn--full" onclick="submitReport()">
+          <i data-lucide="flag"></i> Submit Report
+        </button>
+      </div>
+
+    </div><!-- /modal -->
+  </div><!-- /reportPostModal -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROFILE DRAWER
+       ───────────────────────────────────────────────────────────────
+       Slide-in panel opened by the avatar button in the navbar.
+       Toggled via .is-open on #profileDrawer and #drawerBackdrop.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="profile-drawer" id="profileDrawer">
+    <div class="profile-drawer__header">
+      <button class="btn btn--close btn--sm profile-drawer__close" id="drawerCloseBtn" aria-label="Close">
+        <i data-lucide="x"></i>
+      </button>
+      <div class="profile-drawer__avatar" id="drawerAvatar">…</div>
+      <p class="profile-drawer__name" id="drawerName">Loading…</p>
+      <p class="profile-drawer__role" id="drawerRole">—</p>
+      <span class="profile-drawer__id" id="drawerIdNumber">
+        <i data-lucide="id-card"></i> —
+      </span>
     </div>
+    <nav class="profile-drawer__menu">
+      <a href="profile.html" class="profile-drawer__item">
+        <div class="profile-drawer__item-icon"><i data-lucide="user-pen"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">My Barangay</span>
+          <span class="profile-drawer__item-sub">View your profile and ID</span>
+        </div>
+      </a>
+      <a href="services.html" class="profile-drawer__item">
+        <div class="profile-drawer__item-icon"><i data-lucide="file-text"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">My Documents</span>
+          <span class="profile-drawer__item-sub">Request or track documents</span>
+        </div>
+      </a>
+      <a href="community.html" class="profile-drawer__item">
+        <div class="profile-drawer__item-icon"><i data-lucide="users"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">Community</span>
+          <span class="profile-drawer__item-sub">Bulletin, polls, pet board</span>
+        </div>
+      </a>
+      <button class="profile-drawer__item profile-drawer__item--signout" id="signOutBtn">
+        <div class="profile-drawer__item-icon"><i data-lucide="log-out"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">Sign Out</span>
+        </div>
+      </button>
+    </nav>
   </div>
-</div>
+  <div class="profile-drawer-backdrop" id="drawerBackdrop"></div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL — Sign-out Confirm
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="signoutModal" onclick="this.classList.remove('is-open')">
+    <div class="modal modal--confirm">
+      <div class="modal-confirm__icon"><i data-lucide="log-out"></i></div>
+      <h2 class="modal-confirm__title">Sign out?</h2>
+      <p class="modal-confirm__body">You'll be signed out of your BarangayConnect account on this device.</p>
+      <div class="modal-confirm__footer">
+        <button class="btn btn--outline"
+          onclick="document.getElementById('signoutModal').classList.remove('is-open')">Cancel</button>
+        <button class="btn btn--red btn--full" id="confirmSignOutBtn">Sign Out</button>
+      </div>
+    </div>
+  </div><!-- /signoutModal -->
+
 
   <!-- ═══════════════════════════════════════════════════════════════
        FOOTER
        ───────────────────────────────────────────────────────────────
-       .site-footer from main.css — same across all pages.
+       .site-footer from main.css — shared across all pages.
   ══════════════════════════════════════════════════════════════════ -->
-  
   <footer class="site-footer">
     <div class="site-footer__inner">
       <div class="site-footer__brand">
@@ -1103,102 +1237,60 @@
     </div>
   </footer>
 
-  <div class="modal-overlay" id="reportPostModal" onclick="closeOnBackdrop(event)">
-  <div class="modal">
-    <div class="modal__header modal__header--red">
-      <div class="modal__header-icon"><i data-lucide="flag"></i></div>
-      <div class="modal__header-content">
-        <p class="modal__header-label">Community Safety</p>
-        <h2 class="modal__header-title">Report Post</h2>
-        <p class="modal__header-sub">Help us keep the community safe</p>
-      </div>
-      <button class="btn btn--close btn--sm modal__close" onclick="closeModal('reportPostModal')">
-        <i data-lucide="x"></i>
-      </button>
-    </div>
-    <div class="modal__body">
-      <div class="form-group">
-        <label class="form-label">Reason</label>
-        <select class="form-select" id="reportCategory">
-          <option value="spam">Spam or misleading</option>
-          <option value="hate">Hate speech or discrimination</option>
-          <option value="harassment">Harassment or bullying</option>
-          <option value="violence">Violence or threats</option>
-          <option value="misinformation">False information</option>
-          <option value="inappropriate">Inappropriate content</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Additional details
-          <span style="color:#9ca3af;font-weight:400;font-size:.75rem;">(optional)</span>
-        </label>
-        <textarea id="reportDescription" class="form-input" rows="3"
-          placeholder="Describe the issue..." maxlength="300"></textarea>
-      </div>
-    </div>
-    <div class="modal__footer">
-      <button class="btn btn--outline" onclick="closeModal('reportPostModal')">Cancel</button>
-      <button class="btn btn--red btn--full" onclick="submitReport()">
-        <i data-lucide="flag"></i> Submit Report
-      </button>
-    </div>
-  </div>
-</div>
-
 
   <!-- ═══════════════════════════════════════════════════════════════
        SCRIPTS
        ───────────────────────────────────────────────────────────────
        1. Lucide icons
-       2. Tab switching — shows matching panel, updates aria + active states
-       3. Navbar scroll transparency (same as services.html)
-       4. Modal open/close helpers
-       5. Generic filter pill toggle (bulletin, gallery, pets)
-       6. Report type toggle in pet modal
+       2. Toast keyframe injection
+       3. Tab switching — shows matching panel, updates aria + active states
+       4. Navbar scroll transparency
+       5. Modal open/close helpers
+       6. Generic filter pill toggle (gallery, pets)
+       7. Report type toggle in pet modal
+       8. Bullying helpers (selectBullyingType, toggleAnonFields)
   ══════════════════════════════════════════════════════════════════ -->
   <script>
-    // 1. Render Lucide icons
+
+    /* 1. Render Lucide icons */
     lucide.createIcons();
-    
+
+    /* 2. Inject toast keyframe animation */
     const _ts = document.createElement('style');
     _ts.textContent = `@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}`;
     document.head.appendChild(_ts);
 
-    
-   // 2. Tab switching
-   document.addEventListener('DOMContentLoaded', () => {
-  const tabBtns   = document.querySelectorAll('[data-tab]');
-  const tabPanels = document.querySelectorAll('.tab-panel');
+    /* 3. Tab switching */
+    document.addEventListener('DOMContentLoaded', () => {
+      const tabBtns   = document.querySelectorAll('[data-tab]');
+      const tabPanels = document.querySelectorAll('.tab-panel');
 
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const target = btn.dataset.tab;
-      tabBtns.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-selected', 'false'); });
-      tabPanels.forEach(p => p.classList.remove('is-active'));
-      btn.classList.add('is-active');
-      btn.setAttribute('aria-selected', 'true');
-      document.getElementById('tab-' + target)?.classList.add('is-active');
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.tab;
+          tabBtns.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-selected', 'false'); });
+          tabPanels.forEach(p => p.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          btn.setAttribute('aria-selected', 'true');
+          document.getElementById('tab-' + target)?.classList.add('is-active');
+        });
+      });
     });
-  });
-});
 
-    // 3. Navbar scroll transparency
+    /* 4. Navbar transparent-on-scroll */
     const navbar = document.querySelector('.navbar');
     window.addEventListener('scroll', () => {
       navbar.classList.toggle('navbar--transparent', window.scrollY < 60);
     });
 
-    // 4. Modal helpers
+    /* 5. Modal helpers */
     function openModal(id)  { document.getElementById(id)?.classList.add('is-open'); }
     function closeModal(id) { document.getElementById(id)?.classList.remove('is-open'); }
     function closeOnBackdrop(e) {
       if (e.target === e.currentTarget) e.currentTarget.classList.remove('is-open');
     }
 
-    // 5. Generic filter pill toggle
-    // Bulletin filters are wired inside bulletin.js → initBulletin().
-    // Pets and gallery filters still use the class-toggle approach here.
+    /* 6. Generic filter pill toggle — Bulletin filters wired in bulletin.js */
     document.querySelectorAll('.pets-filters, .gallery-filters').forEach(group => {
       group.querySelectorAll('.btn--filter').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1208,7 +1300,7 @@
       });
     });
 
-    // 6. Report type toggle in pet modal
+    /* 7. Report type toggle in pet modal */
     document.querySelectorAll('.report-type-toggle__btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.report-type-toggle__btn').forEach(b => b.classList.remove('is-active'));
@@ -1216,202 +1308,237 @@
       });
     });
 
-    // 7. Bullying
+    /* 8. Bullying modal helpers */
     function selectBullyingType(btn) {
       document.querySelectorAll('.bullying-option').forEach(b => b.classList.remove('is-selected'));
       btn.classList.add('is-selected');
     }
 
-      function toggleAnonFields() {
+    function toggleAnonFields() {
       const isAnon = document.getElementById('anonToggle').checked;
       document.getElementById('bullyingIdentityFields').style.display = isAnon ? 'none' : 'flex';
     }
+
   </script>
 
-<script type="module">
-  import { initBulletin } from '../js/bulletin.js';
-  import { submitCommunityPost } from '../js/community-posts.js';
-  let _selectedFiles = [];
 
-  document.addEventListener('DOMContentLoaded', initBulletin);
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODULE SCRIPT — Bulletin, Post Submission, Profile Drawer
+       ───────────────────────────────────────────────────────────────
+       Handles: bulletin init, image preview/removal, post submission
+       (new and edit), approval-notice display, profile drawer toggle.
+  ══════════════════════════════════════════════════════════════════ -->
+  <script type="module">
 
-  function showPostToast(msg, type = 'success') {
-    let container = document.getElementById('residentToastContainer');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'residentToastContainer';
-      container.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;
-        display:flex;flex-direction:column;gap:.5rem;z-index:2000;`;
-      document.body.appendChild(container);
+    import { initBulletin }       from '../js/bulletin.js';
+    import { submitCommunityPost } from '../js/community-posts.js';
+
+    let _selectedFiles = [];
+
+    document.addEventListener('DOMContentLoaded', initBulletin);
+
+
+    /* ─── Toast helper ─── */
+    function showPostToast(msg, type = 'success') {
+      let container = document.getElementById('residentToastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'residentToastContainer';
+        container.style.cssText = `position:fixed;bottom:1.5rem;right:1.5rem;
+          display:flex;flex-direction:column;gap:.5rem;z-index:2000;`;
+        document.body.appendChild(container);
+      }
+      const t = document.createElement('div');
+      t.style.cssText = `display:flex;align-items:center;gap:.6rem;
+        background:${type === 'error' ? '#9b1c1c' : '#1a3a1a'};color:#fff;
+        padding:.75rem 1.1rem;border-radius:10px;font-size:.875rem;font-weight:500;
+        box-shadow:0 4px 16px rgba(0,0,0,.2);animation:toastIn .25s ease both;`;
+      t.textContent = msg;
+      container.appendChild(t);
+      setTimeout(() => t.remove(), 3500);
     }
-    const t = document.createElement('div');
-    t.style.cssText = `display:flex;align-items:center;gap:.6rem;
-      background:${type === 'error' ? '#9b1c1c' : '#1a3a1a'};color:#fff;
-      padding:.75rem 1.1rem;border-radius:10px;font-size:.875rem;font-weight:500;
-      box-shadow:0 4px 16px rgba(0,0,0,.2);animation:toastIn .25s ease both;`;
-    t.textContent = msg;
-    container.appendChild(t);
-    setTimeout(() => t.remove(), 3500);
-  }
 
-  window.previewNewPostImages = function(input) {
-    if (input.files?.length) {
-      Array.from(input.files).forEach(newFile => {
-        const exists = _selectedFiles.some(f => f.name === newFile.name && f.size === newFile.size);
-        if (!exists) _selectedFiles.push(newFile);
-      });
-    }
-    if (_selectedFiles.length > 4) _selectedFiles = _selectedFiles.slice(0, 4);
 
-    const container = document.getElementById('newPostImagePreviews');
-    const label     = document.getElementById('newPostImageLabel');
-    container.innerHTML = '';
-
-    if (!_selectedFiles.length) {
-      if (label) label.textContent = 'Tap to add photos (up to 4)';
-      return;
-    }
-    if (label) label.textContent = `${_selectedFiles.length} photo${_selectedFiles.length > 1 ? 's' : ''} selected`;
-
-    _selectedFiles.forEach((file, idx) => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        const wrap = document.createElement('div');
-        wrap.style.cssText = 'position:relative;width:80px;height:60px;flex-shrink:0;';
-        const img = document.createElement('img');
-        img.src = e.target.result;
-        img.style.cssText = 'width:80px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;display:block;';
-        const removeBtn = document.createElement('button');
-        removeBtn.innerHTML = '×';
-        removeBtn.style.cssText = `position:absolute;top:-5px;right:-5px;width:18px;height:18px;
-          border-radius:50%;background:#dc2626;color:#fff;border:none;cursor:pointer;
-          font-size:.75rem;line-height:1;display:flex;align-items:center;justify-content:center;`;
-        removeBtn.onclick = function() {
-          _selectedFiles.splice(idx, 1);
-          previewNewPostImages({ files: null });
-        };
-        wrap.appendChild(img);
-        wrap.appendChild(removeBtn);
-        container.appendChild(wrap);
-      };
-      reader.readAsDataURL(file);
-    });
-  };
-
-  
-    window.resetNewPostModal = function() {
-    _selectedFiles = [];
-    const submitBtn = document.getElementById('newPostSubmitBtn');
-    if (submitBtn) { delete submitBtn.dataset.editId; submitBtn.textContent = 'Publish Post'; }
-    
-    document.getElementById('newPostTitle').value   = '';
-    document.getElementById('newPostBody').value    = '';
-    document.getElementById('newPostCategory').value = 'general';
-    document.getElementById('newPostCharCount').textContent = '0 / 500';
-    const imgInput = document.getElementById('newPostImages');
-    if (imgInput) {
-      imgInput.value = '';
-      const imgSection = imgInput.closest('.form-group');
-      if (imgSection) imgSection.style.display = '';
-
-      const prevContainer = document.getElementById('newPostImagePreviews');
-      if (prevContainer) prevContainer.innerHTML = '';
-      const imgLabel = document.getElementById('newPostImageLabel');
-      if (imgLabel) imgLabel.textContent = 'Tap to add photos (up to 4)';
-    }
-  };
-
-  import { requiresApproval } from '../js/community-posts.js';
-
-  // Show approval warning in modal when it opens
-  const _origOpenModal = window.openModal;
-  window.openModal = async function(id) {
-    _origOpenModal?.(id);
-    if (id !== 'newPostModal') return;
-    const { getModerationSettings } = await import('../js/community-posts.js');
-    const settings = await getModerationSettings();
-    const warningEl = document.getElementById('newPostApprovalWarning');
-    const guidelineEl = document.getElementById('newPostGuidelineText');
-    if (warningEl) warningEl.style.display = (settings.requirePostApproval) ? 'flex' : 'none';
-    const adminNoticeEl = document.getElementById('newPostAdminNotice');
-    if (adminNoticeEl) adminNoticeEl.style.display = (_currentUserRole === 'admin' || _currentUserRole === 'officer') ? 'flex' : 'none';
-    if (guidelineEl) {
-      guidelineEl.textContent = settings.postWarningText || '';
-      guidelineEl.style.display = settings.postWarningText ? 'block' : 'none';
-    }
-  };
-
-  window.handleNewPostSubmit = async function () {
-    const btn      = document.getElementById('newPostSubmitBtn');
-    const category = document.getElementById('newPostCategory')?.value || 'general';
-    const title    = document.getElementById('newPostTitle')?.value.trim();
-    const body     = document.getElementById('newPostBody')?.value.trim() || '';
-    if (!title) { showPostToast('Please enter a title.'); return; }
-    btn.disabled = true; btn.textContent = 'Publishing…';
-    try {
-      const imageFiles = (_selectedFiles ?? []).slice(0, 4);
-      const editId = document.getElementById('newPostSubmitBtn').dataset.editId;
-      let needsApproval = false;
-
-      if (editId) {
-        const { doc: _d, updateDoc, serverTimestamp: _ts } =
-          await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-        const { db } = await import('../js/firebase-config.js');
-        const { getModerationSettings } = await import('../js/community-posts.js');
-        const settings = await getModerationSettings();
-        const combined = `${title} ${body}`.toLowerCase();
-        const hitWord  = (settings.blockedWords ?? []).find(w => w && combined.includes(w));
-        const hasLink  = (settings.blockedLinksEnabled ?? true) && /https?:\/\/|www\./i.test(combined);
-        needsApproval  = !!hitWord || hasLink;
-        const bid = window._communityBid;
-        if (!bid) { showPostToast('Not ready. Please try again.', 'error'); return; }
-        await updateDoc(_d(db, 'barangays', bid, 'communityPosts', editId), {
-          title, body, category,
-          status:    needsApproval ? 'pending' : 'published',
-          isEdited:  true,
-          updatedAt: _ts(),
+    /* ─── Image preview/removal ─── */
+    window.previewNewPostImages = function (input) {
+      if (input.files?.length) {
+        Array.from(input.files).forEach(newFile => {
+          const exists = _selectedFiles.some(f => f.name === newFile.name && f.size === newFile.size);
+          if (!exists) _selectedFiles.push(newFile);
         });
-      } else {
-        needsApproval = await submitCommunityPost({ title, body, category, imageFiles });
       }
+      if (_selectedFiles.length > 4) _selectedFiles = _selectedFiles.slice(0, 4);
 
-      const wasEdit = !!document.getElementById('newPostSubmitBtn').dataset.editId;
-      closeModal('newPostModal');
-      resetNewPostModal();
-      showPostToast(needsApproval
-        ? 'Your post was submitted and is awaiting approval.'
-        : (wasEdit ? 'Post updated!' : 'Your post is now live on the bulletin!'));
-    } catch (err) {
-      showPostToast(err.message, 'error');
-    } finally {
-      btn.disabled = false;
-      if (!document.getElementById('newPostSubmitBtn')?.dataset.editId) {
-        btn.textContent = 'Publish Post';
+      const container = document.getElementById('newPostImagePreviews');
+      const label     = document.getElementById('newPostImageLabel');
+      container.innerHTML = '';
+
+      if (!_selectedFiles.length) {
+        if (label) label.textContent = 'Tap to add photos (up to 4)';
+        return;
       }
-    }
-  };
+      if (label) label.textContent = `${_selectedFiles.length} photo${_selectedFiles.length > 1 ? 's' : ''} selected`;
+
+      _selectedFiles.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const wrap = document.createElement('div');
+          wrap.style.cssText = 'position:relative;width:80px;height:60px;flex-shrink:0;';
+
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.style.cssText = 'width:80px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;display:block;';
+
+          const removeBtn = document.createElement('button');
+          removeBtn.innerHTML = '×';
+          removeBtn.style.cssText = `position:absolute;top:-5px;right:-5px;width:18px;height:18px;
+            border-radius:50%;background:#dc2626;color:#fff;border:none;cursor:pointer;
+            font-size:.75rem;line-height:1;display:flex;align-items:center;justify-content:center;`;
+          removeBtn.onclick = function () {
+            _selectedFiles.splice(idx, 1);
+            previewNewPostImages({ files: null });
+          };
+
+          wrap.appendChild(img);
+          wrap.appendChild(removeBtn);
+          container.appendChild(wrap);
+        };
+        reader.readAsDataURL(file);
+      });
+    };
 
 
-    // Profile drawer
-  const drawer   = document.getElementById('profileDrawer');
-  const backdrop = document.getElementById('drawerBackdrop');
-  function openDrawer()  { drawer.classList.add('is-open');    backdrop.classList.add('is-open'); }
-  function closeDrawer() { drawer.classList.remove('is-open'); backdrop.classList.remove('is-open'); }
-  document.getElementById('avatarBtn').addEventListener('click', openDrawer);
-  document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
-  backdrop.addEventListener('click', closeDrawer);
-  document.getElementById('signOutBtn').addEventListener('click', () => {
-    closeDrawer();
-    document.getElementById('signoutModal').classList.add('is-open');
-  });
+    /* ─── Reset new post modal to blank state ─── */
+    window.resetNewPostModal = function () {
+      _selectedFiles = [];
+      const submitBtn = document.getElementById('newPostSubmitBtn');
+      if (submitBtn) { delete submitBtn.dataset.editId; submitBtn.textContent = 'Publish Post'; }
+
+      document.getElementById('newPostTitle').value    = '';
+      document.getElementById('newPostBody').value     = '';
+      document.getElementById('newPostCategory').value = 'general';
+      document.getElementById('newPostCharCount').textContent = '0 / 500';
+
+      const imgInput = document.getElementById('newPostImages');
+      if (imgInput) {
+        imgInput.value = '';
+        const imgSection = imgInput.closest('.form-group');
+        if (imgSection) imgSection.style.display = '';
+
+        const prevContainer = document.getElementById('newPostImagePreviews');
+        if (prevContainer) prevContainer.innerHTML = '';
+        const imgLabel = document.getElementById('newPostImageLabel');
+        if (imgLabel) imgLabel.textContent = 'Tap to add photos (up to 4)';
+      }
+    };
+
+
+    /* ─── Override openModal to show approval warning for new post ─── */
+    import { getModerationSettings } from '../js/community-posts.js';
+
+    const _origOpenModal = window.openModal;
+    window.openModal = async function (id) {
+      _origOpenModal?.(id);
+      if (id !== 'newPostModal') return;
+
+      const settings    = await getModerationSettings();
+      const warningEl   = document.getElementById('newPostApprovalWarning');
+      const guidelineEl = document.getElementById('newPostGuidelineText');
+      const adminNoticeEl = document.getElementById('newPostAdminNotice');
+
+      if (warningEl)     warningEl.style.display     = settings.requirePostApproval ? 'flex' : 'none';
+      if (adminNoticeEl) adminNoticeEl.style.display  = (_currentUserRole === 'admin' || _currentUserRole === 'officer') ? 'flex' : 'none';
+      if (guidelineEl) {
+        guidelineEl.textContent  = settings.postWarningText || '';
+        guidelineEl.style.display = settings.postWarningText ? 'block' : 'none';
+      }
+    };
+
+
+    /* ─── Handle new post submission (new + edit) ─── */
+    window.handleNewPostSubmit = async function () {
+      const btn      = document.getElementById('newPostSubmitBtn');
+      const category = document.getElementById('newPostCategory')?.value || 'general';
+      const title    = document.getElementById('newPostTitle')?.value.trim();
+      const body     = document.getElementById('newPostBody')?.value.trim() || '';
+
+      if (!title) { showPostToast('Please enter a title.'); return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Publishing…';
+
+      try {
+        const imageFiles = (_selectedFiles ?? []).slice(0, 4);
+        const editId     = document.getElementById('newPostSubmitBtn').dataset.editId;
+        let needsApproval = false;
+
+        if (editId) {
+          const { doc: _d, updateDoc, serverTimestamp: _ts } =
+            await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+          const { db }       = await import('../js/firebase-config.js');
+          const settings     = await getModerationSettings();
+          const combined     = `${title} ${body}`.toLowerCase();
+          const hitWord      = (settings.blockedWords ?? []).find(w => w && combined.includes(w));
+          const hasLink      = (settings.blockedLinksEnabled ?? true) && /https?:\/\/|www\./i.test(combined);
+          needsApproval      = !!hitWord || hasLink;
+          const bid          = window._communityBid;
+
+          if (!bid) { showPostToast('Not ready. Please try again.', 'error'); return; }
+
+          await updateDoc(_d(db, 'barangays', bid, 'communityPosts', editId), {
+            title, body, category,
+            status:    needsApproval ? 'pending' : 'published',
+            isEdited:  true,
+            updatedAt: _ts(),
+          });
+        } else {
+          needsApproval = await submitCommunityPost({ title, body, category, imageFiles });
+        }
+
+        const wasEdit = !!document.getElementById('newPostSubmitBtn').dataset.editId;
+        closeModal('newPostModal');
+        resetNewPostModal();
+        showPostToast(needsApproval
+          ? 'Your post was submitted and is awaiting approval.'
+          : (wasEdit ? 'Post updated!' : 'Your post is now live on the bulletin!'));
+
+      } catch (err) {
+        showPostToast(err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        if (!document.getElementById('newPostSubmitBtn')?.dataset.editId) {
+          btn.textContent = 'Publish Post';
+        }
+      }
+    };
+
+
+    /* ─── Profile drawer ─── */
+    const drawer   = document.getElementById('profileDrawer');
+    const backdrop = document.getElementById('drawerBackdrop');
+
+    function openDrawer()  { drawer.classList.add('is-open');    backdrop.classList.add('is-open'); }
+    function closeDrawer() { drawer.classList.remove('is-open'); backdrop.classList.remove('is-open'); }
+
+    document.getElementById('avatarBtn').addEventListener('click', openDrawer);
+    document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+    backdrop.addEventListener('click', closeDrawer);
+
+    document.getElementById('signOutBtn').addEventListener('click', () => {
+      closeDrawer();
+      document.getElementById('signoutModal').classList.add('is-open');
+    });
 
   </script>
 
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DEFERRED SCRIPTS
+  ══════════════════════════════════════════════════════════════════ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="../js/community-animations.js" defer></script>
+  <script type="module" src="../js/profile.js"></script>
 
-    <script type="module" src="../js/profile.js"></script>
-
-  </body>
-  </html>
+</body>
+</html>

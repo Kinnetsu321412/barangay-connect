@@ -1,22 +1,63 @@
-// js/auth.js
-// =====================================================
-// Handles: Login form validation + Firebase sign-in
-// Used on: login.html
-// =====================================================
+/* ================================================
+   auth.js — BarangayConnect
+   Login form validation and Firebase authentication.
+   Handles sign-in, account status checks, lastSeen
+   updates, and role-based redirects on successful login.
+
+   WHAT IS IN HERE:
+     · onAuthStateChanged redirect — bypasses login for active sessions
+     · Password visibility toggle
+     · Client-side form validation (email format, required fields)
+     · Login form submit handler with Firebase sign-in
+     · Account status gating (pending / inactive)
+     · lastSeen timestamp write on successful login
+     · Role-based redirect helper (admin / officer / resident)
+     · Firebase error code → user-friendly message map
+
+   WHAT IS NOT IN HERE:
+     · User registration flow          → register.js (or equivalent)
+     · Firebase config and db instance → firebase-config.js
+     · Firestore path helpers          → db-paths.js
+     · Login page markup and styles    → login.html / login.css
+
+   REQUIRED IMPORTS:
+     · ./firebase-config.js          (auth, db)
+     · ./db-paths.js                 (userDoc, userIndexDoc)
+     · firebase-auth.js@10.12.0      (signInWithEmailAndPassword,
+                                      onAuthStateChanged, signOut)
+     · firebase-firestore.js@10.12.0 (getDoc, updateDoc, serverTimestamp)
+
+   QUICK REFERENCE:
+     Session redirect   → onAuthStateChanged (top-level, runs on load)
+     Form submit        → loginForm 'submit' listener
+     Role redirect      → redirectByRole(role)
+     Loading state      → setLoading(isLoading)
+     Error messages     → getFirebaseErrorMessage(code)
+================================================ */
+
+
+// ================================================
+// IMPORTS
+// ================================================
 
 import { auth, db } from './firebase-config.js';
 import { userDoc, userIndexDoc } from './db-paths.js';
+
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged,
-  signOut
+  signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
 import {
-  getDoc, updateDoc, serverTimestamp
+  getDoc, updateDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 
-// ---- Element references ----
+// ================================================
+// ELEMENT REFERENCES
+// ================================================
+
 const loginForm     = document.getElementById('loginForm');
 const loginEmail    = document.getElementById('loginEmail');
 const loginPassword = document.getElementById('loginPassword');
@@ -28,20 +69,24 @@ const passwordError = document.getElementById('passwordError');
 const togglePwBtn   = document.getElementById('togglePassword');
 
 
-// =====================================================
-// 1. REDIRECT IF ALREADY LOGGED IN
-// =====================================================
+// ================================================
+// SESSION REDIRECT — Skip Login If Already Active
+// ================================================
+
+/*
+   If the user is already authenticated and active, write lastSeen
+   and redirect immediately without requiring them to log in again.
+*/
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;
 
   const indexSnap = await getDoc(userIndexDoc(user.uid));
   if (!indexSnap.exists()) return;
 
-  const { barangay, status, role } = indexSnap.data(); // add barangay here
-
+  const { barangay, status, role } = indexSnap.data();
   if (status !== 'active') return;
 
-  // ↓ add this before redirectByRole
   try {
     await updateDoc(userDoc(barangay, user.uid), {
       lastSeen: serverTimestamp(),
@@ -54,9 +99,10 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 
-// =====================================================
-// 2. TOGGLE PASSWORD VISIBILITY
-// =====================================================
+// ================================================
+// PASSWORD VISIBILITY TOGGLE
+// ================================================
+
 if (togglePwBtn) {
   togglePwBtn.addEventListener('click', () => {
     const isPassword = loginPassword.type === 'password';
@@ -69,9 +115,11 @@ if (togglePwBtn) {
 }
 
 
-// =====================================================
-// 3. FORM VALIDATION
-// =====================================================
+// ================================================
+// FORM VALIDATION
+// ================================================
+
+/* Validates all fields and surfaces inline errors; returns true if the form is valid */
 function validateLoginForm() {
   let valid = true;
   clearErrors();
@@ -114,9 +162,20 @@ function clearErrors() {
 }
 
 
-// =====================================================
-// 4. LOGIN FORM SUBMIT
-// =====================================================
+// ================================================
+// LOGIN FORM — Submit Handler
+// ================================================
+
+/*
+   Sequence on submit:
+     1. Client-side validation
+     2. Firebase sign-in
+     3. userIndex lookup — resolves barangay, role, status
+     4. Account status gate (pending / inactive → sign out with message)
+     5. lastSeen write to the barangay-scoped user document
+     6. Role-based redirect
+*/
+
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -131,7 +190,7 @@ if (loginForm) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Step 1: fast index lookup — gets barangay, role, status
+      /* Step 1 — fast index lookup: barangay, role, status */
       const indexSnap = await getDoc(userIndexDoc(user.uid));
       if (!indexSnap.exists()) {
         await signOut(auth);
@@ -142,6 +201,7 @@ if (loginForm) {
 
       const { barangay, role, status } = indexSnap.data();
 
+      /* Step 2 — account status gate */
       if (status === 'pending') {
         await signOut(auth);
         setLoading(false);
@@ -156,14 +216,13 @@ if (loginForm) {
         return;
       }
 
-      // Step 2: write lastSeen to the full user doc (barangay-scoped path)
+      /* Step 3 — write lastSeen to the barangay-scoped user document */
       try {
         await updateDoc(userDoc(barangay, user.uid), {
           lastSeen: serverTimestamp(),
         });
-      // In auth.js — change the catch block
       } catch (e) {
-        console.error('lastSeen FAILED:', e.code, e.message); // was console.warn
+        console.error('lastSeen FAILED:', e.code, e.message);
       }
 
       redirectByRole(role || 'resident');
@@ -176,23 +235,27 @@ if (loginForm) {
 }
 
 
-// =====================================================
-// 5. HELPERS
-// =====================================================
+// ================================================
+// HELPERS
+// ================================================
+
+/* Redirects to the appropriate landing page based on the user's role */
 function redirectByRole(role) {
   switch (role) {
-    case 'admin':   window.location.href = '../admin.html';     break;
+    case 'admin':   window.location.href = '../admin.html';    break;
     case 'officer': window.location.href = 'pages/home.html'; break;
     default:        window.location.href = 'pages/home.html'; break;
   }
 }
 
+/* Toggles the submit button and spinner during async sign-in */
 function setLoading(isLoading) {
-  loginBtn.disabled = isLoading;
-  loginSpinner.hidden = !isLoading;
+  loginBtn.disabled           = isLoading;
+  loginSpinner.hidden         = !isLoading;
   loginBtn.querySelector('span:first-of-type').textContent = isLoading ? 'Signing in…' : 'Sign In';
 }
 
+/* Maps Firebase auth error codes to user-friendly messages */
 function getFirebaseErrorMessage(code) {
   const messages = {
     'auth/user-not-found':         'No account found with that email address.',

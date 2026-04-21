@@ -1,12 +1,42 @@
-// js/weather.js
-// =====================================================
-// Uses Open-Meteo API
-//
-// Works on any element with:
-//   Geocoding: geocoding-api.open-meteo.com  (name → lat/lon)
-//   Forecast:  api.open-meteo.com            (lat/lon → weather)
-//
-// DOM targets: #weatherTemp, #weatherDesc
+/* ================================================
+   weather.js — BarangayConnect
+   Fetches and displays current weather conditions
+   for the barangay's municipality using the
+   Open-Meteo API. Results are cached per session
+   to avoid redundant network requests.
+
+   APIs used:
+     Geocoding  → geocoding-api.open-meteo.com  (name → lat/lon)
+     Forecast   → api.open-meteo.com            (lat/lon → weather)
+
+   WHAT IS IN HERE:
+     · WMO weather code to description mapping
+     · Geocoding with municipality + province fallback chain
+     · Current temperature and condition fetching
+     · sessionStorage caching keyed by location
+     · DOM injection into #weatherTemp and #weatherDesc
+
+   WHAT IS NOT IN HERE:
+     · Weather widget styles              → main.css / dashboard.css
+     · Barangay location data             → Firestore / firebase-config.js
+     · Widget layout and markup           → dashboard.html
+
+   REQUIRED IMPORTS:
+     · None — no local dependencies
+
+   QUICK REFERENCE:
+     Entry point    → loadWeather(municipality, province)
+     DOM targets    → #weatherTemp, #weatherDesc
+     Cache key      → weather:{municipality}:{province}
+     PH fallback    → { lat: 12.8797, lon: 121.7740 }
+================================================ */
+
+
+/* ================================================
+   WMO WEATHER CODE MAP
+   Maps WMO weather interpretation codes to
+   human-readable condition labels.
+================================================ */
 
 const WMO = {
   0:  'Clear Sky',
@@ -32,9 +62,24 @@ const WMO = {
   99: 'Thunderstorm',
 };
 
+
+/* ================================================
+   CONFIG
+================================================ */
+
 const GEOCODE_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
-const PH_FALLBACK  = { lat: 12.8797, lon: 121.7740 };
+
+/* Used when geocoding fails for both municipality and province */
+const PH_FALLBACK = { lat: 12.8797, lon: 121.7740 };
+
+
+/* ================================================
+   GEOCODING
+   Resolves a location query string to coordinates.
+   Falls back from municipality+province → province
+   only → Philippines center point.
+================================================ */
 
 async function geocode(query) {
   const res  = await fetch(`${GEOCODE_URL}?name=${encodeURIComponent(query)}&count=1&language=en&format=json`);
@@ -48,12 +93,23 @@ async function resolveCoords(municipality, province) {
     const coords = await geocode(`${municipality}, ${province}, Philippines`);
     if (coords) return coords;
   }
+
   if (province) {
     const coords = await geocode(`${province}, Philippines`);
     if (coords) return coords;
   }
+
   return PH_FALLBACK;
 }
+
+
+/* ================================================
+   LOAD WEATHER
+   Public entry point. Resolves coordinates, fetches
+   current conditions, caches the result, and injects
+   it into the DOM. Network errors are silently
+   ignored to preserve the placeholder state.
+================================================ */
 
 export async function loadWeather(municipality, province) {
   const cacheKey = `weather:${municipality}:${province}`;
@@ -67,7 +123,7 @@ export async function loadWeather(municipality, province) {
     const res  = await fetch(
       `${FORECAST_URL}?latitude=${lat}&longitude=${lon}` +
       `&current=temperature_2m,weathercode` +
-      `&temperature_unit=celsius&timezone=Asia%2FManila`
+      `&temperature_unit=celsius&timezone=Asia%2FManila`,
     );
     const data = await res.json();
 
@@ -78,11 +134,17 @@ export async function loadWeather(municipality, province) {
 
     sessionStorage.setItem(cacheKey, JSON.stringify(result));
     applyWeather(result);
-
   } catch {
-    // Network error — keep the '—°' placeholder
+    /* Network error — keep the '—°' placeholder */
   }
 }
+
+
+/* ================================================
+   APPLY WEATHER
+   Writes temperature and description to their
+   respective DOM elements.
+================================================ */
 
 function applyWeather({ temp, desc }) {
   const tEl = document.getElementById('weatherTemp');

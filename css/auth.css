@@ -1,23 +1,24 @@
 /* ================================================
    auth.css — BarangayConnect
    Auth-page layout. Import AFTER main.css.
-   This file only contains styles unique to login
-   and register pages — two-panel split, step indicator,
-   register nav, upload area, and success screen.
+   Contains only styles unique to the login and
+   register pages.
 
-   WHAT IS IN HERE:
-     · Two-panel auth layout (.login-page, .auth-left, .auth-right)
-     · Auth left-panel elements (logo, badge, hero, stats)
-     · Auth form wrapper + notice banner
-     · Register-page nav, header, body, card, step indicator
-     · Upload area (.upload-area, .upload-preview)
-     · Register success screen (.register-success)
-     · Auth page transitions (.page-transition)
+   SECTIONS:
+     1. Two-panel split layout
+     2. Left panel (decorations, logo, badge, hero, stats)
+     3. Right panel (form wrapper, notice banner)
+     4. Register page (nav, header, body, card)
+     5. Step indicator
+     6. File upload area
+     7. Register success screen
+     8. Page transition
+     9. Responsive overrides
 
    WHAT IS NOT IN HERE:
-     · .form-input, .form-label, .form-group  → main.css
-     · .form-select, .form-grid-2             → main.css
-     · .btn-* variants                        → buttons.css
+     .form-input, .form-label, .form-group  → main.css
+     .form-select, .form-grid-2             → main.css
+     .btn-* variants                        → buttons.css
 
    REQUIRED IMPORTS on auth pages:
      <link rel="stylesheet" href="css/main.css" />
@@ -37,29 +38,35 @@
      Step indicator   → .step-indicator > .step-item + .step-connector
      Register card    → .register-card
      File upload      → .upload-area + .upload-preview
-   ================================================ */
+================================================ */
 
-/* ---- Two-panel layout ---- */
+
+/* ================================================
+   1. TWO-PANEL SPLIT LAYOUT
+================================================ */
+
 .login-page {
   display: flex;
   min-height: 100vh;
 }
 
-/* ===================== */
-/*   LEFT PANEL (Green)  */
-/* ===================== */
+
+/* ================================================
+   2. LEFT PANEL
+================================================ */
+
 .auth-left {
   width: 46%;
-  background: var(--green-dark);
+  min-height: 100vh;
   padding: var(--space-xl) var(--space-2xl);
+  background: var(--green-dark);
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  min-height: 100vh;
 }
 
-/* Decorative large circles */
+/* Decorative large circles — purely visual, non-interactive */
 .auth-left__circle {
   position: absolute;
   border-radius: 50%;
@@ -116,20 +123,20 @@
   letter-spacing: -0.3px;
 }
 
-/* Sign In pill badge */
+/* Pill badge shown above the hero heading */
 .auth-left__badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  width: fit-content;
+  padding: 6px 14px;
   background: var(--overlay-white-12);
   border: 1px solid var(--overlay-white-20);
-  color: var(--white);
-  padding: 6px 14px;
   border-radius: var(--radius-full);
-  font-size: var(--text-base-sm);
-  font-weight: var(--fw-semibold);
   font-family: var(--font-display);
-  width: fit-content;
+  font-weight: var(--fw-semibold);
+  font-size: var(--text-base-sm);
+  color: var(--white);
   position: relative;
   z-index: 2;
   margin-bottom: var(--space-lg);
@@ -141,14 +148,14 @@
   color: var(--orange);
 }
 
-/* Hero heading */
+/* Hero section fills remaining vertical space */
 .auth-left__hero {
-  position: relative;
-  z-index: 2;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  position: relative;
+  z-index: 2;
 }
 
 .auth-left__heading {
@@ -162,21 +169,21 @@
 }
 
 .auth-left__subtext {
+  max-width: 380px;
   font-size: var(--text-base);
   color: var(--overlay-white-70);
   line-height: var(--lh-loose);
-  max-width: 380px;
 }
 
-/* Stats row */
+/* Stats row — sits at the bottom of the hero, separated by a divider */
 .auth-left__stats {
   display: flex;
   gap: var(--space-2xl);
+  padding-top: var(--space-2xl);
+  margin-top: var(--space-2xl);
+  border-top: 1px solid var(--overlay-white-12);
   position: relative;
   z-index: 2;
-  padding-top: var(--space-2xl);
-  border-top: 1px solid var(--overlay-white-12);
-  margin-top: var(--space-2xl);
 }
 
 .stat-item {
@@ -196,20 +203,22 @@
 
 .stat-item__label {
   font-size: var(--text-sm);
-  color: var(--overlay-white-55);
   font-weight: var(--fw-medium);
+  color: var(--overlay-white-55);
 }
 
-/* ===================== */
-/*  RIGHT PANEL (White)  */
-/* ===================== */
+
+/* ================================================
+   3. RIGHT PANEL
+================================================ */
+
 .auth-right {
   flex: 1;
-  background: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--space-2xl) var(--space-xl);
+  background: var(--white);
 }
 
 .auth-form-wrapper {
@@ -228,12 +237,12 @@
   letter-spacing: -0.5px;
 }
 
-/* Demo notice banner */
+/* Warm notice banner for demo/environment context */
 .auth-notice {
+  padding: 12px 16px;
   background: #fff8ed;
   border: 1.5px solid #f5d6a0;
   border-radius: var(--radius-md);
-  padding: 12px 16px;
 }
 
 .auth-notice p {
@@ -242,13 +251,13 @@
   line-height: var(--lh-relaxed);
 }
 
-/* Form spacing */
 .auth-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
 }
 
+/* Right-aligned "Forgot password?" link */
 .form-forgot {
   display: flex;
   justify-content: flex-end;
@@ -259,18 +268,18 @@
   font-size: var(--text-base-sm);
 }
 
-/* Switch to register */
 .auth-switch {
   text-align: center;
   font-size: var(--text-base);
   color: var(--gray-500);
 }
 
-/* ======================== */
-/*  REGISTER PAGE VARIANTS  */
-/* ======================== */
 
-/* Register uses a top navbar instead of split layout */
+/* ================================================
+   4. REGISTER PAGE
+   Uses a top navbar layout instead of a split panel.
+================================================ */
+
 .register-page {
   display: flex;
   flex-direction: column;
@@ -278,18 +287,18 @@
   background: var(--off-white);
 }
 
-/* Register nav */
+/* Top navbar */
 .register-nav {
-  background: var(--green-dark);
-  padding: 0 var(--space-2xl);
   height: 60px;
+  padding: 0 var(--space-2xl);
+  background: var(--green-dark);
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: relative;
 }
 
-/* Decorative blob behind register nav */
+/* Decorative blob behind the nav */
 .register-nav::after {
   content: '';
   position: absolute;
@@ -309,8 +318,8 @@
   gap: var(--space-sm);
   font-family: var(--font-display);
   font-weight: var(--fw-extrabold);
-  color: var(--white);
   font-size: var(--text-lg);
+  color: var(--white);
   position: relative;
   z-index: 2;
 }
@@ -338,7 +347,7 @@
   font-weight: var(--fw-bold);
 }
 
-/* Register page body */
+/* Page body — centers the card column */
 .register-body {
   flex: 1;
   display: flex;
@@ -347,7 +356,7 @@
   padding: var(--space-2xl) var(--space-xl);
 }
 
-/* Register header */
+/* Header row: page title + any right-side controls */
 .register-header {
   width: 100%;
   max-width: 520px;
@@ -365,11 +374,52 @@
   letter-spacing: -0.5px;
 }
 
-/* Step indicator */
+/* Form card */
+.register-card {
+  width: 100%;
+  max-width: 520px;
+  padding: var(--space-xl) var(--space-2xl);
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+.register-card__section-title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-extrabold);
+  font-size: var(--text-lg);
+  color: var(--text-dark);
+  margin-bottom: var(--space-lg);
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Card footer actions — space-between by default, flex-end variant available */
+.register-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--space-md);
+  gap: var(--space-md);
+}
+
+.register-actions--end {
+  justify-content: flex-end;
+}
+
+
+/* ================================================
+   5. STEP INDICATOR
+================================================ */
+
 .step-indicator {
   display: flex;
   align-items: center;
-  gap: 0;
   width: 100%;
   max-width: 520px;
   margin-bottom: var(--space-xl);
@@ -397,41 +447,36 @@
   transition: background var(--transition), color var(--transition);
 }
 
-/* Pending step */
+/* State variants: pending → active → completed */
 .step-item.pending .step-item__circle {
   background: var(--gray-200);
   color: var(--gray-400);
 }
 
-/* Active step */
-.step-item.active .step-item__circle {
-  background: var(--green-dark);
-  color: var(--white);
-}
-
-/* Completed step */
+.step-item.active .step-item__circle,
 .step-item.completed .step-item__circle {
   background: var(--green-dark);
   color: var(--white);
 }
 
 .step-item__label {
-  font-size: var(--text-xs);
-  font-weight: var(--fw-semibold);
   font-family: var(--font-display);
+  font-weight: var(--fw-semibold);
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 
-.step-item.pending  .step-item__label { color: var(--gray-400); }
-.step-item.active   .step-item__label { color: var(--green-dark); font-weight: var(--fw-bold); }
+.step-item.pending   .step-item__label { color: var(--gray-400); }
+.step-item.active    .step-item__label { color: var(--green-dark); font-weight: var(--fw-bold); }
 .step-item.completed .step-item__label { color: var(--green-dark); }
 
-/* Connector line between steps */
+/* Connector line — fills the gap between step circles */
 .step-connector {
   flex: 1;
   height: 2px;
+  /* Offset downward to align visually with circle centers, not labels */
+  margin-bottom: 22px;
   background: var(--gray-200);
-  margin-bottom: 22px; /* align with circles not labels */
   transition: background var(--transition-slow);
 }
 
@@ -439,55 +484,20 @@
   background: var(--green-dark);
 }
 
-/* Register form card */
-.register-card {
-  width: 100%;
-  max-width: 520px;
-  background: var(--white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-xl) var(--space-2xl);
-  border: 1px solid var(--gray-100);
-}
 
-.register-card__section-title {
-  font-family: var(--font-display);
-  font-weight: var(--fw-extrabold);
-  font-size: var(--text-lg);
-  color: var(--text-dark);
-  margin-bottom: var(--space-lg);
-}
+/* ================================================
+   6. FILE UPLOAD AREA
+================================================ */
 
-/* Register form */
-.register-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-/* Register card actions */
-.register-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: var(--space-md);
-  gap: var(--space-md);
-}
-
-.register-actions--end {
-  justify-content: flex-end;
-}
-
-/* Upload area (for ID photo) */
 .upload-area {
-  border: 2px dashed var(--gray-200);
-  border-radius: var(--radius-md);
-  padding: var(--space-2xl) var(--space-xl);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
+  padding: var(--space-2xl) var(--space-xl);
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: border-color var(--transition), background var(--transition);
 }
@@ -505,8 +515,8 @@
 
 .upload-area__label {
   font-size: var(--text-base);
-  color: var(--gray-500);
   font-weight: var(--fw-medium);
+  color: var(--gray-500);
   text-align: center;
 }
 
@@ -515,37 +525,30 @@
   color: var(--gray-400);
 }
 
-/* Hidden file input */
+/* Hidden — triggered programmatically via .upload-area click */
 .upload-area input[type="file"] {
   display: none;
 }
 
-/* Preview image inside upload area */
+/* Preview shown after a file is selected; hidden by default */
 .upload-preview {
+  display: none;
   max-width: 100%;
   max-height: 160px;
   border-radius: var(--radius-sm);
   object-fit: contain;
-  display: none;
 }
 
-/* NOTE: .form-select is defined in main.css — no need to redeclare here. */
 
-/* Success page */
+/* ================================================
+   7. REGISTER SUCCESS SCREEN
+   Shown after submission. Toggle .show to reveal.
+================================================ */
+
+/* Hidden by default; .show switches display to flex */
 .register-success {
-  flex: 1;
   display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-lg);
-  text-align: center;
-  padding: var(--space-2xl);
-}
-
-.register-success[hidden] {
   flex: 1;
-  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -555,16 +558,8 @@
 }
 
 .register-success.show {
-  flex: 1;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-lg);
-  text-align: center;
-  padding: var(--space-2xl);
 }
-
 
 .register-success__icon {
   width: 64px;
@@ -590,16 +585,20 @@
 }
 
 .register-success__sub {
+  max-width: 360px;
   font-size: var(--text-base);
   color: var(--gray-500);
-  max-width: 360px;
   line-height: var(--lh-loose);
 }
 
-/* ======================== */
-/*  PAGE TRANSITIONS        */
-/* ======================== */
-/* Wrap pages in .page-transition for GSAP entrance */
+
+/* ================================================
+   8. PAGE TRANSITION
+   Wrap page root in .page-transition for a GSAP-
+   compatible entrance (fadeUp). CSS handles the
+   animation; JS can override timing if needed.
+================================================ */
+
 .page-transition {
   animation: fadeUp 0.4s ease both;
 }
@@ -609,63 +608,37 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ======================== */
-/*  RESPONSIVE              */
-/* ======================== */
+
+/* ================================================
+   9. RESPONSIVE OVERRIDES
+================================================ */
+
 @media (max-width: 768px) {
-  .login-page {
+  /* Stack the two panels vertically */
+  .login-page,
+  body.login-page {
     flex-direction: column;
+    min-height: 100svh;
   }
 
+  /* Collapse the left panel into a compact header strip */
   .auth-left {
     width: 100%;
-    min-height: auto;
-    padding: var(--space-xl) var(--space-lg);
+    min-height: unset;
+    flex: unset;
+    padding: 2rem 1.5rem 1.5rem;
+  }
+
+  /* Decorative circles and stats are too cluttered at narrow widths */
+  .auth-left__circle,
+  .auth-left__stats {
+    display: none;
   }
 
   .auth-left__hero {
     flex: none;
   }
 
-  .auth-left__stats {
-    margin-top: var(--space-lg);
-    padding-top: var(--space-lg);
-  }
-
-  .auth-right {
-    padding: var(--space-xl) var(--space-lg);
-  }
-
-  .register-card {
-    padding: var(--space-lg);
-  }
-
-  .form-grid-2 {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  /* Stack the two panels vertically */
-  body.login-page {
-    flex-direction: column;
-    min-height: 100svh;
-  }
-
-  /* Collapse the green left panel into a compact header */
-  .auth-left {
-    padding: 2rem 1.5rem 1.5rem;
-    min-height: unset;
-    flex: unset;
-  }
-
-  /* Hide the decorative circles and stats on mobile — too cluttered */
-  .auth-left__circle,
-  .auth-left__stats {
-    display: none;
-  }
-
-  /* Shrink the heading */
   .auth-left__heading {
     font-size: 1.5rem;
     margin-bottom: 0.5rem;
@@ -675,13 +648,13 @@
     font-size: 0.875rem;
   }
 
-  /* Right panel takes remaining space */
+  /* Right panel slides up slightly to overlap the left panel bottom edge */
   .auth-right {
     flex: 1;
     padding: 2rem 1.5rem;
-    border-radius: 1.5rem 1.5rem 0 0;
-    margin-top: -1.5rem; /* overlaps slightly over left panel bottom */
     background: #fff;
+    border-radius: 1.5rem 1.5rem 0 0;
+    margin-top: -1.5rem;
     position: relative;
     z-index: 1;
   }
@@ -701,27 +674,25 @@
     font-size: 0.8rem;
   }
 
-  /* Register body padding */
   .register-body {
     padding: 1rem;
   }
 
-  /* Step indicator — shrink labels */
+  /* Shrink step labels to fit narrow screens */
   .step-item__label {
     font-size: 0.65rem;
   }
 
-  /* Form cards */
   .register-card {
     padding: 1.25rem 1rem;
   }
 
-  /* Two-column grids become single column */
+  /* Two-column form grids collapse to single column */
   .form-grid-2 {
     grid-template-columns: 1fr;
   }
 
-  /* Action buttons row — stack vertically, full width */
+  /* Action buttons stack vertically, reversed so primary is on top */
   .register-actions {
     flex-direction: column-reverse;
     gap: 0.5rem;
@@ -732,10 +703,8 @@
     justify-content: center;
   }
 
-  /* Success screen padding */
   .register-success {
     padding: 2rem 1rem;
     text-align: center;
   }
 }
-

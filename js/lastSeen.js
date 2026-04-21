@@ -1,47 +1,92 @@
-// js/lastSeen.js
-// =====================================================
-// Shared lastSeen heartbeat.
-// Import and call startLastSeenHeartbeat() on every
-// authenticated page (dashboard.html, admin.html, etc.)
-// =====================================================
+/* ================================================
+   lastSeen.js — BarangayConnect
+   Shared last-seen heartbeat for authenticated pages.
+   Writes a Firestore timestamp on page load and repeats
+   on a fixed interval while the tab remains visible.
+   Import and call startLastSeenHeartbeat() on every
+   authenticated page (dashboard.html, admin.html, etc.)
+
+   WHAT IS IN HERE:
+     · One-shot and interval-based lastSeen writes
+     · Auth state listener with heartbeat lifecycle
+     · Barangay resolution via userIndex doc
+     · Visibility check to skip writes on hidden tabs
+
+   WHAT IS NOT IN HERE:
+     · Auth initialization                → firebase-config.js
+     · Firestore path helpers             → db-paths.js
+     · Online/offline presence tracking  → presence.js (if applicable)
+
+   REQUIRED IMPORTS:
+     · ./firebase-config.js              (auth, db)
+     · ./db-paths.js                     (userDoc, userIndexDoc)
+     · firebase-firestore.js@10.12.0     (updateDoc, serverTimestamp, getDoc)
+     · firebase-auth.js@10.12.0          (onAuthStateChanged)
+
+   QUICK REFERENCE:
+     Start heartbeat  → startLastSeenHeartbeat()   (call once per page)
+     Interval         → HEARTBEAT_INTERVAL_MS       (default: 5 minutes)
+================================================ */
+
+
+/* ================================================
+   IMPORTS
+================================================ */
 
 import { auth, db } from './firebase-config.js';
 import { userDoc, userIndexDoc } from './db-paths.js';
+
 import {
-  updateDoc, serverTimestamp, getDoc
+  updateDoc, serverTimestamp, getDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 import {
-  onAuthStateChanged
+  onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 
-const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes — adjust freely
+/* ================================================
+   CONFIG
+================================================ */
+
+const HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
+
+/* ================================================
+   MODULE STATE
+================================================ */
+
 let _heartbeatTimer = null;
 
 
-// =====================================================
-// WRITE LAST SEEN
-// =====================================================
+/* ================================================
+   WRITE LAST SEEN
+   Non-fatal — a failed write does not block the user.
+================================================ */
+
 async function writeLastSeen(barangay, uid) {
   try {
     await updateDoc(userDoc(barangay, uid), {
       lastSeen: serverTimestamp(),
     });
   } catch (e) {
-    // Non-fatal — don't block the user
     console.warn('lastSeen write failed:', e.message);
   }
 }
 
-// =====================================================
-// START HEARTBEAT
-// Call once per page after auth is confirmed.
-// Writes immediately, then repeats on the interval.
-// Stops automatically when the tab is hidden/closed.
-// =====================================================
+
+/* ================================================
+   HEARTBEAT
+   Resolves the user's barangay from their index doc,
+   writes immediately on auth resolve, then repeats on
+   the configured interval. Skips writes when the tab
+   is hidden to avoid unnecessary Firestore usage.
+================================================ */
+
 export async function startLastSeenHeartbeat() {
   onAuthStateChanged(auth, async (user) => {
-    // Clear any previous timer (e.g. if auth state fires twice)
+
+    /* Clear any previous timer if auth state fires more than once */
     if (_heartbeatTimer) {
       clearInterval(_heartbeatTimer);
       _heartbeatTimer = null;
@@ -49,7 +94,7 @@ export async function startLastSeenHeartbeat() {
 
     if (!user) return;
 
-    // Resolve barangay from index (fast single-doc read)
+    /* Resolve barangay from the user index doc */
     let barangay;
     try {
       const indexSnap = await getDoc(userIndexDoc(user.uid));
@@ -63,13 +108,11 @@ export async function startLastSeenHeartbeat() {
       return;
     }
 
-    // Write immediately on page load / auth resolve
+    /* Write immediately on page load / auth resolve */
     await writeLastSeen(barangay, user.uid);
 
-    // Then write on the interval while the tab is open
+    /* Repeat on interval while the tab remains open */
     _heartbeatTimer = setInterval(async () => {
-      // Skip the write if the tab is hidden — saves writes when
-      // the user leaves the tab open in the background
       if (document.visibilityState === 'hidden') return;
       await writeLastSeen(barangay, user.uid);
     }, HEARTBEAT_INTERVAL_MS);

@@ -1,12 +1,14 @@
 /* ================================================
    main.css — BarangayConnect
-   Global foundation. Import FIRST on every page.
+   Global foundation stylesheet. Must be imported
+   first on every page before all other CSS files.
 
-   WHAT IS IN HERE (and only here):
-     · CSS custom properties (:root design tokens)
-     · Global reset & base element styles
+   WHAT IS IN HERE:
+     · CSS custom properties (design tokens)
+     · Global reset and base element styles
      · Shared form components (input, label, select, error)
      · Shared layout utilities (.card, .divider, .sr-only)
+     · Toast notification component
      · Navbar (.navbar and all sub-elements)
      · Site footer (.site-footer and all sub-elements)
 
@@ -16,46 +18,26 @@
      · Modals / drawers / card frames → frames.css
      · Auth-page specific layout      → auth.css
 
-   REQUIRED IMPORT ORDER (every page):
+   REQUIRED IMPORTS (every page, in this order):
      <link rel="stylesheet" href="css/main.css" />
      <link rel="stylesheet" href="css/buttons.css" />
      <link rel="stylesheet" href="css/components.css" />
      <link rel="stylesheet" href="css/frames.css" />
 
-   ── NAVBAR QUICK REFERENCE ────────────────────────
-     Wrapper          → .navbar
-     Transparent mode → .navbar--transparent  (over dark hero images)
-     Logo             → .navbar__logo + .navbar__logo-img + .navbar__logo-text
-     Nav links        → .navbar__nav + .navbar__link
-     Active link      → .navbar__link.is-active
-     Navbar role pill → .navbar__role  (see variants below)
-     Bell             → .navbar__bell + .navbar__bell-dot (remove dot when no notifs)
-     Avatar           → .navbar__avatar
-     Mobile           → .navbar__hamburger + .navbar__mobile-drawer
-
-   ── NAVBAR ROLE PILL VARIANTS ─────────────────────
-     Green  → .navbar__role--resident
-     Orange → .navbar__role--officer
-     Red    → .navbar__role--admin
-     NOTE: These are ONLY for the top navbar pill.
-     For role badges inside content/tables use
-     .badge--role-* from components.css instead.
-
-   ── ROLE-GATED NAV ITEMS ──────────────────────────
-     Wrap nav links:  .navbar__item--officer  .navbar__item--admin
-     Add to <body>:   role-resident | role-officer | role-admin
-     JS toggles body class after Firebase auth resolves.
-
-   ── FOOTER QUICK REFERENCE ────────────────────────
-     Wrapper     → .site-footer
-     Inner grid  → .site-footer__inner
-     Brand block → .site-footer__brand + .site-footer__brand-logo
-     Logo image  → .site-footer__logo-img  (auto-inverted white)
-     Tagline     → .site-footer__tagline
-     Links row   → .site-footer__links + .site-footer__link
+   QUICK REFERENCE:
+     Navbar wrapper        → .navbar
+     Navbar transparent    → .navbar--transparent
+     Navbar role pill      → .navbar__role--resident / --officer / --admin
+     Role-gated nav items  → .navbar__item--officer / .navbar__item--admin
+     Footer wrapper        → .site-footer
+     Footer inner grid     → .site-footer__inner
    ================================================ */
 
-/* FONTS */
+
+/* ================================================
+   FONTS
+   ================================================ */
+
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 @font-face {
@@ -64,12 +46,14 @@
   font-weight: 700;
 }
 
+
 /* ================================================
-   CSS VARIABLES  (Design Tokens)
+   CSS VARIABLES — Design Tokens
    ================================================ */
 
 :root {
-  /* Brand Colors */
+
+  /* ── Brand Colors ───────────────────────────────*/
   --green-dark:    #1B4B27;
   --green-hover:   #12361B;
   --green-active:  #102A16;
@@ -78,16 +62,16 @@
   --green-muted:   #2a4a38;
 
   --orange:        #FFA135;
-  --orange-hover:   #DB8B2F;
+  --orange-hover:  #DB8B2F;
   --orange-active: #92400E;
 
   --red:           #DC2626;
   --red-hover:     #821414;
-  --red-dark:     #7A1A1A;
+  --red-dark:      #7A1A1A;
 
   --black:         #2C2828;
 
-  /* Neutrals */
+  /* ── Neutrals ───────────────────────────────────*/
   --white:         #ffffff;
   --off-white:     #f9fafb;
   --gray-50:       #f3f4f6;
@@ -100,21 +84,21 @@
   --text-dark:     #1a1a1a;
   --text-muted:    #6b7280;
 
-  /* Muted / Located state */
+  /* ── Muted / Located State ──────────────────────*/
   --muted-bg:      #E8EDE9;
   --muted-text:    #3a5c42;
   --muted-icon:    #5a8a68;
 
-  /* Status Colors */
-  --status-pending:     #f59e0b;
-  --status-inprogress:  #3b82f6;
-  --status-resolved:    #10b981;
-  --status-draft:       #9ca3af;
-  --priority-high:      #ef4444;
-  --priority-medium:    #f97316;
-  --priority-low:       #22c55e;
+  /* ── Status Colors ──────────────────────────────*/
+  --status-pending:    #f59e0b;
+  --status-inprogress: #3b82f6;
+  --status-resolved:   #10b981;
+  --status-draft:      #9ca3af;
+  --priority-high:     #ef4444;
+  --priority-medium:   #f97316;
+  --priority-low:      #22c55e;
 
-  /* Spacing */
+  /* ── Spacing ────────────────────────────────────*/
   --space-xs:  4px;
   --space-sm:  8px;
   --space-md:  16px;
@@ -123,47 +107,44 @@
   --space-2xl: 48px;
   --space-3xl: 64px;
 
-  /* Border Radius */
+  /* ── Border Radius ──────────────────────────────*/
+  --radius-xs:   4px;
   --radius-sm:   8px;
   --radius-md:   12px;
   --radius-lg:   16px;
   --radius-xl:   24px;
   --radius-full: 9999px;
 
-  /* Shadows */
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md:  0 4px 12px var(--overlay-black-10), 0 2px 4px var(--overlay-black-06);
-  --shadow-lg:  0 10px 30px rgba(0,0,0,0.12), 0 4px 8px var(--overlay-black-06);
+  /* ── Shadows ────────────────────────────────────*/
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px var(--overlay-black-10), 0 2px 4px var(--overlay-black-06);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.12), 0 4px 8px var(--overlay-black-06);
 
-  /* Navbar specific */
-  --navbar-h:          64px;
-  --navbar-bg:         #ffffff;
-  --navbar-border:     rgba(0,0,0,0.07);
-  --navbar-shadow:     0 1px 0 var(--overlay-black-06), 0 2px 8px rgba(0,0,0,0.04);
+  /* ── Navbar ─────────────────────────────────────*/
+  --navbar-h:      64px;
+  --navbar-bg:     #ffffff;
+  --navbar-border: rgba(0,0,0,0.07);
+  --navbar-shadow: 0 1px 0 var(--overlay-black-06), 0 2px 8px rgba(0,0,0,0.04);
 
-  /* Typography */
+  /* ── Typography — Fonts ─────────────────────────*/
   --font-display: 'Circular Std', sans-serif;
   --font-body:    'Poppins', sans-serif;
 
-  /* Transitions */
-  --transition:      0.2s ease;
-  --transition-slow: 0.4s ease;
+  /* ── Typography — Type Scale ────────────────────
+     10 named steps replace scattered raw rem values.
+     Modify here to propagate changes across all components.
 
-  /* ── Type Scale ─────────────────────────────────────────────────
-     10 named steps replace 15+ scattered raw rem values.
-     Change any value here and it propagates to every component.
-
-     2xs  tiny labels, timestamps, eyebrow text
-     xs   caption/meta, badge content
-     sm   secondary body, card descriptions
+     2xs      tiny labels, timestamps, eyebrow text
+     xs       caption/meta, badge content
+     sm       secondary body, card descriptions
      base-sm  compact body, form labels
      base     primary body, most UI copy
-     lg   card titles, section labels
-     xl   modal titles, widget headings
-     2xl  page sub-headings, success titles
-     3xl  page headings, register header
-     4xl  display text, auth hero
-     ─────────────────────────────────────────────────────────────── */
+     lg       card titles, section labels
+     xl       modal titles, widget headings
+     2xl      page sub-headings, success titles
+     3xl      page headings, register header
+     4xl      display text, auth hero
+     ─────────────────────────────────────────────── */
   --text-2xs:     0.68rem;
   --text-xs:      0.75rem;
   --text-sm:      0.82rem;
@@ -175,7 +156,7 @@
   --text-3xl:     1.90rem;
   --text-4xl:     2.00rem;
 
-  /* ── Font Weights ─────────────────────────────────────────────── */
+  /* ── Typography — Font Weights ──────────────────*/
   --fw-normal:    400;
   --fw-medium:    500;
   --fw-semibold:  600;
@@ -183,71 +164,68 @@
   --fw-extrabold: 800;
   --fw-black:     900;
 
-  /* ── Line Heights ─────────────────────────────────────────────── */
-  --lh-none:     1;
-  --lh-tight:    1.2;
-  --lh-snug:     1.4;
-  --lh-normal:   1.5;
-  --lh-relaxed:  1.6;
-  --lh-loose:    1.7;
+  /* ── Typography — Line Heights ──────────────────*/
+  --lh-none:    1;
+  --lh-tight:   1.2;
+  --lh-snug:    1.4;
+  --lh-normal:  1.5;
+  --lh-relaxed: 1.6;
+  --lh-loose:   1.7;
 
-  /* ── Border Radius (gap fill) ─────────────────────────────────── */
-  --radius-xs: 4px;
+  /* ── Transitions ────────────────────────────────*/
+  --transition:      0.2s ease;
+  --transition-slow: 0.4s ease;
 
-  /* ── Semantic Colour Tints ──────────────────────────────────────*/
+  /* ── Semantic Color Tints — Success / Green ─────*/
+  --green-50:  #f0fdf4;
+  --green-100: #d1fae5;
+  --green-200: #bbf7d0;
+  --green-300: #6ee7b7;
+  --green-400: #4ade80;
+  --green-500: #10b981;
+  --green-800: #14532d;
+  --green-900: #065f46;
 
-  /* Success / Health */
-  --green-50:    #f0fdf4;
-  --green-100:   #d1fae5;
-  --green-200:   #bbf7d0;
-  --green-300:   #6ee7b7;
-  --green-400:   #4ade80;
-  --green-500:   #10b981;
-  --green-800:   #14532d;
-  --green-900:   #065f46;
-
-  /* Error / Danger */
-  --red-50:          #fff0f0;
-  --red-100:         #fee2e2;
-  --red-200:         #fecaca;
-  --red-800:         #7f1d1d;
-  --red-900:         #991b1b;
+  /* ── Semantic Color Tints — Error / Red ─────────*/
+  --red-50:         #fff0f0;
+  --red-100:        #fee2e2;
+  --red-200:        #fecaca;
+  --red-800:        #7f1d1d;
+  --red-900:        #991b1b;
   --red-dark-hover: #5e1414;
 
-  /* Info */
-  --blue-50:   #eff6ff;
-  --blue-100:  #dbeafe;
-  --blue-200:  #bfdbfe;
-  --blue-500:  #3b82f6;
-  --blue-600:  #2563eb;
-  --blue-800:  #1e40af;
-  --blue-900:  #1e3a5f;
+  /* ── Semantic Color Tints — Info / Blue ─────────*/
+  --blue-50:  #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-800: #1e40af;
+  --blue-900: #1e3a5f;
 
-  /* Warning */
-  --amber-50:   #fff8ed;
-  --amber-100:  #fef3c7;
-  --amber-150:  #ffedd5;
-  --amber-200:  #fed7aa;
-  --amber-500:  #f59e0b;
-  --amber-800:  #854d0e;
-  --amber-900:  #7c2d12;
-  --amber-950:  #9a3412;
+  /* ── Semantic Color Tints — Warning / Amber ─────*/
+  --amber-50:  #fff8ed;
+  --amber-100: #fef3c7;
+  --amber-150: #ffedd5;
+  --amber-200: #fed7aa;
+  --amber-500: #f59e0b;
+  --amber-800: #854d0e;
+  --amber-900: #7c2d12;
+  --amber-950: #9a3412;
 
-  /* Yellow */
-  --yellow-50:  #fef9c3;
+  /* ── Semantic Color Tints — Yellow ──────────────*/
+  --yellow-50: #fef9c3;
 
-  /* Low-priority greens */
+  /* ── Semantic Color Tints — Low-priority / Success*/
   --success-100: #dcfce7;
   --success-800: #166534;
   --success-950: #064e3b;
 
-  /* Purple */
+  /* ── Semantic Color Tints — Purple ──────────────*/
   --purple-50:  #faf5ff;
   --purple-600: #7c3aed;
 
-  /* ── Brand Alpha Tints ──────────────────────────────────────────*/
-
-  /* Green tints */
+  /* ── Brand Alpha Tints — Green ──────────────────*/
   --alpha-green-03: rgba(27, 75, 39, 0.03);
   --alpha-green-04: rgba(27, 75, 39, 0.04);
   --alpha-green-06: rgba(27, 75, 39, 0.06);
@@ -255,44 +233,42 @@
   --alpha-green-10: rgba(27, 75, 39, 0.10);
   --alpha-green-12: rgba(27, 75, 39, 0.12);
 
-  /* Glass panel */
+  /* ── Brand Alpha Tints — Glass ──────────────────*/
   --alpha-glass-green: rgba(20, 56, 32, 0.72);
 
-  /* Orange tints */
+  /* ── Brand Alpha Tints — Orange ─────────────────*/
   --alpha-orange-14: rgba(255, 161, 53, 0.14);
   --alpha-orange-15: rgba(255, 161, 53, 0.15);
   --alpha-orange-35: rgba(255, 161, 53, 0.35);
 
-  /* Amber tints */
+  /* ── Brand Alpha Tints — Amber ──────────────────*/
   --alpha-amber-08: rgba(245, 158, 11, 0.08);
   --alpha-amber-12: rgba(245, 158, 11, 0.12);
   --alpha-amber-16: rgba(245, 158, 11, 0.16);
 
-  /* Red tints */
+  /* ── Brand Alpha Tints — Red ────────────────────*/
   --alpha-red-08:       rgba(220, 38, 38, 0.08);
   --alpha-red-10:       rgba(220, 38, 38, 0.10);
   --alpha-red-16:       rgba(220, 38, 38, 0.16);
-  --alpha-red-dark-06: rgba(122, 26, 26, 0.06);
-  --alpha-red-dark-08: rgba(122, 26, 26, 0.08);
-  --alpha-red-dark-12: rgba(122, 26, 26, 0.12);
-  --alpha-red-dark-15: rgba(122, 26, 26, 0.15);
+  --alpha-red-dark-06:  rgba(122, 26, 26, 0.06);
+  --alpha-red-dark-08:  rgba(122, 26, 26, 0.08);
+  --alpha-red-dark-12:  rgba(122, 26, 26, 0.12);
+  --alpha-red-dark-15:  rgba(122, 26, 26, 0.15);
 
-  /* Blue tints */
+  /* ── Brand Alpha Tints — Blue ───────────────────*/
   --alpha-blue-10: rgba(59, 130, 246, 0.10);
   --alpha-blue-12: rgba(37, 99, 235, 0.12);
 
-  /* Success tint */
+  /* ── Brand Alpha Tints — Success ────────────────*/
   --alpha-success-10: rgba(16, 185, 129, 0.10);
 
-  /* Ink tints */
+  /* ── Brand Alpha Tints — Ink ────────────────────*/
   --alpha-ink-05: rgba(44, 40, 40, 0.05);
   --alpha-ink-06: rgba(44, 40, 40, 0.06);
   --alpha-ink-07: rgba(44, 40, 40, 0.07);
   --alpha-ink-20: rgba(44, 40, 40, 0.20);
 
-  /* ── Overlay Tokens ─────────────────────────────────────────────*/
-
-  /* White overlays (on dark green panels) */
+  /* ── Overlay Tokens — White (on dark panels) ────*/
   --overlay-white-04: rgba(255, 255, 255, 0.04);
   --overlay-white-05: rgba(255, 255, 255, 0.05);
   --overlay-white-06: rgba(255, 255, 255, 0.06);
@@ -309,7 +285,7 @@
   --overlay-white-70: rgba(255, 255, 255, 0.70);
   --overlay-white-75: rgba(255, 255, 255, 0.75);
 
-  /* Black overlays */
+  /* ── Overlay Tokens — Black ─────────────────────*/
   --overlay-black-06: rgba(0, 0, 0, 0.06);
   --overlay-black-10: rgba(0, 0, 0, 0.10);
   --overlay-black-18: rgba(0, 0, 0, 0.18);
@@ -318,16 +294,22 @@
   --overlay-black-55: rgba(0, 0, 0, 0.55);
 }
 
-/* Hide role-gated nav items until auth resolves */
+
+/* ================================================
+   ROLE INIT — Hide role-gated items until auth resolves
+   ================================================ */
+
 [data-role-init="pending"] .navbar__item--officer,
 [data-role-init="pending"] .navbar__item--admin {
   visibility: hidden;
   pointer-events: none;
 }
 
+
 /* ================================================
    RESET & BASE
    ================================================ */
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -366,11 +348,14 @@ button {
   background: none;
 }
 
-input, textarea, select {
+input,
+textarea,
+select {
   font-family: inherit;
   font-size: inherit;
 }
 
+/* Default icon size for all Lucide icons */
 [data-lucide] {
   width: 18px;
   height: 18px;
@@ -380,8 +365,10 @@ input, textarea, select {
 
 
 /* ================================================
-   UTILITY
+   UTILITIES
    ================================================ */
+
+/* Visually hidden but accessible to screen readers */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -394,6 +381,7 @@ input, textarea, select {
   border: 0;
 }
 
+/* Horizontal rule divider */
 .divider {
   height: 1px;
   background: var(--gray-100);
@@ -404,6 +392,7 @@ input, textarea, select {
 /* ================================================
    SHARED CARD
    ================================================ */
+
 .card {
   background: var(--white);
   border-radius: var(--radius-md);
@@ -411,42 +400,53 @@ input, textarea, select {
   border: 1px solid var(--gray-100);
 }
 
+
 /* ================================================
    TOAST
    ================================================ */
-.toast {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: 10px;
-    font-family: var(--font-display);
-    font-size: .85rem;
-    font-weight: 600;
-    color: #fff;
-    box-shadow: 0 4px 16px rgba(0,0,0,.18);
-    animation: toastIn .25s ease both;
-  }
 
-  .toast [data-lucide], .toast svg { width: 15px; height: 15px; flex-shrink: 0; }
-  .toast--success { background: #1a3a1a; }
-  .toast--error   { background: #dc2626; }
- 
-  @keyframes toastIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+.toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--white);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  animation: toastIn 0.25s ease both;
+}
+
+.toast [data-lucide],
+.toast svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.toast--success { background: #1a3a1a; }
+.toast--error   { background: var(--red); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 
 /* ================================================
-   FORM SHARED STYLES
+   FORM — Shared Components
    ================================================ */
+
+/* ---- Group wrapper ---- */
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+/* ---- Label ---- */
 .form-label {
   font-size: var(--text-base);
   font-weight: var(--fw-semibold);
@@ -454,6 +454,7 @@ input, textarea, select {
   font-family: var(--font-display);
 }
 
+/* ---- Text input ---- */
 .form-input {
   width: 100%;
   padding: 13px 16px;
@@ -478,9 +479,12 @@ input, textarea, select {
   box-shadow: 0 0 0 3px rgba(239,68,68,0.10);
 }
 
+/* ---- Input with icon slot ---- */
 .form-input-wrap { position: relative; }
+
 .form-input-wrap--icon .form-input { padding-right: 48px; }
 
+/* Password visibility toggle */
 .form-input__eye {
   position: absolute;
   right: 14px;
@@ -492,32 +496,42 @@ input, textarea, select {
   transition: color var(--transition);
   padding: 4px;
 }
+
 .form-input__eye:hover { color: var(--gray-700); }
 
+/* ---- Inline error message ---- */
 .form-error {
   font-size: var(--text-sm);
   color: var(--priority-high);
   min-height: 18px;
   font-weight: var(--fw-medium);
 }
+
 .form-error--center { text-align: center; }
 
+/* ---- Inline links ---- */
 .form-link {
   color: var(--green-light);
   font-weight: var(--fw-semibold);
   transition: color var(--transition);
 }
-.form-link:hover { color: var(--green-dark); text-decoration: underline; }
+
+.form-link:hover {
+  color: var(--green-dark);
+  text-decoration: underline;
+}
 
 .form-link--bold { font-weight: var(--fw-extrabold); color: var(--orange); }
 .form-link--bold:hover { color: var(--orange-hover); }
 
+/* ---- Two-column form grid ---- */
 .form-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-md);
 }
 
+/* ---- Select input ---- */
 .form-select {
   width: 100%;
   padding: 13px 16px;
@@ -543,10 +557,10 @@ input, textarea, select {
 
 
 /* ================================================
-   NOTE: .badge base class + all status/priority/role
-   badge variants live in components.css — that is the
-   single authoritative source. Do NOT add badge styles
-   here. Import components.css on every page that uses them.
+   NOTE: .badge base + all status / priority / role
+   variants are defined in components.css — that is
+   the single authoritative source. Do NOT add badge
+   styles here.
    ================================================ */
 
 
@@ -558,31 +572,20 @@ input, textarea, select {
    <header class="navbar" id="mainNavbar">
      <div class="navbar__inner">
 
-       <!-- Left: Logo -->
        <a href="/" class="navbar__logo">
-         <img src="assets/images/logo.png" alt="BarangayConnect" class="navbar__logo-img" />
+         <img src="..." alt="BarangayConnect" class="navbar__logo-img" />
          <span class="navbar__logo-text">BarangayConnect</span>
        </a>
 
-       <!-- Center: Nav links -->
        <nav class="navbar__nav" aria-label="Main navigation">
          <a href="#" class="navbar__link is-active">Home</a>
          <a href="#" class="navbar__link">Community</a>
          <a href="#" class="navbar__link">Services</a>
          <a href="#" class="navbar__link">My Barangay</a>
-
-         <!-- Officer-only -->
-         <a href="#" class="navbar__link navbar__link--officer navbar__item--officer">
-           Officer Panel
-         </a>
-
-         <!-- Admin-only -->
-         <a href="#" class="navbar__link navbar__link--admin navbar__item--admin">
-           Admin Panel
-         </a>
+         <a href="#" class="navbar__link navbar__link--officer navbar__item--officer">Officer Panel</a>
+         <a href="#" class="navbar__link navbar__link--admin navbar__item--admin">Admin Panel</a>
        </nav>
 
-       <!-- Right: Role badge + Bell + Avatar -->
        <div class="navbar__actions">
          <span class="navbar__role navbar__role--resident" id="navRole">Resident</span>
          <button class="navbar__bell" aria-label="Notifications" id="bellBtn">
@@ -603,7 +606,14 @@ input, textarea, select {
      body.role-officer   →  officer link shown (orange), admin hidden
      body.role-admin     →  both shown; active one highlighted red
 
-   Transparent hero mode — add class to <header>:
+   Role pill variants (navbar only):
+     .navbar__role--resident  →  green
+     .navbar__role--officer   →  orange
+     .navbar__role--admin     →  red
+     NOTE: For role badges inside content/tables,
+     use .badge--role-* from components.css instead.
+
+   Transparent hero mode:
      .navbar--transparent  →  no bg, white text, for dark hero sections
                               JS removes it on scroll past threshold
    ================================================================ */
@@ -620,12 +630,12 @@ input, textarea, select {
   border-bottom: 1px solid var(--navbar-border);
   box-shadow: var(--navbar-shadow);
   transition:
-    background    0.30s ease,
-    border-color  0.30s ease,
-    box-shadow    0.30s ease;
+    background   0.30s ease,
+    border-color 0.30s ease,
+    box-shadow   0.30s ease;
 }
 
-/* Transparent hero variant */
+/* Transparent hero variant — no bg, white text */
 .navbar--transparent {
   background: var(--black);
   border-bottom-color: transparent;
@@ -698,8 +708,11 @@ input, textarea, select {
   background: var(--alpha-green-06);
 }
 
-/* Active link — orange dot below */
-.navbar__link.is-active { color: var(--green-dark); font-weight: var(--fw-bold); }
+/* Active link — orange dot indicator below */
+.navbar__link.is-active {
+  color: var(--green-dark);
+  font-weight: var(--fw-bold);
+}
 
 .navbar__link.is-active::after {
   content: '';
@@ -713,36 +726,50 @@ input, textarea, select {
   background: var(--orange);
 }
 
-/* ---- Role-coloured panel links ---- */
+/* ---- Officer-panel link ---- */
 .navbar__link--officer {
   color: var(--orange-hover);
   font-weight: var(--fw-bold);
 }
-.navbar__link--officer:hover { background: rgba(255,161,53,0.08); color: var(--orange-hover); }
+
+.navbar__link--officer:hover {
+  background: rgba(255,161,53,0.08);
+  color: var(--orange-hover);
+}
+
 .navbar__link--officer.is-active::after { background: var(--orange); }
 
+/* ---- Admin-panel link ---- */
 .navbar__link--admin {
   color: var(--red-dark);
   font-weight: var(--fw-bold);
 }
-.navbar__link--admin:hover { background: var(--alpha-red-dark-06); color: var(--red-dark); }
+
+.navbar__link--admin:hover {
+  background: var(--alpha-red-dark-06);
+  color: var(--red-dark);
+}
+
 .navbar__link--admin.is-active::after { background: var(--red); }
 
-/* ---- Transparent mode text colours ---- */
-.navbar--transparent .navbar__link { color: rgba(255,255,255,0.80); }
-.navbar--transparent .navbar__link:hover { color: var(--white); background: var(--overlay-white-10); }
-.navbar--transparent .navbar__link.is-active { color: var(--white); }
+/* ---- Transparent mode — link overrides ---- */
+.navbar--transparent .navbar__link               { color: rgba(255,255,255,0.80); }
+.navbar--transparent .navbar__link:hover         { color: var(--white); background: var(--overlay-white-10); }
+.navbar--transparent .navbar__link.is-active     { color: var(--white); }
 
 
-/* ================================================================
+/* ================================================
    ROLE-BASED VISIBILITY
-   ================================================================ */
+   JS adds role-* class to <body> after auth resolves.
+   ================================================ */
 
+/* Hidden by default */
 .navbar__item--officer,
 .navbar__item--admin {
   display: none;
 }
 
+/* Shown per role */
 body.role-officer .navbar__item--officer,
 body.role-admin   .navbar__item--officer,
 body.role-admin   .navbar__item--admin {
@@ -807,14 +834,18 @@ body.role-admin   .navbar__item--admin {
   transition: background var(--transition), color var(--transition);
 }
 
-.navbar__bell [data-lucide] { width: 20px; height: 20px; stroke-width: 1.8; }
+.navbar__bell [data-lucide] {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.8;
+}
 
 .navbar__bell:hover {
   background: var(--gray-100);
   color: var(--text-dark);
 }
 
-/* Unread dot */
+/* Unread indicator dot — remove element when no notifications */
 .navbar__bell-dot {
   position: absolute;
   top: 6px;
@@ -827,9 +858,9 @@ body.role-admin   .navbar__item--admin {
   pointer-events: none;
 }
 
-.navbar--transparent .navbar__bell { color: var(--overlay-white-75); }
-.navbar--transparent .navbar__bell:hover { background: var(--overlay-white-12); color: var(--white); }
-.navbar--transparent .navbar__bell-dot { border-color: transparent; }
+.navbar--transparent .navbar__bell            { color: var(--overlay-white-75); }
+.navbar--transparent .navbar__bell:hover      { background: var(--overlay-white-12); color: var(--white); }
+.navbar--transparent .navbar__bell-dot        { border-color: transparent; }
 
 /* ---- Avatar button ---- */
 .navbar__avatar {
@@ -847,7 +878,10 @@ body.role-admin   .navbar__item--admin {
   font-size: var(--text-sm);
   cursor: pointer;
   overflow: hidden;
-  transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+  transition:
+    border-color var(--transition),
+    transform    var(--transition),
+    box-shadow   var(--transition);
   padding: 0;
   flex-shrink: 0;
 }
@@ -879,8 +913,13 @@ body.role-admin   .navbar__item--admin {
   background: none;
   transition: background var(--transition);
 }
+
 .navbar__hamburger:hover { background: var(--gray-100); }
-.navbar__hamburger [data-lucide] { width: 20px; height: 20px; }
+
+.navbar__hamburger [data-lucide] {
+  width: 20px;
+  height: 20px;
+}
 
 /* ---- Mobile drawer ---- */
 .navbar__mobile-drawer {
@@ -898,17 +937,13 @@ body.role-admin   .navbar__item--admin {
   border-radius: var(--radius-md);
 }
 
-.navbar__mobile-drawer .navbar__link:hover {
-  background: var(--gray-50);
-}
+.navbar__mobile-drawer .navbar__link:hover { background: var(--gray-50); }
 
-.navbar__mobile-drawer.is-open {
-  display: flex;
-}
+/* Open state toggled by JS */
+.navbar__mobile-drawer.is-open { display: flex; }
 
-.navbar--transparent .navbar__mobile-drawer {
-  background: var(--green-dark);
-}
+/* Transparent variant overrides */
+.navbar--transparent .navbar__mobile-drawer { background: var(--green-dark); }
 
 .navbar--transparent .navbar__mobile-drawer .navbar__link {
   color: var(--overlay-white-70);
@@ -920,19 +955,31 @@ body.role-admin   .navbar__item--admin {
   background: var(--overlay-white-10);
 }
 
-/* ---- Responsive ---- */
-@media (max-width: 900px) {
-  .navbar__nav { display: none; }
-  .navbar__hamburger { display: flex; order: 99; }
-  .navbar__role { display: none; }
-  .navbar__bell { display: flex; }
-  .navbar__avatar { display: flex; }
-  .navbar__actions { margin-left: auto; }
+/* ---- Logo filter for non-transparent state ---- */
+.navbar:not(.navbar--transparent) .navbar__logo-text {
+  color: var(--green-dark);
+  transition: color 0.25s ease;
 }
 
+.navbar:not(.navbar--transparent) .navbar__logo-img {
+  filter: brightness(0) saturate(100%) invert(21%) sepia(28%) saturate(800%) hue-rotate(100deg) brightness(85%);
+  transition: filter 0.25s ease;
+}
+
+/* ---- Responsive — tablet ---- */
+@media (max-width: 900px) {
+  .navbar__nav       { display: none; }
+  .navbar__hamburger { display: flex; order: 99; }
+  .navbar__role      { display: none; }
+  .navbar__bell      { display: flex; }
+  .navbar__avatar    { display: flex; }
+  .navbar__actions   { margin-left: auto; }
+}
+
+/* ---- Responsive — mobile ---- */
 @media (max-width: 520px) {
-  .navbar__inner { padding: 0 var(--space-md); gap: var(--space-sm); }
-  .navbar__logo-text { display: none; }
+  .navbar__inner      { padding: 0 var(--space-md); gap: var(--space-sm); }
+  .navbar__logo-text  { display: none; }
 }
 
 
@@ -944,7 +991,6 @@ body.role-admin   .navbar__item--admin {
    <footer class="site-footer">
      <div class="site-footer__inner">
 
-       <!-- Left brand block -->
        <div class="site-footer__brand">
          <div class="site-footer__brand-logo">
            <img src="assets/images/logo.png" alt="BarangayConnect" class="site-footer__logo-img" />
@@ -955,7 +1001,6 @@ body.role-admin   .navbar__item--admin {
          </p>
        </div>
 
-       <!-- Right links -->
        <nav class="site-footer__links" aria-label="Footer navigation">
          <a href="#" class="site-footer__link">Privacy Policy</a>
          <a href="#" class="site-footer__link">Terms of Use</a>
@@ -967,6 +1012,7 @@ body.role-admin   .navbar__item--admin {
    </footer>
    ================================================================ */
 
+/* ---- Wrapper ---- */
 .site-footer {
   background: #4a4a4a;
   color: var(--overlay-white-75);
@@ -975,6 +1021,7 @@ body.role-admin   .navbar__item--admin {
   margin-bottom: 0;
 }
 
+/* ---- Inner grid ---- */
 .site-footer__inner {
   max-width: 1280px;
   margin: 0 auto;
@@ -999,6 +1046,7 @@ body.role-admin   .navbar__item--admin {
   gap: 8px;
 }
 
+/* Logo auto-inverted to white */
 .site-footer__logo-img {
   width: 28px;
   height: 28px;
@@ -1052,14 +1100,4 @@ body.role-admin   .navbar__item--admin {
   }
 
   .site-footer__links { gap: var(--space-md); }
-}
-
-.navbar:not(.navbar--transparent) .navbar__logo-text {
-  color: var(--green-dark);
-  transition: color 0.25s ease;
-}
-
-.navbar:not(.navbar--transparent) .navbar__logo-img {
-  filter: brightness(0) saturate(100%) invert(21%) sepia(28%) saturate(800%) hue-rotate(100deg) brightness(85%);
-  transition: filter 0.25s ease;
 }

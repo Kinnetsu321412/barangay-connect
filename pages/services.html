@@ -1,6 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 
+<!--
+  ═══════════════════════════════════════════════
+  services.html — BarangayConnect
+  Barangay services hub for Barangay Bancod.
+  Handles all resident-facing service interactions
+  across four tab panels.
+
+  CSS IMPORT ORDER — DO NOT CHANGE THIS ORDER
+  ═══════════════════════════════════════════════
+  main.css        → design tokens, reset, navbar, footer, form inputs
+  buttons.css     → all clickable elements (.btn and variants)
+  components.css  → badges, tags, banners, stat grid, alert widgets
+  frames.css      → post cards, marquee, modals, drawers
+  services.css    → THIS PAGE ONLY — hero, tab panels, doc cards,
+                    stepper, appointment slots, directory layout
+
+  WHAT IS IN HERE:
+    · Navbar (shared layout, role-gated items)
+    · Services hero with 4 tab buttons
+    · Tab panel: Report a Concern (4-step stepper)
+    · Tab panel: Document Requests (doc cards + status tracker)
+    · Tab panel: Book Appointment (promo card + slot grid)
+    · Tab panel: Emergency & Directory (contacts + filter list)
+    · Modal: Bullying Report (anonymous toggle, confidential form)
+    · Modal: Book Appointment (4-step multi-panel)
+    · Modal: Document Request Form (dynamic doc type dropdown)
+    · Profile drawer + sign-out confirm modal
+    · Footer (shared)
+
+  WHAT IS NOT IN HERE:
+    · Auth logic              → js/nav-auth.js
+    · Profile data population → js/profile.js
+    · Global CSS design tokens → main.css
+
+  REQUIRED IMPORTS:
+    · Lucide Icons (CDN)
+    · js/nav-auth.js (module)
+    · js/profile.js  (module)
+
+  QUICK REFERENCE:
+    · Tab switching      → [data-tab] buttons + .tab-panel.is-active
+    · Report stepper     → goToStep(n)
+    · Appointment modal  → goToApptStep(n)
+    · Doc request modal  → openDocRequest(value), updateDocInfo()
+    · Modal open/close   → openModal(id), closeModal(id)
+    · Anon toggle        → toggleAnonFields()
+  ═══════════════════════════════════════════════
+-->
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,10 +65,24 @@
   <script type="module" src="../js/nav-auth.js"></script>
 </head>
 
+<!--
+  ─────────────────────────────────────────────
+  ROLE CLASS on <body> controls which navbar
+  items are visible. JS sets this after auth.
+  Values: role-resident | role-officer | role-admin
+  Default for this page: role-guest
+  ─────────────────────────────────────────────
+-->
 <body class="role-guest" data-role-init="pending">
+
 
   <!-- ═══════════════════════════════════════════════════════════════
        NAVBAR
+       ───────────────────────────────────────────────────────────────
+       .navbar--transparent: transparent bg with white text, layered
+       over the hero. JS removes this class on scroll > 60px.
+       Role-gated items use .navbar__item--officer / --admin and
+       auto-show/hide based on the <body> role class.
   ══════════════════════════════════════════════════════════════════ -->
   <nav class="navbar navbar--transparent" id="mainNavbar">
     <div class="navbar__inner">
@@ -43,14 +106,21 @@
       </ul>
 
       <div class="navbar__actions">
+        <!-- Role pill — modifier reflects logged-in user role -->
         <span class="navbar__role navbar__role--resident" id="navRole">Resident</span>
+
+        <!-- Bell — remove .navbar__bell-dot when no notifications -->
         <button class="navbar__bell" aria-label="Notifications" id="bellBtn">
           <i data-lucide="bell"></i>
           <span class="navbar__bell-dot"></span>
         </button>
+
+        <!-- Avatar — replace icon with <img> when user has a photo -->
         <button class="navbar__avatar" aria-label="Open profile" id="avatarBtn">
           <i data-lucide="user"></i>
         </button>
+
+        <!-- Mobile hamburger (auto-shows on small screens via CSS) -->
         <button class="navbar__hamburger" aria-label="Open menu" id="hamburgerBtn">
           <i data-lucide="menu"></i>
         </button>
@@ -58,6 +128,7 @@
 
     </div><!-- /navbar__inner -->
 
+    <!-- Mobile drawer (toggled by JS adding .is-open) -->
     <div class="navbar__mobile-drawer" id="mobileDrawer">
       <a href="home.html"      class="navbar__link">Home</a>
       <a href="community.html" class="navbar__link">Community</a>
@@ -69,6 +140,13 @@
 
   <!-- ═══════════════════════════════════════════════════════════════
        HERO — Barangay Services Header
+       ───────────────────────────────────────────────────────────────
+       Contains the page eyebrow, title, and 4-tab navigation bar
+       that controls which service panel is active below.
+
+       .btn--category  → tab trigger buttons (buttons.css)
+       .btn-tab-bar    → tab group wrapper
+       Active tab:     [data-tab].is-active + aria-selected="true"
   ══════════════════════════════════════════════════════════════════ -->
   <section class="services-hero">
     <div class="services-hero__inner">
@@ -97,12 +175,29 @@
 
   <!-- ═══════════════════════════════════════════════════════════════
        MAIN CONTENT — Tab Panels
+       ───────────────────────────────────────────────────────────────
+       Each .tab-panel corresponds to one tab button via [data-tab].
+       Only the panel with .is-active is visible at a time.
+       JS manages active state — see tab switching script below.
   ══════════════════════════════════════════════════════════════════ -->
   <main class="services-main">
 
 
     <!-- ─────────────────────────────────────────────────────────────
          TAB PANEL: REPORT A CONCERN
+         ─────────────────────────────────────────────────────────────
+         4-step stepper flow:
+           Step 1 → Category selection (.concern-grid)
+           Step 2 → Description textarea with char counter
+           Step 3 → Optional photo upload dropzone
+           Step 4 → Review table + submit action
+
+         .stepper         → step indicator bar (services.css)
+         .report-step     → individual step panel; .is-active shows it
+         goToStep(n)      → JS function that advances/retreats steps
+
+         Also contains the bullying notice banner that opens
+         the #bullyingModal on click.
     ──────────────────────────────────────────────────────────────── -->
     <section class="tab-panel tab-panel--report is-active" id="tab-report" role="tabpanel">
       <div class="services-panel-inner">
@@ -127,7 +222,7 @@
           </div>
         </div>
 
-        <!-- Step 1: Category -->
+        <!-- ─── Step 1: Category ─── -->
         <div class="report-step is-active" id="report-step-1">
           <h2 class="report-step__title">What type of concern is this?</h2>
           <p class="report-step__sub">Select the category that best describes your concern.</p>
@@ -166,16 +261,18 @@
           </div>
         </div><!-- /report-step-1 -->
 
-        <!-- Step 2: Description -->
+        <!-- ─── Step 2: Description ─── -->
         <div class="report-step" id="report-step-2">
           <h2 class="report-step__title">Describe the concern</h2>
           <p class="report-step__sub">Be as specific as possible — include location and time of occurrence.</p>
 
           <div class="form-group">
-            <textarea class="form-input report-step__textarea"
+            <textarea
+              class="form-input report-step__textarea"
               rows="7"
               placeholder="e.g. There's a large pothole on Rizal Street near the elementary school gate. It's been there since last week and vehicles keep swerving to avoid it..."
-              maxlength="500"></textarea>
+              maxlength="500"
+            ></textarea>
             <span class="char-count">0/500 characters</span>
           </div>
 
@@ -189,7 +286,7 @@
           </div>
         </div><!-- /report-step-2 -->
 
-        <!-- Step 3: Photos -->
+        <!-- ─── Step 3: Photos ─── -->
         <div class="report-step" id="report-step-3">
           <h2 class="report-step__title">Add supporting photos</h2>
           <p class="report-step__sub">Photos help our team better understand and prioritize the issue. (Optional)</p>
@@ -210,7 +307,7 @@
           </div>
         </div><!-- /report-step-3 -->
 
-        <!-- Step 4: Review & Submit -->
+        <!-- ─── Step 4: Review & Submit ─── -->
         <div class="report-step" id="report-step-4">
           <h2 class="report-step__title">Review your concern</h2>
           <p class="report-step__sub">Please review before submitting. This will be sent to the barangay office.</p>
@@ -244,7 +341,7 @@
           </div>
         </div><!-- /report-step-4 -->
 
-        <!-- Bullying notice banner -->
+        <!-- Bullying notice — opens #bullyingModal -->
         <div class="notice-banner notice-banner--red">
           <div class="notice-banner__icon">
             <i data-lucide="alert-circle"></i>
@@ -256,98 +353,127 @@
           <button class="btn btn--red btn--sm" onclick="openModal('bullyingModal')">Report Now</button>
         </div>
 
-
-         <!-- ═══════════════════════════════════════════════════════════════
-       MODAL — Bullying Report
-       ───────────────────────────────────────────────────────────────
-       .modal-overlay > .modal from frames.css.
-       Header: .modal__header .modal__header--green
-       Report type toggle: .report-type-toggle + .report-type-toggle__btn--*
-       Close: .btn .btn--close .btn--sm .modal__close from buttons.css.
-  ══════════════════════════════════════════════════════════════════ -->
-
       </div><!-- /services-panel-inner -->
     </section><!-- /tab-report -->
 
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         MODAL — Bullying Report
+         ───────────────────────────────────────────────────────────────
+         Confidential report form. Anonymous by default; toggling the
+         switch reveals identity fields (#bullyingIdentityFields).
+
+         Header:         .modal__header--red
+         Anonymous row:  .anon-toggle-row + .toggle-wrap (toggle switch)
+         Identity fields: hidden when #anonToggle is checked
+         toggleAnonFields() → JS handler for the checkbox
+    ══════════════════════════════════════════════════════════════════ -->
     <div class="modal-overlay" id="bullyingModal" onclick="closeOnBackdrop(event)">
-  <div class="modal">
-    <div class="modal__header modal__header--red">
-      <div class="modal__header-icon">
-        <i data-lucide="shield-alert"></i>
-      </div>
-      <div class="modal__header-content">
-        <p class="modal__header-label">YOUTH PROTECTION</p>
-        <h2 class="modal__header-title">Report a Bullying Incident</h2>
-        <p class="modal__header-sub">This report is confidential and will only be seen by the Youth Protection Officer.</p>
-      </div>
-      <button class="btn btn--close btn--sm modal__close" aria-label="Close" onclick="closeModal('bullyingModal')">
-        <i data-lucide="x"></i>
-      </button>
-    </div>
+      <div class="modal">
 
-    <!-- Anonymous toggle — sits just below the red header -->
-    <div class="anon-toggle-row">
-      <div class="anon-toggle-row__icon">
-        <i data-lucide="eye-off"></i>
-      </div>
-      <div class="anon-toggle-row__body">
-        <p class="anon-toggle-row__title">Submitting Anonymously</p>
-        <p class="anon-toggle-row__sub">Your identity will not be shared. Tap to add contact.</p>
-      </div>
-      <label class="toggle-wrap">
-        <input type="checkbox" class="toggle-input" id="anonToggle" checked onchange="toggleAnonFields()" />
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-      </label>
-    </div>
-
-    <div class="modal__body">
-
-      <!-- Identity fields — hidden by default since anonymous is on -->
-      <div id="bullyingIdentityFields" style="display:none; display:flex; flex-direction:column; gap:var(--space-md);">
-        <div class="form-group">
-          <label class="form-label">Your Name</label>
-          <input type="text" class="form-input" placeholder="e.g. Juan dela Cruz" />
+        <div class="modal__header modal__header--red">
+          <div class="modal__header-icon">
+            <i data-lucide="shield-alert"></i>
+          </div>
+          <div class="modal__header-content">
+            <p class="modal__header-label">YOUTH PROTECTION</p>
+            <h2 class="modal__header-title">Report a Bullying Incident</h2>
+            <p class="modal__header-sub">This report is confidential and will only be seen by the Youth Protection Officer.</p>
+          </div>
+          <button class="btn btn--close btn--sm modal__close" aria-label="Close" onclick="closeModal('bullyingModal')">
+            <i data-lucide="x"></i>
+          </button>
         </div>
-        <div class="form-group">
-          <label class="form-label">Contact Number</label>
-          <input type="tel" class="form-input" placeholder="e.g. 0917-123-4567" />
+
+        <!-- Anonymous toggle — sits just below the red header -->
+        <div class="anon-toggle-row">
+          <div class="anon-toggle-row__icon">
+            <i data-lucide="eye-off"></i>
+          </div>
+          <div class="anon-toggle-row__body">
+            <p class="anon-toggle-row__title">Submitting Anonymously</p>
+            <p class="anon-toggle-row__sub">Your identity will not be shared. Tap to add contact.</p>
+          </div>
+          <label class="toggle-wrap">
+            <input
+              type="checkbox"
+              class="toggle-input"
+              id="anonToggle"
+              checked
+              onchange="toggleAnonFields()"
+            />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label class="form-label">Who was involved?</label>
-        <input type="text" class="form-input" placeholder="Name(s) of the person(s) involved" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Where did it happen?</label>
-        <input type="text" class="form-input" placeholder="e.g. School, barangay hall, online..." />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Describe what happened</label>
-        <textarea class="form-input" rows="4"
-          placeholder="Please describe the incident in as much detail as you're comfortable sharing..."
-          maxlength="500"
-          oninput="this.closest('.form-group').querySelector('.char-count').textContent = this.value.length + ' / 500'"></textarea>
-        <span class="char-count">0 / 500</span>
-      </div>
+        <div class="modal__body">
 
-    </div>
+          <!-- Identity fields — hidden by default since anonymous is on -->
+          <div id="bullyingIdentityFields" style="display:none; display:flex; flex-direction:column; gap:var(--space-md);">
+            <div class="form-group">
+              <label class="form-label">Your Name</label>
+              <input type="text" class="form-input" placeholder="e.g. Juan dela Cruz" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Contact Number</label>
+              <input type="tel" class="form-input" placeholder="e.g. 0917-123-4567" />
+            </div>
+          </div>
 
-    <div class="modal__footer">
-      <button class="btn btn--outline" onclick="closeModal('bullyingModal')">Cancel</button>
-      <button class="btn btn--red btn--full">
-        <i data-lucide="send"></i> Submit Report
-      </button>
-    </div>
-  </div>
-</div>
+          <div class="form-group">
+            <label class="form-label">Who was involved?</label>
+            <input type="text" class="form-input" placeholder="Name(s) of the person(s) involved" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Where did it happen?</label>
+            <input type="text" class="form-input" placeholder="e.g. School, barangay hall, online..." />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Describe what happened</label>
+            <textarea
+              class="form-input"
+              rows="4"
+              placeholder="Please describe the incident in as much detail as you're comfortable sharing..."
+              maxlength="500"
+              oninput="this.closest('.form-group').querySelector('.char-count').textContent = this.value.length + ' / 500'"
+            ></textarea>
+            <span class="char-count">0 / 500</span>
+          </div>
+
+        </div><!-- /modal__body -->
+
+        <div class="modal__footer">
+          <button class="btn btn--outline" onclick="closeModal('bullyingModal')">Cancel</button>
+          <button class="btn btn--red btn--full">
+            <i data-lucide="send"></i> Submit Report
+          </button>
+        </div>
+
+      </div>
+    </div><!-- /bullyingModal -->
+
 
     <!-- ─────────────────────────────────────────────────────────────
          TAB PANEL: DOCUMENT REQUESTS
+         ─────────────────────────────────────────────────────────────
+         Two sections:
+           1. Doc cards grid — 4 document types with fee/turnaround
+              badges. Each card's Request button calls
+              openDocRequest(value), pre-selecting the doc type
+              in the #docRequestModal dropdown.
+           2. My Request Status — progress tracker for in-flight
+              requests. Uses .step-progress + .badge--doc-* variants.
+
+         .doc-card         → individual document card (services.css)
+         .request-status-card → request tracker card
+         .step-progress    → 4-stage horizontal progress indicator
     ──────────────────────────────────────────────────────────────── -->
     <section class="tab-panel tab-panel--documents" id="tab-documents" role="tabpanel">
       <div class="services-panel-inner">
 
+        <!-- Document type cards -->
         <div class="doc-cards-grid">
 
           <div class="doc-card">
@@ -396,12 +522,12 @@
 
         </div><!-- /doc-cards-grid -->
 
-
         <h2 class="services-section-title">My Request Status</h2>
 
+        <!-- In-flight request tracker cards -->
         <div class="request-status-list">
 
-          <!-- Request 1 — Ready -->
+          <!-- Request 1 — Ready for pickup -->
           <div class="card request-status-card">
             <div class="request-status-card__header">
               <div>
@@ -430,7 +556,7 @@
             </div>
           </div>
 
-          <!-- Request 2 — Processing -->
+          <!-- Request 2 — In processing -->
           <div class="card request-status-card">
             <div class="request-status-card__header">
               <div>
@@ -467,11 +593,22 @@
 
     <!-- ─────────────────────────────────────────────────────────────
          TAB PANEL: BOOK APPOINTMENT
+         ─────────────────────────────────────────────────────────────
+         Three sub-sections:
+           1. Promo card — context card with "Book Now" CTA
+              that opens the #bookApptModal 4-step wizard.
+           2. Available Services — slot cards with live availability.
+           3. Next Available Dates — selectable date cards that
+              highlight on click.
+
+         .appt-promo       → featured promo card (services.css)
+         .slot-card        → individual service slot row
+         .date-slot-card   → selectable date button
     ──────────────────────────────────────────────────────────────── -->
     <section class="tab-panel tab-panel--appointment" id="tab-appointment" role="tabpanel">
       <div class="services-panel-inner">
 
-        <!-- Promo banner card -->
+        <!-- Promo card — CTA to open the booking modal -->
         <div class="appt-promo">
           <div class="appt-promo__body">
             <div class="appt-promo__icon-row">
@@ -498,7 +635,7 @@
           </div>
         </div><!-- /appt-promo -->
 
-        <!-- Available Services -->
+        <!-- Available service slots -->
         <h2 class="services-section-title">Available Services</h2>
         <p class="services-section-sub">Walk-in appointments available for the following:</p>
 
@@ -553,7 +690,7 @@
           </div>
         </div><!-- /slot-cards-grid -->
 
-        <!-- Next Available Dates -->
+        <!-- Selectable upcoming date cards -->
         <h2 class="services-section-title">Next Available Dates</h2>
 
         <div class="date-slot-cards-row">
@@ -586,10 +723,18 @@
 
     <!-- ─────────────────────────────────────────────────────────────
          TAB PANEL: EMERGENCY & DIRECTORY
+         ─────────────────────────────────────────────────────────────
+         Two sub-sections:
+           1. Emergency Contacts — 4 rows with call buttons.
+              Icon color modifier: .contact-row__icon--orange / --red
+           2. Local Services Directory — filterable list of local
+              service providers with ratings and call buttons.
+              Filter pills use .btn--filter + .is-active toggled by JS.
     ──────────────────────────────────────────────────────────────── -->
     <section class="tab-panel tab-panel--emergency" id="tab-emergency" role="tabpanel">
       <div class="services-panel-inner">
 
+        <!-- Emergency contact rows -->
         <h2 class="services-section-title">Emergency Contacts</h2>
 
         <div class="emergency-grid">
@@ -647,9 +792,10 @@
           </div>
         </div><!-- /emergency-grid -->
 
-
+        <!-- Local services directory -->
         <h2 class="services-section-title">Local Services Directory</h2>
 
+        <!-- Category filter pills -->
         <div class="directory-filters">
           <button class="btn btn--filter is-active">All</button>
           <button class="btn btn--filter">Plumbing</button>
@@ -734,7 +880,18 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════════
-       MODAL — Book Appointment (4-step)
+       MODAL — Book Appointment (4-step wizard)
+       ───────────────────────────────────────────────────────────────
+       Step 1 → Service selection (.appt-service-grid)
+       Step 2 → Date picker (.cal calendar widget)
+       Step 3 → Time slot grid (.appt-time-grid)
+       Step 4 → Details confirmation form + submit
+
+       goToApptStep(n) manages panel visibility and step label states.
+       Each step has its own .modal__body panel (#appt-step-N) and
+       footer (#appt-footer-N). Footers hidden/shown by JS.
+
+       Header step labels: .appt-modal-steps__item (.is-active / .is-done)
   ══════════════════════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="bookApptModal" onclick="closeOnBackdrop(event)">
     <div class="modal">
@@ -747,9 +904,9 @@
           <h2 class="modal__header-title">Book an Appointment</h2>
           <div class="appt-modal-steps">
             <span class="appt-modal-steps__item is-active" id="appt-step-label-1">Service</span>
-            <span class="appt-modal-steps__item" id="appt-step-label-2">Date</span>
-            <span class="appt-modal-steps__item" id="appt-step-label-3">Time</span>
-            <span class="appt-modal-steps__item" id="appt-step-label-4">Details</span>
+            <span class="appt-modal-steps__item"            id="appt-step-label-2">Date</span>
+            <span class="appt-modal-steps__item"            id="appt-step-label-3">Time</span>
+            <span class="appt-modal-steps__item"            id="appt-step-label-4">Details</span>
           </div>
         </div>
         <button class="btn btn--close btn--sm modal__close" aria-label="Close" onclick="closeModal('bookApptModal')">
@@ -757,7 +914,7 @@
         </button>
       </div>
 
-      <!-- Step 1: Service -->
+      <!-- ─── Step 1: Service ─── -->
       <div class="modal__body appt-step is-active" id="appt-step-1">
         <h3 class="appt-step__title">What service do you need?</h3>
         <div class="appt-service-grid">
@@ -810,7 +967,7 @@
         <button class="btn btn--green btn--full" onclick="goToApptStep(2)">Continue →</button>
       </div>
 
-      <!-- Step 2: Date -->
+      <!-- ─── Step 2: Date ─── -->
       <div class="modal__body appt-step" id="appt-step-2">
         <h3 class="appt-step__title">Pick a date</h3>
         <div class="cal">
@@ -873,7 +1030,7 @@
         <button class="btn btn--green btn--full" onclick="goToApptStep(3)">Continue →</button>
       </div>
 
-      <!-- Step 3: Time -->
+      <!-- ─── Step 3: Time ─── -->
       <div class="modal__body appt-step" id="appt-step-3">
         <h3 class="appt-step__title">Choose a time slot</h3>
         <p class="appt-step__sub">June 17, 2025 · Barangay Hall</p>
@@ -899,7 +1056,7 @@
         <button class="btn btn--green btn--full" onclick="goToApptStep(4)">Continue →</button>
       </div>
 
-      <!-- Step 4: Details -->
+      <!-- ─── Step 4: Details ─── -->
       <div class="modal__body appt-step" id="appt-step-4">
         <h3 class="appt-step__title">Confirm your details</h3>
         <div class="appt-summary-strip">
@@ -946,7 +1103,18 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════════
-       MODAL — Document Request Form (with inline doc type dropdown)
+       MODAL — Document Request Form
+       ───────────────────────────────────────────────────────────────
+       Single-page form with a dynamic document type dropdown.
+       Selecting a doc type reveals the #docInfoStrip with fee and
+       turnaround time pulled from the option's data attributes.
+
+       openDocRequest(value) → pre-selects dropdown + opens modal
+       updateDocInfo()       → syncs info strip to selected option
+
+       Header: .modal__header--green
+       Info strip: #docInfoStrip (hidden until a type is selected)
+       Copies counter: .doc-copies-counter (decrement / increment)
   ══════════════════════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="docRequestModal" onclick="closeOnBackdrop(event)">
     <div class="modal">
@@ -966,7 +1134,7 @@
 
       <div class="modal__body">
 
-        <!-- Document type dropdown -->
+        <!-- Document type dropdown — drives the info strip below -->
         <div class="form-group">
           <label class="form-label">Type of Document</label>
           <select class="form-select" id="docTypeSelect" onchange="updateDocInfo()">
@@ -1053,68 +1221,79 @@
   </div><!-- /docRequestModal -->
 
 
-<!-- Profile Drawer -->
-<div class="profile-drawer" id="profileDrawer">
-  <div class="profile-drawer__header">
-    <button class="btn btn--close btn--sm profile-drawer__close" id="drawerCloseBtn" aria-label="Close">
-      <i data-lucide="x"></i>
-    </button>
-    <div class="profile-drawer__avatar" id="drawerAvatar">…</div>
-    <p class="profile-drawer__name" id="drawerName">Loading…</p>
-    <p class="profile-drawer__role" id="drawerRole">—</p>
-    <span class="profile-drawer__id" id="drawerIdNumber">
-      <i data-lucide="id-card"></i> —
-    </span>
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROFILE DRAWER
+       ───────────────────────────────────────────────────────────────
+       Slide-in panel opened by the avatar button in the navbar.
+       Toggled via .is-open on #profileDrawer and #drawerBackdrop.
+       Populated dynamically by js/profile.js.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="profile-drawer" id="profileDrawer">
+    <div class="profile-drawer__header">
+      <button class="btn btn--close btn--sm profile-drawer__close" id="drawerCloseBtn" aria-label="Close">
+        <i data-lucide="x"></i>
+      </button>
+      <div class="profile-drawer__avatar" id="drawerAvatar">…</div>
+      <p class="profile-drawer__name" id="drawerName">Loading…</p>
+      <p class="profile-drawer__role" id="drawerRole">—</p>
+      <span class="profile-drawer__id" id="drawerIdNumber">
+        <i data-lucide="id-card"></i> —
+      </span>
+    </div>
+    <nav class="profile-drawer__menu">
+      <a href="profile.html" class="profile-drawer__item">
+        <div class="profile-drawer__item-icon"><i data-lucide="user-pen"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">My Barangay</span>
+          <span class="profile-drawer__item-sub">View your profile and ID</span>
+        </div>
+      </a>
+      <a href="services.html" class="profile-drawer__item">
+        <div class="profile-drawer__item-icon"><i data-lucide="file-text"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">My Documents</span>
+          <span class="profile-drawer__item-sub">Request or track documents</span>
+        </div>
+      </a>
+      <a href="community.html" class="profile-drawer__item">
+        <div class="profile-drawer__item-icon"><i data-lucide="users"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">Community</span>
+          <span class="profile-drawer__item-sub">Bulletin, polls, pet board</span>
+        </div>
+      </a>
+      <button class="profile-drawer__item profile-drawer__item--signout" id="signOutBtn">
+        <div class="profile-drawer__item-icon"><i data-lucide="log-out"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">Sign Out</span>
+        </div>
+      </button>
+    </nav>
   </div>
-  <nav class="profile-drawer__menu">
-    <a href="profile.html" class="profile-drawer__item">
-      <div class="profile-drawer__item-icon"><i data-lucide="user-pen"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">My Barangay</span>
-        <span class="profile-drawer__item-sub">View your profile and ID</span>
-      </div>
-    </a>
-    <a href="services.html" class="profile-drawer__item">
-      <div class="profile-drawer__item-icon"><i data-lucide="file-text"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">My Documents</span>
-        <span class="profile-drawer__item-sub">Request or track documents</span>
-      </div>
-    </a>
-    <a href="community.html" class="profile-drawer__item">
-      <div class="profile-drawer__item-icon"><i data-lucide="users"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">Community</span>
-        <span class="profile-drawer__item-sub">Bulletin, polls, pet board</span>
-      </div>
-    </a>
-    <button class="profile-drawer__item profile-drawer__item--signout" id="signOutBtn">
-      <div class="profile-drawer__item-icon"><i data-lucide="log-out"></i></div>
-      <div class="profile-drawer__item-body">
-        <span class="profile-drawer__item-title">Sign Out</span>
-      </div>
-    </button>
-  </nav>
-</div>
-<div class="profile-drawer-backdrop" id="drawerBackdrop"></div>
+  <div class="profile-drawer-backdrop" id="drawerBackdrop"></div>
 
-<!-- Sign-out confirm modal -->
-<div class="modal-overlay" id="signoutModal" onclick="this.classList.remove('is-open')">
-  <div class="modal modal--confirm">
-    <div class="modal-confirm__icon"><i data-lucide="log-out"></i></div>
-    <h2 class="modal-confirm__title">Sign out?</h2>
-    <p class="modal-confirm__body">You'll be signed out of your BarangayConnect account on this device.</p>
-    <div class="modal-confirm__footer">
-      <button class="btn btn--outline" onclick="document.getElementById('signoutModal').classList.remove('is-open')">Cancel</button>
-      <button class="btn btn--red btn--full" id="confirmSignOutBtn">Sign Out</button>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SIGN-OUT CONFIRM MODAL
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="signoutModal" onclick="this.classList.remove('is-open')">
+    <div class="modal modal--confirm">
+      <div class="modal-confirm__icon"><i data-lucide="log-out"></i></div>
+      <h2 class="modal-confirm__title">Sign out?</h2>
+      <p class="modal-confirm__body">You'll be signed out of your BarangayConnect account on this device.</p>
+      <div class="modal-confirm__footer">
+        <button class="btn btn--outline" onclick="document.getElementById('signoutModal').classList.remove('is-open')">
+          Cancel
+        </button>
+        <button class="btn btn--red btn--full" id="confirmSignOutBtn">Sign Out</button>
+      </div>
     </div>
   </div>
-</div>
+
 
   <!-- ═══════════════════════════════════════════════════════════════
        FOOTER
   ══════════════════════════════════════════════════════════════════ -->
-  
   <footer class="site-footer">
     <div class="site-footer__inner">
       <div class="site-footer__brand">
@@ -1134,12 +1313,35 @@
   </footer>
 
 
+  <!-- ═══════════════════════════════════════════════════════════════
+       SCRIPTS
+       ───────────────────────────────────────────────────────────────
+       1.  lucide.createIcons()    — renders all data-lucide icons
+       2.  Tab switching           — [data-tab] buttons ↔ .tab-panel
+       3.  Navbar scroll           — removes .navbar--transparent > 60px
+       4.  Modal helpers           — openModal / closeModal / closeOnBackdrop
+       5.  Report stepper          — goToStep(n) advances/retreats steps
+       6.  Appointment stepper     — goToApptStep(n) + footer visibility
+       7a. openDocRequest(value)   — pre-selects dropdown then opens modal
+       7b. updateDocInfo()         — syncs info strip to selected doc type
+       8.  Concern category tiles  — single-select within .concern-grid
+       9.  Appointment services    — single-select within .appt-service-grid
+       10. Date slot cards         — single-select in .date-slot-cards-row
+       11. Time slot buttons       — single-select in .appt-time-grid
+       12. Directory filter pills  — active state in .directory-filters
+       13. Copies counter          — decrement/increment .doc-copies-counter
+       14. Textarea char counter   — live count on .report-step__textarea
+       15. Appt footer init        — hide footers 2–4 on page load
+       16. Bullying anon toggle    — toggleAnonFields() shows/hides identity
+       17. Profile drawer          — avatar button opens slide-in panel
+  ══════════════════════════════════════════════════════════════════ -->
   <script>
-    // 1. Render Lucide icons
-    lucide.createIcons();
-    
 
-    // 2. Tab switching
+    /* 1. Render Lucide icons */
+    lucide.createIcons();
+
+
+    /* 2. Tab switching */
     const tabBtns   = document.querySelectorAll('[data-tab]');
     const tabPanels = document.querySelectorAll('.tab-panel');
 
@@ -1154,20 +1356,23 @@
       });
     });
 
-    // 3. Navbar scroll transparency
+
+    /* 3. Navbar transparent-on-scroll */
     const navbar = document.querySelector('.navbar');
     window.addEventListener('scroll', () => {
       navbar.classList.toggle('navbar--transparent', window.scrollY < 60);
     });
 
-    // 4. Modal helpers
+
+    /* 4. Modal helpers */
     function openModal(id)  { document.getElementById(id)?.classList.add('is-open'); }
     function closeModal(id) { document.getElementById(id)?.classList.remove('is-open'); }
     function closeOnBackdrop(e) {
       if (e.target === e.currentTarget) e.currentTarget.classList.remove('is-open');
     }
 
-    // 5. Report concern — step navigation
+
+    /* 5. Report concern — step navigation */
     function goToStep(n) {
       document.querySelectorAll('.report-step').forEach(s => s.classList.remove('is-active'));
       document.getElementById('report-step-' + n)?.classList.add('is-active');
@@ -1178,7 +1383,8 @@
       });
     }
 
-    // 6. Book appointment — step navigation
+
+    /* 6. Book appointment — step navigation */
     function goToApptStep(n) {
       document.querySelectorAll('.appt-step').forEach(s => s.classList.remove('is-active'));
       document.querySelectorAll('[id^="appt-footer-"]').forEach(f => f.style.display = 'none');
@@ -1191,7 +1397,8 @@
       });
     }
 
-    // 7a. Open doc request modal with a pre-selected document type
+
+    /* 7a. Open doc request modal with a pre-selected document type */
     function openDocRequest(value) {
       const select = document.getElementById('docTypeSelect');
       select.value = value;
@@ -1199,10 +1406,7 @@
       openModal('docRequestModal');
     }
 
-    // 7b. Doc type dropdown — update info strip
-    function updateDocInfo() {
-
-    // 7. Doc type dropdown — update info strip
+    /* 7b. Doc type dropdown — update info strip */
     function updateDocInfo() {
       const select   = document.getElementById('docTypeSelect');
       const strip    = document.getElementById('docInfoStrip');
@@ -1215,9 +1419,9 @@
         strip.style.display = 'none';
       }
     }
-  }
 
-    // 8. Concern category selector
+
+    /* 8. Concern category selector — single-select within grid */
     document.querySelectorAll('.concern-grid .btn--selector').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.concern-grid .btn--selector').forEach(b => b.classList.remove('is-selected'));
@@ -1225,7 +1429,8 @@
       });
     });
 
-    // 9. Appointment service selector
+
+    /* 9. Appointment service selector — single-select within grid */
     document.querySelectorAll('.appt-service-grid .btn--selector').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.appt-service-grid .btn--selector').forEach(b => b.classList.remove('is-selected'));
@@ -1233,7 +1438,8 @@
       });
     });
 
-    // 10. Date slot cards
+
+    /* 10. Date slot cards — single-select */
     document.querySelectorAll('.date-slot-card').forEach(card => {
       card.addEventListener('click', () => {
         document.querySelectorAll('.date-slot-card').forEach(c => c.classList.remove('is-selected'));
@@ -1241,7 +1447,8 @@
       });
     });
 
-    // 11. Time slot buttons
+
+    /* 11. Time slot buttons — single-select (skips empty slots) */
     document.querySelectorAll('.time-slot-btn:not(.time-slot-btn--empty)').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.time-slot-btn').forEach(b => b.classList.remove('is-selected'));
@@ -1249,7 +1456,8 @@
       });
     });
 
-    // 12. Directory filter pills
+
+    /* 12. Directory filter pills — active state */
     document.querySelector('.directory-filters')?.querySelectorAll('.btn--filter').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.directory-filters .btn--filter').forEach(b => b.classList.remove('is-active'));
@@ -1257,7 +1465,8 @@
       });
     });
 
-    // 13. Copies counter
+
+    /* 13. Copies counter — decrement / increment */
     document.querySelectorAll('.doc-copies-counter').forEach(counter => {
       const valueEl = counter.querySelector('.doc-copies-counter__value');
       counter.querySelector('.doc-copies-counter__btn:first-child').addEventListener('click', () => {
@@ -1269,41 +1478,42 @@
       });
     });
 
-    // 14. Textarea char counter
+
+    /* 14. Textarea char counter — live update */
     document.querySelector('.report-step__textarea')?.addEventListener('input', function () {
       this.closest('.form-group').querySelector('.char-count').textContent =
         this.value.length + '/500 characters';
     });
 
-    // 15. Initialize: hide all appt footers except step 1
+
+    /* 15. Initialize — hide appointment footers 2–4 on load */
     document.querySelectorAll('[id^="appt-footer-"]').forEach((f, i) => {
       f.style.display = i === 0 ? 'flex' : 'none';
     });
 
-    // 16. Bullying
-    function selectBullyingType(btn) {
-      document.querySelectorAll('.bullying-option').forEach(b => b.classList.remove('is-selected'));
-      btn.classList.add('is-selected');
-    }
 
-      function toggleAnonFields() {
+    /* 16. Bullying anonymous toggle — show/hide identity fields */
+    function toggleAnonFields() {
       const isAnon = document.getElementById('anonToggle').checked;
       document.getElementById('bullyingIdentityFields').style.display = isAnon ? 'none' : 'flex';
     }
 
 
-    // Profile drawer
-const drawer   = document.getElementById('profileDrawer');
-const backdrop = document.getElementById('drawerBackdrop');
-function openDrawer()  { drawer.classList.add('is-open');    backdrop.classList.add('is-open'); }
-function closeDrawer() { drawer.classList.remove('is-open'); backdrop.classList.remove('is-open'); }
-document.getElementById('avatarBtn').addEventListener('click', openDrawer);
-document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
-backdrop.addEventListener('click', closeDrawer);
-document.getElementById('signOutBtn').addEventListener('click', () => {
-  closeDrawer();
-  document.getElementById('signoutModal').classList.add('is-open');
-});
+    /* 17. Profile drawer */
+    const drawer   = document.getElementById('profileDrawer');
+    const backdrop = document.getElementById('drawerBackdrop');
+
+    function openDrawer()  { drawer.classList.add('is-open');    backdrop.classList.add('is-open'); }
+    function closeDrawer() { drawer.classList.remove('is-open'); backdrop.classList.remove('is-open'); }
+
+    document.getElementById('avatarBtn').addEventListener('click', openDrawer);
+    document.getElementById('drawerCloseBtn').addEventListener('click', closeDrawer);
+    backdrop.addEventListener('click', closeDrawer);
+
+    document.getElementById('signOutBtn').addEventListener('click', () => {
+      closeDrawer();
+      document.getElementById('signoutModal').classList.add('is-open');
+    });
 
   </script>
 
