@@ -993,6 +993,12 @@
                  color:#555;font-size:.85rem;font-weight:600;cursor:pointer;">
           <i data-lucide="briefcase" style="width:14px;height:14px;"></i> Services
         </button>
+        <button class="community-sub-btn" onclick="switchCommunitySubTab('polls',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                 color:#555;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Polls
+        </button>
       </div>
 
       <!-- ── Bulletin Posts sub-panel ────────────────────────── -->
@@ -1141,6 +1147,9 @@
           <p style="margin:0;font-size:.9rem;">Local services and listings will appear here.</p>
         </div>
       </div>
+
+      <!-- Polls sub-panel — shell rendered by polls-admin.js on auth -->
+      <div id="community-sub-polls" hidden></div>
 
     </div><!-- /panel-community -->
 
@@ -1732,6 +1741,7 @@
   <script type="module" src="js/features/admin/reported-comments-admin.js"></script>
   <script type="module" src="js/features/admin/comment-manager-admin.js"></script>
   <script type="module" src="js/features/admin/settings-admin.js"></script>
+  <script type="module" src="js/features/admin/polls-admin.js"></script>
 
 </body>
 </html>

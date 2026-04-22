@@ -62,6 +62,7 @@
   <link rel="stylesheet" href="../../css/shared/components.css" />
   <link rel="stylesheet" href="../../css/shared/frames.css" />
   <link rel="stylesheet" href="../../css/features/community/community.css" />
+  <link rel="stylesheet" href="../../css/features/community/polls.css" />
 
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script type="module" src="../../js/shared/nav-auth.js"></script>
@@ -269,111 +270,7 @@
     ──────────────────────────────────────────────────────────────── -->
     <section class="tab-panel tab-panel--polls" id="tab-polls" role="tabpanel">
       <div class="community-panel-inner">
-
-        <div class="polls-list">
-
-          <!-- Poll 1 — Active, user already voted (results visible) -->
-          <div class="card poll-card">
-            <h3 class="poll-card__question">What new facility would you like most in our Barangay?</h3>
-            <div class="poll-options">
-              <label class="poll-option is-voted is-selected">
-                <input type="radio" name="poll1" />
-                <div class="poll-option__bar" style="--pct: 42%"></div>
-                <span class="poll-option__label">Mini Park / Green Space</span>
-                <span class="poll-option__pct">42%</span>
-              </label>
-              <label class="poll-option is-voted">
-                <input type="radio" name="poll1" />
-                <div class="poll-option__bar" style="--pct: 31%"></div>
-                <span class="poll-option__label">Covered Basketball Court</span>
-                <span class="poll-option__pct">31%</span>
-              </label>
-              <label class="poll-option is-voted">
-                <input type="radio" name="poll1" />
-                <div class="poll-option__bar" style="--pct: 17%"></div>
-                <span class="poll-option__label">Community Library</span>
-                <span class="poll-option__pct">17%</span>
-              </label>
-              <label class="poll-option is-voted">
-                <input type="radio" name="poll1" />
-                <div class="poll-option__bar" style="--pct: 10%"></div>
-                <span class="poll-option__label">Health Clinic Extension</span>
-                <span class="poll-option__pct">10%</span>
-              </label>
-            </div>
-            <p class="poll-card__meta">312 votes · Results shown</p>
-          </div><!-- /poll-card -->
-
-          <!-- Poll 2 — Active, not yet voted -->
-          <div class="card poll-card">
-            <h3 class="poll-card__question">What is your preferred schedule for the Community Clean-Up Drive?</h3>
-            <div class="poll-options">
-              <label class="poll-option">
-                <input type="radio" name="poll2" />
-                <div class="poll-option__bar" style="--pct: 0%"></div>
-                <span class="poll-option__label">Saturday Morning</span>
-              </label>
-              <label class="poll-option">
-                <input type="radio" name="poll2" />
-                <div class="poll-option__bar" style="--pct: 0%"></div>
-                <span class="poll-option__label">Sunday Afternoon</span>
-              </label>
-              <label class="poll-option">
-                <input type="radio" name="poll2" />
-                <div class="poll-option__bar" style="--pct: 0%"></div>
-                <span class="poll-option__label">Friday Evening</span>
-              </label>
-            </div>
-            <p class="poll-card__meta">188 votes · Tap to vote</p>
-          </div><!-- /poll-card -->
-
-          <!-- Poll 3 — Closed, results visible -->
-          <div class="card poll-card">
-            <div class="poll-card__header">
-              <h3 class="poll-card__question">How would you rate barangay services this quarter?</h3>
-              <span class="status-pill status-pill--closed">Closed</span>
-            </div>
-            <div class="poll-options">
-              <label class="poll-option is-voted is-selected">
-                <input type="radio" name="poll3" disabled />
-                <div class="poll-option__bar" style="--pct: 44%"></div>
-                <span class="poll-option__label">Excellent</span>
-                <span class="poll-option__pct">44%</span>
-              </label>
-              <label class="poll-option is-voted">
-                <input type="radio" name="poll3" disabled />
-                <div class="poll-option__bar" style="--pct: 35%"></div>
-                <span class="poll-option__label">Good</span>
-                <span class="poll-option__pct">35%</span>
-              </label>
-              <label class="poll-option is-voted">
-                <input type="radio" name="poll3" disabled />
-                <div class="poll-option__bar" style="--pct: 15%"></div>
-                <span class="poll-option__label">Fair</span>
-                <span class="poll-option__pct">15%</span>
-              </label>
-              <label class="poll-option is-voted">
-                <input type="radio" name="poll3" disabled />
-                <div class="poll-option__bar" style="--pct: 6%"></div>
-                <span class="poll-option__label">Needs Improvement</span>
-                <span class="poll-option__pct">6%</span>
-              </label>
-            </div>
-            <p class="poll-card__meta">501 votes · Results shown</p>
-          </div><!-- /poll-card -->
-
-        </div><!-- /polls-list -->
-
-        <!-- Pagination controls -->
-        <div class="polls-pagination">
-          <button class="btn btn--outline btn--sm polls-pagination__btn" aria-label="Previous">
-            <i data-lucide="chevron-left"></i>
-          </button>
-          <button class="btn btn--outline btn--sm polls-pagination__btn" aria-label="Next">
-            <i data-lucide="chevron-right"></i>
-          </button>
-        </div>
-
+        <div id="pollsList"></div>
       </div><!-- /community-panel-inner -->
     </section><!-- /tab-panel--polls -->
 
@@ -1539,6 +1436,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
   <script src="../../js/features/community/community-animations.js" defer></script>
   <script type="module" src="../../js/features/profile/profile.js"></script>
+  <script type="module" src="../../js/features/community/community-polls.js"></script>
 
 </body>
 </html>

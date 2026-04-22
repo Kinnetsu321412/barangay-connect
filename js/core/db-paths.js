@@ -12,6 +12,9 @@
      userIndex/{uid}                         fast auth routing
                                              (top-level: auth needs this
                                              before the barangay is known)
+     barangays/{barangayId}/polls/{pollId}              poll document (options embedded)
+     barangays/{barangayId}/polls/{pollId}/votes/{uid}  one vote per user (uid = doc ID)
+     barangays/{barangayId}/polls/{pollId}/poll_actions audit trail
 
    STORAGE STRUCTURE:
      barangays/{barangayId}/id-photos/{uid}/front.webp
@@ -30,6 +33,7 @@
      · Storage path helpers: idPhotoFrontPath, idPhotoBackPath,
        avatarPath, reportPhotoPath, announcementPhotoPath,
        postPhotoPath, petPhotoPath
+      · pollsCol, pollDoc, voteDoc, pollActionsCol — poll Firestore path helpers
 
    WHAT IS NOT IN HERE:
      · Firebase initialization          → firebase-config.js
@@ -47,6 +51,10 @@
      Auth index doc   → userIndexDoc(uid)
      ID counter doc   → barangayCounterDoc(barangay)
      Settings doc     → barangaySettingsDoc(barangay)
+     Poll collection  → pollsCol(barangay)
+     Poll doc         → pollDoc(barangay, pollId)
+     Vote doc         → voteDoc(barangay, pollId, userId)
+     Poll actions col → pollActionsCol(barangay, pollId)
      Storage paths    → *Path(...) helpers below
 ================================================ */
 
@@ -178,4 +186,32 @@ export function postPhotoPath(barangay, uid, fileName) {
 /* barangays/{barangayId}/pets/{uid}/{fileName} */
 export function petPhotoPath(barangay, uid, fileName) {
   return `barangays/${barangayId(barangay)}/pets/${uid}/${fileName}`;
+}
+
+// ================================================
+// POLL PATHS
+// ================================================
+
+/* barangays/{barangayId}/polls */
+export function pollsCol(barangay) {
+  return collection(db, 'barangays', barangayId(barangay), 'polls');
+}
+
+/* barangays/{barangayId}/polls/{pollId} */
+export function pollDoc(barangay, pollId) {
+  return doc(db, 'barangays', barangayId(barangay), 'polls', pollId);
+}
+
+/*
+   barangays/{barangayId}/polls/{pollId}/votes/{userId}
+   userId used as the document ID — Firestore enforces the 1-vote
+   constraint by making a second setDoc silently fail inside a transaction.
+*/
+export function voteDoc(barangay, pollId, userId) {
+  return doc(db, 'barangays', barangayId(barangay), 'polls', pollId, 'votes', userId);
+}
+
+/* barangays/{barangayId}/polls/{pollId}/poll_actions */
+export function pollActionsCol(barangay, pollId) {
+  return collection(db, 'barangays', barangayId(barangay), 'polls', pollId, 'poll_actions');
 }
