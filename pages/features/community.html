@@ -1170,6 +1170,22 @@
           btn.classList.add('is-active');
           btn.setAttribute('aria-selected', 'true');
           document.getElementById('tab-' + target)?.classList.add('is-active');
+
+          /* ── Notification scroll — check if a pending scroll was set by a notification click ── */
+          if (window._pendingScrollTo) {
+            const pid = window._pendingScrollTo;
+            window._pendingScrollTo = null;
+            setTimeout(() => {
+              const el = document.getElementById(`comment-thread-${pid}`)?.closest('article')
+                      ?? document.getElementById(`opts_${pid}`)?.closest('.poll-card');
+              if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.transition = 'box-shadow .3s';
+                el.style.boxShadow  = '0 0 0 2px #f97316';
+                setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+              }
+            }, 900);
+          }
         });
       });
     });

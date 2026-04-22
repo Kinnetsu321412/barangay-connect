@@ -68,6 +68,9 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { notifyAllInBarangay } from '../../shared/notifications.js';
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 
 // ================================================
 // MODULE STATE
@@ -331,7 +334,8 @@ window.openPollForm = function (prefill = null) {
   const fmtDate = ts => {
     if (!ts) return '';
     const d = ts.toDate?.() ?? new Date(ts);
-    return d.toISOString().slice(0, 16);
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d - offset).toISOString().slice(0, 16);
   };
 
   const cats = ['general','health','infrastructure','safety','events','livelihood','youth','environment'];
@@ -532,9 +536,9 @@ window.savePoll = async function (status) {
   const existingPoll = _editId ? _polls.find(p => p.id === _editId) : null;
   const editingWithVotes = !!(_editId && (existingPoll?.totalVotes ?? 0) > 0);
   const startRaw  = document.getElementById('pf_start')?.value;
-  const startDate = startRaw ? new Date(startRaw) : null;
+  const startDate = startRaw ? new Date(startRaw + ':00') : null;
   const endRaw    = document.getElementById('pf_end')?.value;
-  const endDate   = endRaw ? new Date(endRaw) : null;
+  const endDate   = endRaw   ? new Date(endRaw   + ':00') : null;
   if (!editingWithVotes) {
     if (!endDate) { showToast('End date is required.', 'error'); return; }
     if (isNaN(endDate)) { showToast('Invalid end date.', 'error'); return; }
@@ -597,6 +601,9 @@ window.savePoll = async function (status) {
       const ref = await addDoc(pollsCol(_bid), payload);
       await _logAction(ref.id, status === 'active' ? 'publish' : 'create_draft', null);
       showToast(status === 'active' ? 'Poll published.' : 'Draft saved.', 'success');
+      if (status === 'active') {
+        notifyAllInBarangay(_bid, { type: 'poll_created', actorId: _uid, postId: ref.id, postTitle: payload.title, description: payload.description ?? null });
+      }
     }
     window.closePollForm();
   } catch (err) {
@@ -622,6 +629,9 @@ window.publishPoll = async function (pollId) {
     await updateDoc(pollDoc(_bid, pollId), { status: 'active', updatedAt: serverTimestamp() });
     await _logAction(pollId, 'publish', null);
     showToast('Poll published.', 'success');
+    notifyAllInBarangay(_bid, { type: 'poll_created', actorId: _uid, postId: pollId,
+    postTitle: _polls.find(p=>p.id===pollId)?.title ?? 'New Poll',
+    description: _polls.find(p=>p.id===pollId)?.description ?? null });
   } catch { showToast('Failed to publish.', 'error'); }
 };
 
@@ -684,13 +694,16 @@ window.extendDeadline = function (pollId) {
 };
 
 window._submitExtend = async function (pollId) {
-  const newDate = new Date(document.getElementById('_extDate')?.value ?? '');
+  const rawDate = document.getElementById('_extDate')?.value ?? '';
+  const newDate = rawDate ? new Date(rawDate + ':00') : new Date('');
   const reason  = document.getElementById('_extReason')?.value.trim();
 
   if (isNaN(newDate)) { showToast('Please enter a valid date.', 'error'); return; }
   const poll = _polls.find(p => p.id === pollId);
   const startDate = poll?.startDate?.toDate?.();
   if (startDate && newDate <= startDate) { showToast('New end date must be after the poll\'s start date.', 'error'); return; }
+  const origEnd = poll?.endDate?.toDate?.();
+  if (origEnd && newDate <= origEnd) { showToast('New end date must be after the original deadline.', 'error'); return; }
   if (!reason)         { showToast('A reason is required.', 'error'); return; }
 
   try {
@@ -712,6 +725,9 @@ window.closePoll = async function (pollId) {
     await updateDoc(pollDoc(_bid, pollId), { status: 'closed', updatedAt: serverTimestamp() });
     await _logAction(pollId, 'close_early', null);
     showToast('Poll closed.', 'success');
+    notifyAllInBarangay(_bid, { type: 'poll_closed', actorId: _uid,
+        postId: pollId, postTitle: _polls.find(p=>p.id===pollId)?.title ?? 'Poll',
+        description: _polls.find(p=>p.id===pollId)?.description ?? null });
   } catch { showToast('Failed to close poll.', 'error'); }
 };
 

@@ -38,16 +38,19 @@
 ================================================ */
 
 import { auth } from '../core/firebase-config.js';
-import { initNotifications } from './notifications.js';
 import { userIndexDoc } from '../core/db-paths.js';
 
 import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { initNotifications } from './notifications.js';
+
 import {
   getDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+import { barangayId as toBid } from '../core/db-paths.js';
 
 
 /* ================================================
@@ -78,7 +81,7 @@ export function initNavAuth({ onResolved } = {}) {
       sessionStorage.setItem('bc_role', role);
       _applyRole(role);
 
-      initNotifications(barangay, user.uid);
+      initNotifications(toBid(barangay), user.uid);
       onResolved?.({ user, role, barangay });
 
     } catch (_) {

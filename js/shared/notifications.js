@@ -142,6 +142,9 @@ function renderDropdown(notifs, barangayId, uid) {
     comment: { icon: 'message-circle',  bg: '#f0fdf4', color: '#15803d' },
     reply:   { icon: 'corner-down-right', bg: '#f0fdf4', color: '#15803d' },
     like:    { icon: 'heart',            bg: '#fef2f2', color: '#dc2626' },
+    poll_created:  { icon: 'bar-chart-2', bg: '#f0fdf4', color: '#15803d' },
+    poll_closed:   { icon: 'square',      bg: '#fef2f2', color: '#dc2626' },
+    poll_deadline: { icon: 'clock',       bg: '#fffbeb', color: '#92400e' },
   };
 
   panel.innerHTML = `
@@ -179,15 +182,17 @@ function renderDropdown(notifs, barangayId, uid) {
            </p>`
         : notifs.map(n => {
             const meta = ICONS[n.type] ?? ICONS.comment;
-            const msg  = n.type === 'like'
-              ? `liked your comment on`
-              : n.type === 'reply'
-              ? `replied to your comment on`
-              : `commented on your post`;
+            const msg =
+            n.type === 'like'          ? 'liked your comment on' :
+            n.type === 'reply'         ? 'replied to your comment on' :
+            n.type === 'poll_created'  ? 'A new community poll has been published:' :
+            n.type === 'poll_closed'   ? 'A community poll has been closed:' :
+            n.type === 'poll_deadline' ? 'A poll is closing within 24 hours:' :
+            'commented on your post';
 
             return `
             <div id="notif-row-${esc(n.id)}"
-              onclick="handleNotifClick('${esc(n.id)}','${esc(n.postId)}','${esc(barangayId)}','${esc(uid)}')"
+              onclick="handleNotifClick('${esc(n.id)}','${esc(n.postId)}','${esc(barangayId)}','${esc(uid)}','${esc(n.type)}')"
               style="display:flex;align-items:flex-start;gap:.75rem;
                 padding:.85rem 1.1rem;border-bottom:1px solid #f3f4f6;
                 cursor:pointer;transition:background .15s;position:relative;"
@@ -204,8 +209,10 @@ function renderDropdown(notifs, barangayId, uid) {
               <div style="flex:1;min-width:0;padding-right:1.5rem;">
                 <p style="margin:0 0 2px;font-size:.82rem;color:#374151;line-height:1.4;
                   font-weight:${n.read ? '400' : '600'};">
-                  <strong>${esc(n.actorName)}</strong> ${msg}
-                  <em>"${esc(n.postTitle)}"</em>
+                  ${['poll_created','poll_closed','poll_deadline'].includes(n.type)
+                  ? `${msg} <em>"${esc(n.postTitle)}"</em>${n.description ? `<br><span style="color:#6b7280;font-size:.76rem;">${esc(n.description)}</span>` : ''}`
+                  : `<strong>${esc(n.actorName)}</strong> ${msg} <em>"${esc(n.postTitle)}"</em>`
+                }
                 </p>
                 <p style="margin:0;font-size:.7rem;color:#9ca3af;">${relTime(n.createdAt)}</p>
               </div>
@@ -232,6 +239,24 @@ function renderDropdown(notifs, barangayId, uid) {
     </div>`;
 
   lucide.createIcons({ el: panel });
+}
+
+/*
+   Sends a poll notification to every user in the barangay
+   except the actor. Used by polls-admin.js and community-polls.js.
+   data shape: { type, actorId, postId, postTitle, description? }
+*/
+export async function notifyAllInBarangay(barangayId, data) {
+  try {
+    const { getDocs: _get, collection: _col } =
+      await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap = await _get(_col(db, 'barangays', barangayId, 'users'));
+    await Promise.all(
+      snap.docs
+        .filter(d => d.id !== data.actorId)
+        .map(d => sendNotification(barangayId, d.id, { ...data, actorName: 'BarangayConnect' }))
+    );
+  } catch (e) { console.error('[notif] notifyAllInBarangay:', e); }
 }
 
 
@@ -263,34 +288,125 @@ export async function sendNotification(barangayId, recipientUid, data) {
 }
 
 
-/* ================================================
-   NOTIFICATION CLICK
-   Marks the notification as read, closes the panel,
-   then scrolls to the related post and opens its
-   comment thread if not already open.
-================================================ */
+  /* ================================================
+    NOTIFICATION CLICK
+    Marks the notification as read, closes the panel,
+    determines the target page + tab, and either
+    navigates cross-page (with ?tab=&scrollTo= params)
+    or switches tab + retries scrolling in-place.
+  ================================================ */
 
-window.handleNotifClick = async function (notifId, postId, barangayId, uid) {
-  try {
-    const ref = doc(db, 'barangays', barangayId, 'users', uid, 'notifications', notifId);
-    await updateDoc(ref, { read: true });
-  } catch (e) { /* non-fatal */ }
+  window.handleNotifClick = async function (notifId, postId, barangayId, uid, type) {
+    try {
+      const ref = doc(db, 'barangays', barangayId, 'users', uid, 'notifications', notifId);
+      await updateDoc(ref, { read: true });
+    } catch (e) { /* non-fatal */ }
 
-  document.getElementById('notif-panel').style.display = 'none';
+    document.getElementById('notif-panel').style.display = 'none';
 
-  const postEl = document.getElementById(`comment-thread-${postId}`)?.closest('article');
-  if (postEl) {
-    postEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    postEl.style.transition = 'box-shadow .3s';
-    postEl.style.boxShadow  = '0 0 0 2px #f97316';
-    setTimeout(() => { postEl.style.boxShadow = ''; }, 1800);
+    const isPoll    = ['poll_created', 'poll_closed', 'poll_deadline'].includes(type);
+    const targetTab = isPoll ? 'polls' : 'bulletin';
 
-    const thread = document.getElementById(`comment-thread-${postId}`);
-    if (thread && (thread.style.display === 'none' || !thread.style.display)) {
-      window.toggleComments?.(postId);
+    // Detect community page by the presence of its root containers
+    const onCommunity = !!(
+      document.getElementById('bulletinList') ||
+      document.getElementById('pollsList')
+    );
+
+    if (!onCommunity) {
+      // Navigate cross-page — community.html reads ?tab= and ?scrollTo= on load
+      window.location.href =
+        `community.html?tab=${targetTab}&scrollTo=${encodeURIComponent(postId)}`;
+      return;
     }
+
+    // Already on community page — switch to the correct tab first
+    const tabBtn = document.querySelector(`[data-tab="${targetTab}"]`);
+    if (tabBtn) {
+      const isActive =
+        tabBtn.classList.contains('is-active') ||
+        tabBtn.getAttribute('aria-selected') === 'true' ||
+        tabBtn.dataset.active === 'true';
+      if (!isActive) tabBtn.click();
+    }
+
+    // Then retry-scroll until the element renders (data may still be loading)
+    _notifScrollToPost(postId);
+  };
+
+
+  /* ================================================
+    SCROLL WITH RETRY
+    Polls the DOM every 250 ms for up to ~3.5 s after
+    a tab switch or fresh page load. Shows a toast if
+    the post can't be found (likely deleted).
+  ================================================ */
+
+  function _notifScrollToPost(postId, attempt = 0) {
+    const MAX_ATTEMPTS = 14;
+    const INTERVAL_MS  = 250;
+
+    const el =
+      document.getElementById(`comment-thread-${postId}`)?.closest('article') ??
+      document.getElementById(`opts_${postId}`)?.closest('.poll-card');
+
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.style.transition = 'box-shadow .35s';
+      el.style.boxShadow  = '0 0 0 3px #f97316, 0 0 0 7px rgba(249,115,22,.18)';
+      setTimeout(() => { el.style.boxShadow = ''; }, 2200);
+
+      // Auto-open the comment thread if it's a comment/reply notification
+      const thread = document.getElementById(`comment-thread-${postId}`);
+      if (thread && (thread.style.display === 'none' || !thread.style.display)) {
+        window.toggleComments?.(postId);
+      }
+      return;
+    }
+
+    if (attempt < MAX_ATTEMPTS) {
+      if (attempt === 7) {
+        window._bcTab?.('archived');
+      }
+      setTimeout(() => _notifScrollToPost(postId, attempt + 1), INTERVAL_MS);
+    } else {
+      _showNotifToast('This post is no longer available.', 'error');
   }
-};
+  }
+
+
+  /* ================================================
+    NOTIFICATION TOAST
+    Falls back to creating its own container if the
+    page doesn't have a known toast container yet.
+  ================================================ */
+
+  function _showNotifToast(msg, type = 'info') {
+    let c =
+      document.getElementById('bulletinToastContainer') ??
+      document.getElementById('toastContainer') ??
+      document.getElementById('_pollToasts');
+
+    if (!c) {
+      c    = document.createElement('div');
+      c.id = '_notifToastContainer';
+      c.style.cssText =
+        'position:fixed;bottom:1.5rem;right:1.5rem;' +
+        'display:flex;flex-direction:column;gap:.5rem;z-index:4000;pointer-events:none;';
+      document.body.appendChild(c);
+    }
+
+    const bg = { error: '#9b1c1c', success: '#1a3a1a', info: '#374151' }[type] ?? '#374151';
+    const t  = document.createElement('div');
+    t.style.cssText =
+      `display:flex;align-items:center;gap:.55rem;background:${bg};color:#fff;` +
+      `padding:.75rem 1.1rem;border-radius:10px;font-size:.875rem;font-weight:500;` +
+      `box-shadow:0 4px 16px rgba(0,0,0,.22);pointer-events:all;` +
+      `animation:toastIn .25s ease both;`;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+  }
 
 
 /* ================================================
@@ -366,6 +482,24 @@ async function markAllRead(barangayId, uid) {
 
   unreadSnap.forEach(d => batch.update(d.ref, { read: true }));
   await batch.commit();
+}
+
+function _scrollAndHighlight(el, postId) {
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.style.transition = 'box-shadow .3s';
+  el.style.boxShadow  = '0 0 0 2px #f97316';
+  setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+  const thread = document.getElementById(`comment-thread-${postId}`);
+  if (thread && (thread.style.display === 'none' || !thread.style.display)) {
+    window.toggleComments?.(postId);
+  }
+}
+
+function _switchToTab(tabName) {
+  // These selectors need to match your actual tab buttons
+  // Look in your HTML for the tab buttons and adjust the selector
+  const tabBtn = document.querySelector(`[data-tab="${tabName}"], [onclick*="${tabName}"], #tab-${tabName}`);
+  if (tabBtn) tabBtn.click();
 }
 
 

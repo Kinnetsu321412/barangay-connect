@@ -270,6 +270,26 @@ function renderSettings(data) {
         </button>
       </div>
 
+      <!-- Poll archive delay -->
+      <div style="padding:1rem;border:1.5px solid #e5e7eb;border-radius:10px;margin-bottom:.75rem;">
+        <p style="font-weight:600;font-size:.9rem;margin:0 0 4px;">Auto-archive closed polls after</p>
+        <p style="font-size:.78rem;color:#6b7280;margin:0 0 .75rem;line-height:1.5;">
+          Closed polls will automatically move to Archived after this many days. Default is 1.
+        </p>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+          <input type="number" id="pollArchiveDaysInput" min="0" max="365"
+            value="${data.pollArchiveDays ?? 1}"
+            style="width:60px;padding:.4rem .6rem;border:1.5px solid #e0e0e0;border-radius:8px;
+              font-size:.88rem;text-align:center;outline:none;font-weight:600;" />
+          <span style="font-size:.78rem;color:#6b7280;">days after closing</span>
+          <button onclick="savePollArchiveDays()"
+            style="padding:.4rem .9rem;border-radius:8px;background:#1a3a1a;
+              color:#fff;border:none;font-size:.78rem;font-weight:600;cursor:pointer;">
+            Save
+          </button>
+        </div>
+      </div>
+
       <!-- Daily post report limit -->
       <div style="padding:1rem;border:1.5px solid #e5e7eb;border-radius:10px;margin-bottom:.75rem;">
         <p style="font-weight:600;font-size:.9rem;margin:0 0 4px;">Daily post report limit per resident</p>
@@ -440,6 +460,20 @@ window.saveCommentReportLimit = async function () {
   showSettingsToast('Saving…');
   try {
     await setDoc(_settingsRef, { dailyCommentReportLimit: val }, { merge: true });
+    showSettingsToast('Saved ✓', 'success');
+  } catch {
+    showSettingsToast('Failed to save. Try again.', 'error');
+  }
+};
+
+/* Saves the number of days before closed polls are auto-archived */
+window.savePollArchiveDays = async function () {
+  if (!_settingsRef) return;
+  const val = parseInt(document.getElementById('pollArchiveDaysInput')?.value, 10);
+  if (isNaN(val) || val < 0 || val > 365) return;
+  showSettingsToast('Saving…');
+  try {
+    await setDoc(_settingsRef, { pollArchiveDays: val }, { merge: true });
     showSettingsToast('Saved ✓', 'success');
   } catch {
     showSettingsToast('Failed to save. Try again.', 'error');

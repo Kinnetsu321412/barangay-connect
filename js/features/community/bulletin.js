@@ -99,6 +99,7 @@ let _currentUserName   = 'Resident';
 let _currentUserRole   = 'resident';
 const PAGE_SIZE        = 10;
 let _currentPage       = 0;
+let _scrollHandled = false;
 
 
 // ================================================
@@ -457,6 +458,46 @@ function renderBulletin(listEl) {
   }
 
   restoreOpenThreads();
+
+    if (!_scrollHandled) {
+    const _qp     = new URLSearchParams(window.location.search);
+    const _scrollTo = _qp.get('scrollTo');
+    const _tabParam = _qp.get('tab');
+
+    // If the URL explicitly targets the polls tab, let community-polls.js handle it
+    if (_scrollTo && _tabParam !== 'polls') {
+      _scrollHandled = true;
+
+      // Ensure the bulletin tab is active before we start looking
+      const bulletinTabBtn = document.querySelector('[data-tab="bulletin"]');
+      if (bulletinTabBtn) {
+        const active =
+          bulletinTabBtn.classList.contains('is-active') ||
+          bulletinTabBtn.getAttribute('aria-selected') === 'true';
+        if (!active) bulletinTabBtn.click();
+      }
+
+      let _attempts = 0;
+      const _MAX    = 14;
+
+      (function tryScroll() {
+        const el =
+          document.getElementById(`comment-thread-${_scrollTo}`)?.closest('article') ??
+          document.getElementById(`opts_${_scrollTo}`)?.closest('.poll-card');
+
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.transition = 'box-shadow .35s';
+          el.style.boxShadow  = '0 0 0 3px #f97316, 0 0 0 7px rgba(249,115,22,.18)';
+          setTimeout(() => { el.style.boxShadow = ''; }, 2200);
+        } else if (_attempts++ < _MAX) {
+          setTimeout(tryScroll, 250);
+        } else {
+          showToast('This post is no longer available.', 'error');
+        }
+      })();
+    }
+  }
 }
 
 

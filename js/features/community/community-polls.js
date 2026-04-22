@@ -76,6 +76,8 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { notifyAllInBarangay } from '../../shared/notifications.js';
+
 // ================================================
 // CATEGORY MAP
 // ================================================
@@ -163,7 +165,9 @@ function _subscribe() {
   _unsub = onSnapshot(q, async snap => {
     const polls = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    _autoCloseExpired(polls); // fire-and-forget — updates expired polls
+    _autoCloseExpired(polls);       // closes polls past their endDate
+    _autoArchiveClosedPolls(polls); // archives old closed polls
+    _checkNearDeadline(polls);
     if (_uid) await _prefetchVotes(polls.map(p => p.id));
     _render(polls);
   });
@@ -198,29 +202,89 @@ function _subscribeArchived() {
    the next snapshot will reflect the update and re-render.
    Any authenticated user can close an expired poll since
    the outcome is deterministic and the write is non-destructive.
+
+   Auto-archives closed polls after N days (default: 1).
+   archiveDays is read from barangay settings.
+   Sets isDeleted: true — same as admin soft-delete.
 */
+async function _autoArchiveClosedPolls(polls) {
+  // Fetch archiveDays from settings
+  let archiveDays = 1;
+  try {
+    const { getDoc: _gd, doc: _d } = await import(
+      "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"
+    );
+    const settingsSnap = await _gd(_d(db, 'barangays', _barangayId, 'meta', 'settings'));
+    if (settingsSnap.exists()) {
+      archiveDays = settingsSnap.data().pollArchiveDays ?? 1;
+    }
+  } catch { /* use default */ }
+
+  const threshold = Date.now() - archiveDays * 86_400_000;
+
+  for (const poll of polls) {
+    if (poll.status !== 'closed') continue;
+    const closedAt = poll.updatedAt?.toMillis?.() ?? poll.endDate?.toMillis?.();
+    if (!closedAt || closedAt > threshold) continue;
+    try {
+      await updateDoc(pollDoc(_barangayId, poll.id), {
+        isDeleted: true,
+        updatedAt: serverTimestamp(),
+      });
+    } catch { /* non-fatal */ }
+  }
+}
+
 async function _autoCloseExpired(polls) {
   const now = Date.now();
   for (const poll of polls) {
-    if (poll.status !== 'active') continue;
     const end = poll.endDate?.toMillis?.();
+    if (poll.status !== 'active') continue;
     if (!end || end >= now) continue;
     try {
       await updateDoc(pollDoc(_barangayId, poll.id), {
         status:    'closed',
         updatedAt: serverTimestamp(),
-        });
-        // Audit log — non-fatal
-        try {
+      });
+      try {
         await addDoc(pollActionsCol(_barangayId, poll.id), {
-            actionType:  'auto_close',
-            performedBy: _uid ?? 'system',
-            role:        _role,
-            reason:      'Poll reached its end date',
-            timestamp:   serverTimestamp(),
+          actionType:  'auto_close',
+          performedBy: _uid ?? 'system',
+          role:        _role,
+          reason:      'Poll reached its end date',
+          timestamp:   serverTimestamp(),
         });
-        } catch { /* non-fatal */ }
+      } catch { /* non-fatal */ }
     } catch { /* non-fatal — another tab may have already closed it */ }
+  }
+}
+
+/*
+   Sends a one-time deadline alert for active polls ending within 24 hours.
+   Sets nearDeadlineNotified: true on the poll doc to prevent repeat sends.
+*/
+async function _checkNearDeadline(polls) {
+  const now   = Date.now();
+  const in24h = now + 86_400_000;
+  for (const poll of polls) {
+    if (poll.status !== 'active' || poll.nearDeadlineNotified) continue;
+    const end = poll.endDate?.toMillis?.();
+    if (!end || end < now || end > in24h) continue;
+    try {
+      await updateDoc(pollDoc(_barangayId, poll.id), {
+        nearDeadlineNotified: true,
+        updatedAt: serverTimestamp(),
+      });
+      if (_role === 'admin' || _role === 'officer') {
+        notifyAllInBarangay(_barangayId, {
+            type:        'poll_deadline',
+            actorId:     _uid ?? 'system',
+            postId:      poll.id,
+            postTitle:   poll.title,
+            description: poll.description ?? null,
+        });
+        }
+    } catch { /* non-fatal */ }
   }
 }
 
@@ -619,6 +683,43 @@ onAuthStateChanged(auth, async user => {
       user.displayName ?? 'Resident',
       role ?? 'resident',
     );
+    const _qp2     = new URLSearchParams(window.location.search);
+    const _scrollTo = _qp2.get('scrollTo');
+    const _tabParam = _qp2.get('tab');
+
+    // If the URL explicitly targets the bulletin tab, let bulletin.js handle it
+    if (_scrollTo && _tabParam !== 'bulletin') {
+
+    // Ensure the polls tab is active
+    const pollsTabBtn = document.querySelector('[data-tab="polls"]');
+    if (pollsTabBtn) {
+        const active =
+        pollsTabBtn.classList.contains('is-active') ||
+        pollsTabBtn.getAttribute('aria-selected') === 'true';
+        if (!active) pollsTabBtn.click();
+    }
+
+    let _attempts = 0;
+    const _MAX    = 14;
+
+    (function tryScroll() {
+        const el =
+        document.getElementById(`opts_${_scrollTo}`)?.closest('.poll-card') ??
+        document.getElementById(`comment-thread-${_scrollTo}`)?.closest('article');
+
+        if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'box-shadow .35s';
+        el.style.boxShadow  = '0 0 0 3px #f97316, 0 0 0 7px rgba(249,115,22,.18)';
+        setTimeout(() => { el.style.boxShadow = ''; }, 2200);
+        } else if (_attempts++ < _MAX) {
+        setTimeout(tryScroll, 250);
+        } else {
+        _showToast('This poll is no longer available.', 'error');
+        }
+    })();
+    }
+
   } catch (err) {
     console.error('[polls] bootstrap error', err);
   }
