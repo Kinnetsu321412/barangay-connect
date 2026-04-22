@@ -735,21 +735,20 @@ window.closePoll = async function (pollId) {
    Polls with votes are soft-deleted (isDeleted: true) to preserve
    the audit trail. Zero-vote polls are hard-deleted.
 */
-window.deletePoll = async function (pollId, hasVotes) {
-  const msg = hasVotes
-    ? 'This poll has votes. It will be archived and hidden from public view but will remain in the audit logs. Continue?'
-    : 'Delete this poll permanently? This cannot be undone.';
-  if (!confirm(msg)) return;
+window.deletePoll = async function (pollId) {
+  if (!confirm('Archive this poll instead of deleting it permanently?')) return;
 
   try {
-    if (hasVotes) {
-      await updateDoc(pollDoc(_bid, pollId), { isDeleted: true, updatedAt: serverTimestamp() });
-      await _logAction(pollId, 'soft_delete', null);
-    } else {
-      await deleteDoc(pollDoc(_bid, pollId));
-    }
-    showToast('Poll deleted.', 'success');
-  } catch { showToast('Failed to delete poll.', 'error'); }
+    await updateDoc(pollDoc(_bid, pollId), {
+      isDeleted: true,
+      updatedAt: serverTimestamp(),
+    });
+
+    await _logAction(pollId, 'soft_delete', null);
+    showToast('Poll archived.', 'success');
+  } catch {
+    showToast('Failed to archive poll.', 'error');
+  }
 };
 
 window.togglePinPoll = async function (pollId, currentlyPinned) {
