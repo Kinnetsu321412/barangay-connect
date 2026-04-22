@@ -36,7 +36,6 @@
 
       {
         "source": "/home",
-<<<<<<< HEAD
         "destination": "/pages/features/home.html"
       },
       {
@@ -50,21 +49,6 @@
       {
         "source": "/service",
         "destination": "/pages/features/services.html"
-=======
-        "destination": "/pages/home.html"
-      },
-      {
-        "source": "/community",
-        "destination": "/pages/community.html"
-      },
-      {
-        "source": "/profile",
-        "destination": "/pages/profile.html"
-      },
-      {
-        "source": "/service",
-        "destination": "/pages/service.html"
->>>>>>> a8186e92af4ca5dd1d4d80ab0d0ece95a2bc75ad
       },
 
       {
@@ -77,7 +61,6 @@
       },
 
       {
-<<<<<<< HEAD
         "source": "/ui-library/button-library",
         "destination": "/ui-library/button-library.html"
       },
@@ -108,22 +91,6 @@
       {
         "source": "/library/main-library",
         "destination": "/ui-library/main-library.html"
-=======
-        "source": "/library/button-library",
-        "destination": "/library/button-library.html"
-      },
-      {
-        "source": "/library/components-library",
-        "destination": "/library/components-library.html"
-      },
-      {
-        "source": "/library/frames-library",
-        "destination": "/library/frames-library.html"
-      },
-      {
-        "source": "/library/main-library",
-        "destination": "/library/main-library.html"
->>>>>>> a8186e92af4ca5dd1d4d80ab0d0ece95a2bc75ad
       }
     ]
   }
