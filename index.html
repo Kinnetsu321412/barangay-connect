@@ -1,0 +1,226 @@
+<!--
+================================================
+  index.html — BarangayConnect
+  Sign-in entry point for registered residents.
+  Renders the two-panel login layout: a branded
+  left panel with stats and a right panel with
+  the login form.
+
+  WHAT IS IN HERE:
+    · Left panel — logo, decorative circles, badge,
+      hero text, and animated stats row
+    · Right panel — email/password login form with
+      toggle visibility, forgot password link,
+      and register redirect
+
+  WHAT IS NOT IN HERE:
+    · Form validation and submit logic (auth.js)
+    · Layout and panel styles (auth.css, main.css)
+    · Firebase initialization (firebase-config.js)
+
+  REQUIRED IMPORTS:
+    · css/shared/main.css, css/features/auth/auth.css
+    · https://unpkg.com/lucide — icon set
+    · js/features/auth/auth.js (module)
+    · js/core/firebase-config.js (module)
+
+  QUICK REFERENCE:
+    · #loginForm        — main sign-in form
+    · #loginEmail       — email input field
+    · #loginPassword    — password input field
+    · #togglePassword   — eye button for password visibility
+    · #loginBtn         — submit button
+    · #loginSpinner     — loading spinner (hidden by default)
+    · #loginError       — general credential error message
+    · .auth-left        — branded left panel
+    · .auth-right       — white right panel with form
+================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In</title>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <link rel="stylesheet" href="css/shared/main.css" />
+  <link rel="stylesheet" href="css/features/auth/auth.css" />
+</head>
+<body class="login-page">
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       LEFT PANEL
+       ───────────────────────────────────────────────────────────────
+       Branded panel with logo, decorative circles, hero copy,
+       and a stats row. Visual only — no interactive elements.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="auth-left">
+
+    <!-- Logo -->
+    <div class="auth-logo">
+      <img
+        src="assets/images/logo.png"
+        alt="BarangayConnect"
+        class="auth-logo__img"
+      />
+    </div>
+
+    <!-- Decorative Circles (CSS only) -->
+    <div class="auth-left__circle auth-left__circle--top"></div>
+    <div class="auth-left__circle auth-left__circle--bottom"></div>
+
+    <!-- Sign In Badge -->
+    <div class="auth-left__badge">
+      <i data-lucide="circle-dot"></i>
+      <span>Sign In</span>
+    </div>
+
+    <!-- Hero Text -->
+    <div class="auth-left__hero">
+      <h1 class="auth-left__heading">
+        Welcome back to<br />your community
+      </h1>
+      <p class="auth-left__subtext">
+        Access services, report concerns, and stay connected with your
+        barangay — all in one place.
+      </p>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="auth-left__stats">
+      <div class="stat-item">
+        <span class="stat-item__number" data-target="2418">0</span>
+        <span class="stat-item__label">Residents</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__number" data-suffix="%">98</span>
+        <span class="stat-item__label">Satisfaction</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-item__number" data-suffix="h">24</span>
+        <span class="stat-item__label">Response Time</span>
+      </div>
+    </div>
+
+  </div><!-- /auth-left -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       RIGHT PANEL
+       ───────────────────────────────────────────────────────────────
+       White panel containing the sign-in form.
+       Handles email/password input, visibility toggle,
+       forgot password link, and redirect to registration.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="auth-right">
+
+    <div class="auth-form-wrapper">
+
+      <h2 class="auth-form__title">Sign in</h2>
+
+      <!-- ─────────────────────────────────────────────
+           LOGIN FORM
+           Validated and submitted by auth.js.
+           Shows inline field errors and a general
+           credential error below the submit button.
+      ───────────────────────────────────────────────── -->
+      <form class="auth-form" id="loginForm" novalidate>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label" for="loginEmail">Email address</label>
+          <div class="form-input-wrap">
+            <input
+              class="form-input"
+              type="email"
+              id="loginEmail"
+              name="email"
+              placeholder="juan@barangay.ph"
+              autocomplete="email"
+            />
+          </div>
+          <span class="form-error" id="emailError" aria-live="polite"></span>
+        </div>
+
+        <!-- Password -->
+        <div class="form-group">
+          <label class="form-label" for="loginPassword">Password</label>
+          <div class="form-input-wrap form-input-wrap--icon">
+            <input
+              class="form-input"
+              type="password"
+              id="loginPassword"
+              name="password"
+              placeholder="Your password"
+              autocomplete="current-password"
+            />
+            <!-- Toggle password visibility -->
+            <button
+              type="button"
+              class="form-input__eye"
+              id="togglePassword"
+              aria-label="Toggle password visibility"
+            >
+              <i data-lucide="eye"></i>
+            </button>
+          </div>
+          <span class="form-error" id="passwordError" aria-live="polite"></span>
+        </div>
+
+        <!-- Forgot Password -->
+        <div class="form-forgot">
+          <a href="#" class="form-link">Forgot password?</a>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn--primary btn--full" id="loginBtn">
+          <i data-lucide="log-in"></i>
+          <span>Sign In</span>
+          <!-- Loading spinner (hidden by default) -->
+          <span class="btn__spinner" id="loginSpinner" hidden>
+            <i data-lucide="loader-circle"></i>
+          </span>
+        </button>
+
+        <!-- General credential error -->
+        <p class="form-error form-error--center" id="loginError" aria-live="polite"></p>
+
+      </form><!-- /loginForm -->
+
+      <!-- Register Redirect -->
+      <p class="auth-switch">
+        Don't have an account?
+        <a href="register.html" class="form-link form-link--bold">Register here</a>
+      </p>
+
+    </div><!-- /auth-form-wrapper -->
+
+  </div><!-- /auth-right -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SCRIPTS
+       ───────────────────────────────────────────────────────────────
+       1. lucide.createIcons() — renders all data-lucide icons
+       2. auth.js (module)    — form validation and sign-in logic
+       3. firebase-config.js  — shared Firebase app instance
+  ══════════════════════════════════════════════════════════════════ -->
+  <script>lucide.createIcons();</script>
+
+  <script type="module" src="js/features/auth/auth.js"></script>
+
+  <script type="module">
+    import { initializeApp }                    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getAuth, signInAnonymously }       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+    import { getFirestore, doc, getDoc }        from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+    import { app } from './js/core/firebase-config.js';
+  </script>
+
+
+</body>
+</html>

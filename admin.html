@@ -1,0 +1,1737 @@
+<!--
+  ================================================
+  admin.html — BarangayConnect
+  Full admin panel page. Entry point for all
+  administrative management features including
+  user roles, pending registrations, bulletin
+  moderation, alerts, curfew, and settings.
+
+  WHAT IS IN HERE:
+    · Top navigation tabs (Overview, Requests, Community, Management, Alerts, Settings)
+    · Sub-tab panels for each main section
+    · Pending registrations list with approve/reject actions
+    · Users & Roles table with role assignment modal
+    · Bulletin Posts, Reports, and Comment Manager
+    · Site Alerts and Curfew sub-panels
+    · ID photo lightbox viewer
+    · Role change confirmation modal
+    · Toast notification container
+    · Profile drawer and sign-out modal
+
+  WHAT IS NOT IN HERE:
+    · Auth logic         → js/shared/nav-auth.js
+    · Admin data logic   → js/features/admin/admin.js
+    · Role management    → js/features/admin/roles-admin.js
+    · Alert management   → js/features/admin/alerts-admin.js
+    · Curfew management  → js/features/admin/curfew-admin.js
+    · Bulletin admin     → js/features/admin/bulletin-admin.js
+    · Community posts    → js/features/admin/community-posts-admin.js
+    · Reported posts     → js/features/admin/reported-posts-admin.js
+    · Reported comments  → js/features/admin/reported-comments-admin.js
+    · Comment manager    → js/features/admin/comment-manager-admin.js
+    · Settings           → js/features/admin/settings-admin.js
+    · Shared styles      → css/shared/main.css, buttons.css, components.css, frames.css, home.css
+
+  REQUIRED IMPORTS:
+    · lucide (UMD)       → https://unpkg.com/lucide@latest/dist/umd/lucide.js
+    · js/shared/nav-auth.js     → sets body role class after auth
+    · js/shared/image-viewer.js → openImageViewer utility
+
+  QUICK REFERENCE:
+    · Tab switching      → switchTab(tab)
+    · Sub-tab switching  → switchSubTab(sub, btn) / switchAlertsSubTab / etc.
+    · Role modal         → closeModal(), confirmRoleChange(), onAdminConfirmInput()
+    · Lightbox           → openLightbox(urls, idx), closeLightbox(), lightboxStep(dir)
+    · Toast container    → #toastContainer
+  ================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin</title>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script type="module" src="js/shared/nav-auth.js"></script>
+
+  <!--
+    CSS IMPORT ORDER — DO NOT CHANGE THIS ORDER
+    main.css        → design tokens, reset, navbar, footer, form inputs
+    buttons.css     → all clickable elements (.btn and variants)
+    components.css  → badges, tags, banners, stat grid, alert widgets
+    frames.css      → post cards, marquee, modals, drawers
+    home.css        → shared page layout utilities
+  -->
+  <link rel="stylesheet" href="/css/shared/main.css" />
+  <link rel="stylesheet" href="/css/shared/buttons.css" />
+  <link rel="stylesheet" href="/css/shared/components.css" />
+  <link rel="stylesheet" href="/css/shared/frames.css" />
+  <link rel="stylesheet" href="/css/features/home/home.css" />
+
+  <style>
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+
+    /* ================================================
+       TOP NAV
+    ================================================ */
+
+    .admin-topnav {
+      background: linear-gradient(135deg, #8b1a1a 0%, #b91c1c 50%, #991b1b 100%);
+      padding: 0.75rem 2rem 0.75rem;
+      border-radius: 0 0 20px 20px;
+      position: relative;
+      margin-top: 64px;
+    }
+
+    .admin-topnav__inner {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding-top: 1rem;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+    }
+
+    .admin-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: 999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.8);
+      transition: background 0.2s, color 0.2s;
+      margin-bottom: 0.75rem;
+    }
+    .admin-tab:hover  { background: rgba(255, 255, 255, 0.25); color: #fff; }
+    .admin-tab.active { background: #fff; color: #1a1a1a; font-weight: 600; }
+    .admin-tab [data-lucide] { width: 15px; height: 15px; }
+
+
+    /* ================================================
+       CONTENT LAYOUT
+    ================================================ */
+
+    .admin-content {
+      padding: 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .admin-panel         { display: none; }
+    .admin-panel.active  { display: block; }
+
+    .panel-heading {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+    }
+
+
+    /* ================================================
+       PENDING REGISTRATIONS
+    ================================================ */
+
+    #pendingList {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .applicant-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+
+    .applicant-card__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .applicant-card__name { font-size: 1.1rem; font-weight: 600; }
+
+    /* Pending status badge */
+    .badge--pending {
+      background: #fff3cd;
+      color: #856404;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .applicant-card__grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .detail-item__label {
+      display: block;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 2px;
+    }
+
+    .detail-item__value {
+      font-size: 0.9rem;
+      font-weight: 500;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      min-width: 0;
+    }
+
+    .applicant-card__ids  { display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+    .id-photo-wrap__label { display: block; font-size: 0.75rem; color: #888; margin-bottom: 0.4rem; }
+
+    .id-photo {
+      width: 200px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+      cursor: zoom-in;
+      transition: transform 0.15s, box-shadow 0.15s;
+      display: block;
+    }
+    .id-photo:hover {
+      transform: scale(1.03);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
+    }
+    .id-photo--missing { color: #aaa; font-size: 0.85rem; }
+
+    .applicant-card__actions { display: flex; gap: 0.75rem; }
+
+    /* Shared action button base */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1.1rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .btn--success       { background: #198754; color: white; }
+    .btn--success:hover { background: #157347; }
+    .btn--danger        { background: #dc3545; color: white; }
+    .btn--danger:hover  { background: #bb2d3b; }
+    .btn:disabled       { opacity: 0.6; cursor: not-allowed; }
+
+    .applicant-card__feedback {
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+      min-height: 1rem;
+    }
+
+    #emptyState { color: #888; }
+
+
+    /* ================================================
+       USERS & ROLES
+    ================================================ */
+
+    .roles-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .role-filters {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .role-filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      border: 1.5px solid #e0e0e0;
+      background: white;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: #555;
+      transition: all 0.15s;
+    }
+    .role-filter-btn:hover         { border-color: #999; color: #1a1a1a; }
+    .role-filter-btn.active        { background: #1a3a1a; color: white; border-color: #1a3a1a; }
+    .role-filter-btn [data-lucide] { width: 13px; height: 13px; }
+
+    /* Search bar */
+    .roles-search-wrap {
+      position: relative;
+      margin-bottom: 1.5rem;
+      max-width: 400px;
+    }
+    .roles-search-wrap [data-lucide] {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      color: #aaa;
+      pointer-events: none;
+    }
+    #rolesSearch {
+      width: 100%;
+      padding: 0.6rem 1rem 0.6rem 2.4rem;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+      background: white;
+    }
+    #rolesSearch:focus { border-color: #1a3a1a; }
+
+    /* Users table */
+    .users-table {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
+      overflow: visible;
+    }
+
+    .user-row {
+      display: grid;
+      grid-template-columns: 2fr 2fr 1.2fr 0.9fr auto;
+      align-items: center;
+      padding: 0.9rem 1.25rem;
+      border-bottom: 1px solid #f0f0f0;
+      gap: 1rem;
+      transition: background 0.1s;
+      background: white;
+    }
+    .user-row:first-child  { border-radius: 12px 12px 0 0; }
+    .user-row:last-child   { border-bottom: none; border-radius: 0 0 12px 12px; }
+    .user-row:only-child   { border-radius: 12px; }
+    .user-row:hover        { background: #fafafa; }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+
+    /* Role-coloured avatar circle */
+    .user-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.875rem;
+      flex-shrink: 0;
+      color: white;
+    }
+    .user-avatar--resident { background: #1a5c2e; }
+    .user-avatar--officer  { background: #b45309; }
+    .user-avatar--admin    { background: #9b1c1c; }
+
+    .user-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .user-since { font-size: 0.75rem; color: #999; }
+
+    /* Role badge — inline label with icon */
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.25rem 0;
+    }
+    .role-badge [data-lucide]  { width: 13px; height: 13px; }
+    .role-badge--resident      { color: #1a5c2e; }
+    .role-badge--officer       { color: #b45309; }
+    .role-badge--admin         { color: #9b1c1c; }
+
+    /* Online/offline status indicator */
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: #666;
+    }
+    .status-dot::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ccc;
+    }
+    .status-dot--online::before  { background: #22c55e; }
+    .status-dot--offline::before { background: #d1d5db; }
+    .status-dot--recent::before  { background: #f59e0b; }
+
+    /* Role action buttons (circular icon buttons) */
+    .role-actions { display: flex; align-items: center; gap: 0.4rem; }
+
+    .role-action-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 2px solid #e0e0e0;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: #bbb;
+    }
+    .role-action-btn [data-lucide]        { width: 15px; height: 15px; }
+    .role-action-btn:not(:disabled):hover { transform: scale(1.1); }
+
+    .role-action-btn--resident { color: #1a5c2e; border-color: #1a5c2e; }
+    .role-action-btn--officer  { color: #b45309; border-color: #b45309; }
+    .role-action-btn--admin    { color: #9b1c1c; border-color: #9b1c1c; }
+
+    /* Active role highlight */
+    .role-action-btn.current-role              { border-width: 2.5px; }
+    .role-action-btn.current-role--resident    { background: #f0faf4; }
+    .role-action-btn.current-role--officer     { background: #fffbeb; }
+    .role-action-btn.current-role--admin       { background: #fff1f1; }
+
+    .role-action-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .users-empty {
+      padding: 3rem;
+      text-align: center;
+      color: #aaa;
+      font-size: 0.9rem;
+      border-radius: 12px;
+    }
+
+    #rolesLoadingState {
+      padding: 2rem;
+      text-align: center;
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    /* Identity chips */
+    .you-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #e8f5ed;
+      color: #1a5c2e;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 999px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .you-chip [data-lucide] { width: 11px; height: 11px; }
+
+    .super-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #fef9c3;
+      color: #854d0e;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 999px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+    .super-badge [data-lucide] { width: 11px; height: 11px; }
+
+
+    /* ================================================
+       JS TOOLTIP
+    ================================================ */
+
+    #adminTooltip {
+      position: fixed;
+      z-index: 9999;
+      background: #1a1a1a;
+      color: white;
+      font-size: 0.72rem;
+      font-weight: 500;
+      padding: 5px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.12s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    #adminTooltip.visible { opacity: 1; }
+
+
+    /* ================================================
+       ROLE CHANGE MODAL
+    ================================================ */
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .modal-backdrop.visible { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      width: min(460px, 92vw);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+      transform: translateY(12px) scale(0.97);
+      transition: transform 0.2s, opacity 0.2s;
+      opacity: 0;
+    }
+    .modal-backdrop.visible .modal { transform: translateY(0) scale(1); opacity: 1; }
+
+    /* Role-coloured icon container */
+    .modal__icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .modal__icon--resident { background: #f0faf4; color: #1a5c2e; }
+    .modal__icon--officer  { background: #fffbeb; color: #b45309; }
+    .modal__icon--admin    { background: #fff1f1; color: #9b1c1c; }
+    .modal__icon [data-lucide] { width: 22px; height: 22px; }
+
+    .modal__title { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .modal__body  { font-size: 0.9rem; color: #555; line-height: 1.6; margin-bottom: 1.25rem; }
+    .modal__body strong { color: #1a1a1a; }
+
+    /* Admin confirm text input — only shown for admin role changes */
+    .modal__confirm-wrap               { display: none; flex-direction: column; gap: 0.4rem; margin-bottom: 1.25rem; }
+    .modal__confirm-wrap.visible       { display: flex; }
+    .modal__confirm-label              { font-size: 0.8rem; color: #666; font-weight: 500; }
+    .modal__confirm-label span {
+      font-family: monospace;
+      background: #f4f6f9;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      color: #9b1c1c;
+    }
+    .modal__confirm-input {
+      padding: 0.6rem 0.9rem;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .modal__confirm-input:focus { border-color: #9b1c1c; }
+    .modal__confirm-input.error { border-color: #dc3545; }
+
+    .modal__actions   { display: flex; gap: 0.75rem; justify-content: flex-end; }
+    .modal__btn {
+      padding: 0.55rem 1.2rem;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .modal__btn--cancel          { background: #f4f6f9; color: #555; }
+    .modal__btn--cancel:hover    { background: #e8eaed; }
+    .modal__btn--confirm         { background: #1a5c2e; color: white; }
+    .modal__btn--confirm:hover   { background: #155227; }
+    .modal__btn--confirm.admin-confirm       { background: #9b1c1c; }
+    .modal__btn--confirm.admin-confirm:hover { background: #7f1d1d; }
+    .modal__btn--confirm:disabled            { opacity: 0.4; cursor: not-allowed; }
+
+
+    /* ================================================
+       TOAST NOTIFICATIONS
+    ================================================ */
+
+    #toastContainer {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 2000;
+    }
+
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: #1a1a1a;
+      color: white;
+      padding: 0.75rem 1.1rem;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      animation: toastIn 0.25s ease both;
+    }
+    .toast [data-lucide] { width: 16px; height: 16px; flex-shrink: 0; }
+    .toast--success      { background: #1a5c2e; }
+    .toast--error        { background: #9b1c1c; }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+
+    /* ================================================
+       NAVBAR OVERRIDE — force admin red theme
+    ================================================ */
+
+    .navbar,
+    .navbar--transparent {
+      background: linear-gradient(135deg, #8b1a1a 0%, #b91c1c 50%, #991b1b 100%) !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+    .navbar__link,
+    .navbar__logo-text { color: #fff !important; }
+
+
+    /* ================================================
+       ID PHOTO LIGHTBOX
+    ================================================ */
+
+    #idLightbox {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9000;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(6px);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    #idLightbox.is-open {
+      display: flex;
+      animation: lbFadeIn 0.18s ease both;
+    }
+
+    @keyframes lbFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .lb-card {
+      position: relative;
+      animation: lbSlideUp 0.22s ease both;
+    }
+    @keyframes lbSlideUp {
+      from { opacity: 0; transform: translateY(18px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .lb-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.45);
+      margin-bottom: 0.6rem;
+      text-align: center;
+    }
+
+    #lightboxImg {
+      max-width: min(880px, 92vw);
+      max-height: 74vh;
+      border-radius: 12px;
+      display: block;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+      transition: opacity 0.15s;
+    }
+    #lightboxImg.is-loading { opacity: 0.35; }
+
+    .lb-close {
+      position: absolute;
+      top: -14px;
+      right: -14px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+      transition: transform 0.15s;
+    }
+    .lb-close:hover        { transform: scale(1.12); }
+    .lb-close [data-lucide] { width: 15px; height: 15px; }
+
+    .lb-nav { display: flex; gap: 0.6rem; }
+
+    .lb-nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 1.1rem;
+      border-radius: 8px;
+      border: 1.5px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.07);
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .lb-nav-btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
+    .lb-nav-btn:disabled             { opacity: 0.3; cursor: default; }
+    .lb-nav-btn [data-lucide]        { width: 13px; height: 13px; }
+
+    .lb-hint {
+      color: rgba(255, 255, 255, 0.28);
+      font-size: 0.72rem;
+      margin: 0;
+    }
+    .lb-hint kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+    }
+
+  </style>
+</head>
+
+<!--
+  ─────────────────────────────────────────────
+  ROLE CLASS on <body> controls navbar item
+  visibility. JS sets this after auth.
+  Values: role-resident | role-officer | role-admin
+  Default: role-guest
+  ─────────────────────────────────────────────
+-->
+<body class="role-guest" data-role-init="pending">
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       NAVBAR
+       ───────────────────────────────────────────────────────────────
+       Overridden to use the admin red gradient theme.
+       Role-gated items (.navbar__item--admin etc.) are controlled
+       by the body role class set in nav-auth.js.
+  ══════════════════════════════════════════════════════════════════ -->
+  <nav class="navbar navbar--transparent" id="mainNavbar">
+    <div class="navbar__inner">
+
+      <!-- Logo -->
+      <a href="pages/features/home.html" class="navbar__logo">
+        <img src="assets/images/logo.png" alt="BarangayConnect logo" class="navbar__logo-img" />
+        <span class="navbar__logo-text">BarangayConnect</span>
+      </a>
+
+      <!-- Desktop nav links -->
+      <ul class="navbar__nav" style="list-style-type: none;">
+        <li><a href="pages/features/home.html"      class="navbar__link">Home</a></li>
+        <li><a href="pages/features/community.html" class="navbar__link">Community</a></li>
+        <li><a href="pages/features/services.html"  class="navbar__link">Services</a></li>
+        <li><a href="pages/features/profile.html"   class="navbar__link">My Barangay</a></li>
+        <li class="navbar__item--officer">
+          <a class="navbar__link navbar__link--officer">Officer Panel</a>
+        </li>
+        <li class="navbar__item--admin">
+          <a href="./admin.html" class="navbar__link navbar__link--admin is-active">Admin Panel</a>
+        </li>
+      </ul>
+
+      <!-- Right-side actions -->
+      <div class="navbar__actions">
+        <span class="navbar__role navbar__role--resident" id="navRole">Resident</span>
+        <button class="navbar__bell" aria-label="Notifications" id="bellBtn">
+          <i data-lucide="bell"></i>
+          <span class="navbar__bell-dot"></span>
+        </button>
+        <button class="navbar__avatar" aria-label="Open profile" id="avatarBtn">
+          <i data-lucide="user"></i>
+        </button>
+        <button class="navbar__hamburger" aria-label="Open menu" id="hamburgerBtn">
+          <i data-lucide="menu"></i>
+        </button>
+      </div>
+
+    </div><!-- /navbar__inner -->
+
+    <!-- Mobile drawer -->
+    <div class="navbar__mobile-drawer" id="mobileDrawer">
+      <a href="pages/features/home.html"      class="navbar__link">Home</a>
+      <a href="pages/features/community.html" class="navbar__link is-active">Community</a>
+      <a href="pages/features/services.html"  class="navbar__link">Services</a>
+      <a href="pages/features/profile.html"   class="navbar__link">My Barangay</a>
+    </div>
+  </nav>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADMIN TOP NAV — Tab bar
+       ───────────────────────────────────────────────────────────────
+       Renders as a pill-tab row on the red gradient header.
+       Active tab gets white background + dark text.
+       Pending count badge shown inline on the Management tab.
+  ══════════════════════════════════════════════════════════════════ -->
+  <nav class="admin-topnav">
+    <div class="admin-topnav__inner">
+
+      <button class="admin-tab active" data-tab="overview" onclick="switchTab('overview')">
+        <i data-lucide="layout-dashboard"></i> Overview
+      </button>
+
+      <button class="admin-tab" data-tab="requests" onclick="switchTab('requests')">
+        <i data-lucide="inbox"></i> Requests &amp; Concerns
+      </button>
+
+      <button class="admin-tab" data-tab="community" onclick="switchTab('community')">
+        <i data-lucide="newspaper"></i> Community Board
+      </button>
+
+      <button class="admin-tab" data-tab="management" onclick="switchTab('management')">
+        <i data-lucide="clock"></i> Management
+        <span id="pendingBadgeCount"
+          style="background:rgba(255,255,255,0.25);border-radius:999px;
+                 padding:0 6px;font-size:0.7rem;margin-left:2px;display:none">
+        </span>
+      </button>
+
+      <button class="admin-tab" data-tab="alerts" onclick="switchTab('alerts')">
+        <i data-lucide="bell"></i> Announcements &amp; Alerts
+        <span id="activeAlertCount"
+          style="background:rgba(255,255,255,0.25);border-radius:999px;
+                 padding:0 6px;font-size:0.7rem;margin-left:2px;display:none">
+        </span>
+      </button>
+
+      <button class="admin-tab" data-tab="settings" onclick="switchTab('settings')">
+        <i data-lucide="settings"></i> Settings
+      </button>
+
+    </div>
+  </nav>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ADMIN CONTENT — Panel container
+       ───────────────────────────────────────────────────────────────
+       Each .admin-panel corresponds to a top nav tab.
+       Only the .active panel is visible at a time.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="admin-content">
+
+
+    <!-- ══ PANEL: OVERVIEW ═══════════════════════════════════════ -->
+    <div id="panel-overview" class="admin-panel active">
+
+      <!-- Sub-tab row -->
+      <div style="display:flex;gap:.5rem;margin-bottom:1.75rem;padding-bottom:.75rem;
+                  border-bottom:2px solid #f0f0f0;flex-wrap:wrap;">
+        <button class="overview-sub-btn" onclick="switchOverviewSubTab('stats',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;
+                 color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Stats
+        </button>
+        <button class="overview-sub-btn" onclick="switchOverviewSubTab('activity',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                 color:#555;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="activity" style="width:14px;height:14px;"></i> Recent Activity
+        </button>
+      </div>
+
+      <!-- Stats sub-panel (default) -->
+      <div id="overview-sub-stats">
+        <h1 class="panel-heading">Overview</h1>
+        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
+                    color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
+          <div style="font-size:2rem;margin-bottom:.5rem;">📊</div>
+          <p style="margin:0;font-size:.9rem;">Stats and summary cards will appear here.</p>
+        </div>
+      </div>
+
+      <!-- Activity sub-panel -->
+      <div id="overview-sub-activity" hidden>
+        <h1 class="panel-heading">Recent Activity</h1>
+        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
+                    color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
+          <div style="font-size:2rem;margin-bottom:.5rem;">🕓</div>
+          <p style="margin:0;font-size:.9rem;">Recent activity feed will appear here.</p>
+        </div>
+      </div>
+
+    </div><!-- /panel-overview -->
+
+
+    <!-- ══ PANEL: REQUESTS & CONCERNS ════════════════════════════ -->
+    <div id="panel-requests" class="admin-panel">
+
+      <!-- Sub-tab row -->
+      <div style="display:flex;gap:.5rem;margin-bottom:1.75rem;padding-bottom:.75rem;
+                  border-bottom:2px solid #f0f0f0;flex-wrap:wrap;">
+        <button class="requests-sub-btn" onclick="switchRequestsSubTab('concerns',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;
+                 color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="message-circle" style="width:14px;height:14px;"></i> Concern Queue
+        </button>
+        <button class="requests-sub-btn" onclick="switchRequestsSubTab('documents',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                 color:#555;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="file-stack" style="width:14px;height:14px;"></i> Document Requests
+        </button>
+      </div>
+
+      <!-- Concern Queue sub-panel (default) -->
+      <div id="requests-sub-concerns">
+        <h1 class="panel-heading">Concern Queue</h1>
+        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
+                    color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
+          <div style="font-size:2rem;margin-bottom:.5rem;">📥</div>
+          <p style="margin:0;font-size:.9rem;">Resident concerns and reports will appear here.</p>
+        </div>
+      </div>
+
+      <!-- Document Requests sub-panel -->
+      <div id="requests-sub-documents" hidden>
+        <h1 class="panel-heading">Document Requests</h1>
+        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
+                    color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
+          <div style="font-size:2rem;margin-bottom:.5rem;">📄</div>
+          <p style="margin:0;font-size:.9rem;">Barangay clearance, certificates, and other document requests will appear here.</p>
+        </div>
+      </div>
+
+    </div><!-- /panel-requests -->
+
+
+    <!-- ══ PANEL: COMMUNITY BOARD ═════════════════════════════════ -->
+    <div id="panel-community" class="admin-panel">
+
+      <!-- Sub-tab row -->
+      <div style="display:flex;gap:.5rem;margin-bottom:1.75rem;padding-bottom:.75rem;
+                  border-bottom:2px solid #f0f0f0;flex-wrap:wrap;">
+        <button class="community-sub-btn" onclick="switchCommunitySubTab('bulletin',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;
+                 color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="layout-list" style="width:14px;height:14px;"></i> Bulletin Posts
+        </button>
+        <button class="community-sub-btn" onclick="switchCommunitySubTab('pets',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                 color:#555;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="paw-print" style="width:14px;height:14px;"></i> Pets
+        </button>
+        <button class="community-sub-btn" onclick="switchCommunitySubTab('services',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                 color:#555;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="briefcase" style="width:14px;height:14px;"></i> Services
+        </button>
+      </div>
+
+      <!-- ── Bulletin Posts sub-panel ────────────────────────── -->
+      <div id="community-sub-bulletin">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+          <h1 class="panel-heading" style="margin:0;">Bulletin Posts</h1>
+        </div>
+
+        <!-- Section toggle: Posts / Reports / Comments -->
+        <div style="display:flex;align-items:center;gap:.3rem;margin-bottom:1rem;flex-wrap:wrap;">
+          <button class="bulletin-section-btn" onclick="switchBulletinSection('posts',this)"
+            style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;
+                   border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;
+                   color:#fff;font-size:.78rem;font-weight:600;cursor:pointer;">
+            <i data-lucide="layout-list" style="width:11px;height:11px;"></i> Posts
+          </button>
+          <button class="bulletin-section-btn" onclick="switchBulletinSection('reports',this)"
+            style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;
+                   border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                   color:#6b7280;font-size:.78rem;font-weight:600;cursor:pointer;">
+            <i data-lucide="flag" style="width:11px;height:11px;"></i> Reports
+            <span id="reportsMainBadge"
+              style="display:none;background:#dc2626;color:#fff;
+                     border-radius:999px;padding:0 5px;font-size:.68rem;">
+            </span>
+          </button>
+          <button class="bulletin-section-btn" onclick="switchBulletinSection('comments',this)"
+            style="display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .75rem;
+                   border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                   color:#6b7280;font-size:.78rem;font-weight:600;cursor:pointer;">
+            <i data-lucide="message-circle" style="width:11px;height:11px;"></i> Comments
+          </button>
+        </div>
+
+        <!-- Dynamic sub-filter row — populated by switchBulletinSection() -->
+        <div id="bulletin-subfilters"
+          style="display:flex;gap:.5rem;margin-bottom:1.25rem;flex-wrap:wrap;
+                 padding-top:.75rem;border-top:1.5px solid #f0f0f0;">
+        </div>
+
+        <!-- Bulletin view containers — toggled by switchBulletinView() -->
+        <div id="bulletin-view-official">
+          <div id="announcementList" style="margin-bottom:1.5rem;"></div>
+          <div id="announcementForm"></div>
+        </div>
+
+        <div id="bulletin-view-community" hidden>
+          <div id="communityPostsList" style="display:flex;flex-direction:column;gap:.75rem;"></div>
+        </div>
+
+        <div id="bulletin-view-pending" hidden>
+          <div id="pendingPostsList" style="display:flex;flex-direction:column;gap:1rem;"></div>
+        </div>
+
+        <div id="bulletin-view-reported" hidden>
+          <div id="reportedPostsList" style="display:flex;flex-direction:column;gap:1rem;">
+            <p style="color:#aaa;">Loading…</p>
+          </div>
+        </div>
+
+        <div id="bulletin-view-reported-comments" hidden>
+          <div id="reportedCommentsList" style="display:flex;flex-direction:column;gap:.75rem;">
+            <p style="color:#aaa;">Loading…</p>
+          </div>
+        </div>
+
+        <!-- Comments view — search + list -->
+        <div id="bulletin-view-comments" hidden>
+          <div style="position:relative;margin-bottom:1rem;max-width:400px;">
+            <i data-lucide="search"
+              style="position:absolute;left:12px;top:50%;transform:translateY(-50%);
+                     width:15px;height:15px;color:#aaa;pointer-events:none;">
+            </i>
+            <input id="commentSearchInput" type="text"
+              placeholder="Search by author or content…"
+              oninput="filterComments()"
+              style="width:100%;padding:.55rem 1rem .55rem 2.4rem;border:1.5px solid #e0e0e0;
+                     border-radius:10px;font-size:.875rem;outline:none;
+                     background:#fff;box-sizing:border-box;" />
+          </div>
+          <div id="commentManagerList" style="display:flex;flex-direction:column;gap:.75rem;">
+            <p style="color:#aaa;font-size:.9rem;">Click Refresh to load comments.</p>
+          </div>
+        </div>
+
+      </div><!-- /community-sub-bulletin -->
+
+      <!-- ── Comment Manager sub-panel (legacy slot) ─────────── -->
+      <div id="community-sub-comments" hidden>
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    margin-bottom:1rem;flex-wrap:wrap;gap:.75rem;">
+          <h1 class="panel-heading" style="margin:0;">Comment Manager</h1>
+          <button onclick="refreshComments()"
+            style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                   border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                   color:#555;font-size:.82rem;font-weight:600;cursor:pointer;">
+            <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Refresh
+          </button>
+        </div>
+
+        <!-- Source filter -->
+        <div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+          <button class="comment-source-btn" onclick="setCommentSource('all',this)"
+            style="display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;
+                   border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;
+                   color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">
+            All
+          </button>
+          <button class="comment-source-btn" onclick="setCommentSource('announcements',this)"
+            style="display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;
+                   border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                   color:#555;font-size:.82rem;font-weight:600;cursor:pointer;">
+            <i data-lucide="shield-check" style="width:13px;height:13px;"></i> Official
+          </button>
+          <button class="comment-source-btn" onclick="setCommentSource('communityPosts',this)"
+            style="display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .9rem;
+                   border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                   color:#555;font-size:.82rem;font-weight:600;cursor:pointer;">
+            <i data-lucide="users" style="width:13px;height:13px;"></i> Community
+          </button>
+        </div>
+
+        <div id="commentManagerList" style="display:flex;flex-direction:column;gap:.75rem;">
+          <p style="color:#aaa;font-size:.9rem;">Click Refresh to load comments.</p>
+        </div>
+      </div><!-- /community-sub-comments -->
+
+      <!-- Pets sub-panel (placeholder) -->
+      <div id="community-sub-pets" hidden>
+        <h1 class="panel-heading">Pets</h1>
+        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
+                    color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
+          <div style="font-size:2rem;margin-bottom:.5rem;">🐾</div>
+          <p style="margin:0;font-size:.9rem;">Registered pets and lost/found listings will appear here.</p>
+        </div>
+      </div>
+
+      <!-- Services sub-panel (placeholder) -->
+      <div id="community-sub-services" hidden>
+        <h1 class="panel-heading">Services</h1>
+        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
+                    color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
+          <div style="font-size:2rem;margin-bottom:.5rem;">🛠️</div>
+          <p style="margin:0;font-size:.9rem;">Local services and listings will appear here.</p>
+        </div>
+      </div>
+
+    </div><!-- /panel-community -->
+
+
+    <!-- ══ PANEL: MANAGEMENT ══════════════════════════════════════ -->
+    <div id="panel-management" class="admin-panel">
+
+      <!-- Sub-tab row -->
+      <div style="display:flex;gap:.5rem;margin-bottom:1.75rem;padding-bottom:.75rem;
+                  border-bottom:2px solid #f0f0f0;flex-wrap:wrap;">
+        <button class="mgmt-sub-btn" data-sub="pending" onclick="switchSubTab('pending',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;
+                 color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="clock" style="width:14px;height:14px;"></i> Pending Registrations
+          <span id="pendingSubBadge"
+            style="background:rgba(255,255,255,0.25);border-radius:999px;
+                   padding:0 6px;font-size:0.7rem;display:none">
+          </span>
+        </button>
+        <button class="mgmt-sub-btn" data-sub="users" onclick="switchSubTab('users',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                 color:#555;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="users" style="width:14px;height:14px;"></i> Users &amp; Roles
+        </button>
+        <button class="mgmt-sub-btn" data-sub="reports" onclick="switchSubTab('reports',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                 color:#555;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="file-text" style="width:14px;height:14px;"></i> Reports
+        </button>
+      </div>
+
+      <!-- ── Sub: Pending Registrations ──────────────────────── -->
+      <div id="sub-pending">
+        <h1 class="panel-heading">Pending Registrations</h1>
+
+        <div class="roles-search-wrap" style="margin-bottom:1.5rem;">
+          <i data-lucide="search"></i>
+          <input type="text" id="pendingSearch"
+            placeholder="Search by name, email, or resident ID…"
+            autocomplete="off"
+            style="width:100%;padding:0.6rem 1rem 0.6rem 2.4rem;
+                   border:1.5px solid #e0e0e0;border-radius:10px;
+                   font-size:0.875rem;outline:none;
+                   transition:border-color 0.15s;background:white;" />
+        </div>
+
+        <div id="loadingState">Loading applications…</div>
+        <p id="emptyState" hidden>No pending applications. ✅</p>
+        <div id="pendingList"></div>
+      </div><!-- /sub-pending -->
+
+      <!-- ── Sub: Users & Roles ───────────────────────────────── -->
+      <div id="sub-users" hidden>
+
+        <div class="roles-header">
+          <h1 class="panel-heading" style="margin:0">Users &amp; Roles</h1>
+        </div>
+
+        <!-- Role filter pills -->
+        <div class="role-filters">
+          <button class="role-filter-btn active" data-role-filter="all" onclick="setRoleFilter('all', this)">
+            <i data-lucide="users"></i> All Users
+          </button>
+          <button class="role-filter-btn" data-role-filter="resident" onclick="setRoleFilter('resident', this)">
+            <i data-lucide="user"></i> Resident
+          </button>
+          <button class="role-filter-btn" data-role-filter="officer" onclick="setRoleFilter('officer', this)">
+            <i data-lucide="shield"></i> Barangay Officer
+          </button>
+          <button class="role-filter-btn" data-role-filter="admin" onclick="setRoleFilter('admin', this)">
+            <i data-lucide="settings"></i> Administrator
+          </button>
+        </div>
+
+        <!-- Household filter bar — populated by JS -->
+        <div style="margin-bottom:1.25rem;">
+          <p style="font-size:0.72rem;font-weight:600;text-transform:uppercase;
+                    color:#aaa;margin-bottom:0.5rem;letter-spacing:0.08em;">
+            Households
+          </p>
+          <div class="role-filters" id="householdBar"></div>
+        </div>
+
+        <!-- Search -->
+        <div class="roles-search-wrap">
+          <i data-lucide="search"></i>
+          <input type="text" id="rolesSearch"
+            placeholder="Search by name or email…"
+            oninput="filterUsers()" />
+        </div>
+
+        <!-- Users table — rows injected by roles-admin.js -->
+        <div class="users-table" id="usersTable">
+          <div id="rolesLoadingState">Loading users…</div>
+        </div>
+
+      </div><!-- /sub-users -->
+
+      <!-- ── Sub: Reports (placeholder) ──────────────────────── -->
+      <div id="sub-reports" hidden>
+        <h1 class="panel-heading">Reports</h1>
+        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
+                    color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
+          <div style="font-size:2rem;margin-bottom:.5rem;">📋</div>
+          <p style="margin:0;font-size:.9rem;">Resident reports will appear here.<br>This section is coming soon.</p>
+        </div>
+      </div><!-- /sub-reports -->
+
+    </div><!-- /panel-management -->
+
+
+    <!-- ══ PANEL: ANNOUNCEMENTS & ALERTS ═════════════════════════ -->
+    <div id="panel-alerts" class="admin-panel">
+
+      <!-- Sub-tab row -->
+      <div style="display:flex;gap:.5rem;margin-bottom:1.75rem;padding-bottom:.75rem;
+                  border-bottom:2px solid #f0f0f0;flex-wrap:wrap;">
+        <button class="alerts-sub-btn" data-sub="alerts" onclick="switchAlertsSubTab('alerts',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #1a3a1a;background:#1a3a1a;
+                 color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="bell" style="width:14px;height:14px;"></i> Alerts
+        </button>
+        <button class="alerts-sub-btn" data-sub="curfew" onclick="switchAlertsSubTab('curfew',this)"
+          style="display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;
+                 border-radius:999px;border:1.5px solid #e0e0e0;background:#fff;
+                 color:#555;font-size:.85rem;font-weight:600;cursor:pointer;">
+          <i data-lucide="moon" style="width:14px;height:14px;"></i> Curfew
+        </button>
+      </div>
+
+      <!-- ── Sub: Site Alerts ─────────────────────────────────── -->
+      <div id="alerts-sub-alerts">
+        <h1 class="panel-heading">Site Alerts</h1>
+        <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">All Alerts</h2>
+        <div id="alertsList" style="display:flex;flex-direction:column;gap:0.75rem;">
+          <p style="color:#aaa;">Loading…</p>
+        </div>
+        <div id="alertCreateFormWrap"></div>
+      </div><!-- /alerts-sub-alerts -->
+
+      <!-- ── Sub: Curfew Schedules ────────────────────────────── -->
+      <div id="alerts-sub-curfew" hidden>
+        <h1 class="panel-heading">Curfew Schedules</h1>
+        <div id="curfewList" style="margin-bottom:1.5rem;"></div>
+        <div id="curfewForm"></div>
+      </div><!-- /alerts-sub-curfew -->
+
+    </div><!-- /panel-alerts -->
+
+
+    <!-- ══ PANEL: SETTINGS ════════════════════════════════════════ -->
+    <div id="panel-settings" class="admin-panel">
+      <h1 class="panel-heading">Settings &amp; Preferences</h1>
+      <div id="settingsContainer">
+        <p style="color:#aaa;">Loading settings…</p>
+      </div>
+    </div><!-- /panel-settings -->
+
+
+  </div><!-- /admin-content -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       JS TOOLTIP — hover tooltip for action buttons
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="adminTooltip"></div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ROLE CHANGE MODAL
+       ───────────────────────────────────────────────────────────────
+       Shown when assigning a new role to a user.
+       Admin role changes require a typed confirmation phrase.
+       Controlled by roles-admin.js.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-backdrop" id="roleModal">
+    <div class="modal">
+      <div class="modal__icon" id="modalIcon">
+        <i data-lucide="user" id="modalIconInner"></i>
+      </div>
+      <div class="modal__title" id="modalTitle">Assign Role</div>
+      <div class="modal__body"  id="modalBody"></div>
+      <div class="modal__confirm-wrap" id="adminConfirmWrap">
+        <label class="modal__confirm-label">
+          Type <span>CONFIRM ADMIN</span> to proceed:
+        </label>
+        <input class="modal__confirm-input" id="adminConfirmInput" type="text"
+          placeholder="CONFIRM ADMIN"
+          oninput="onAdminConfirmInput()" />
+      </div>
+      <div class="modal__actions">
+        <button class="modal__btn modal__btn--cancel" onclick="closeModal()">Cancel</button>
+        <button class="modal__btn modal__btn--confirm" id="modalConfirmBtn" onclick="confirmRoleChange()">
+          Assign Role
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TOAST CONTAINER — rendered by admin JS modules
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="toastContainer"></div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ID PHOTO LIGHTBOX
+       ───────────────────────────────────────────────────────────────
+       Displays front and back of an applicant's ID in full-screen.
+       Keyboard: Esc = close, ← → = navigate.
+       State managed by openLightbox() / closeLightbox() below.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div id="idLightbox" role="dialog" aria-modal="true" aria-label="ID Photo Viewer"
+       onclick="closeLightbox()">
+
+    <div class="lb-card" onclick="event.stopPropagation()">
+      <div class="lb-label" id="lightboxLabel">Front of ID</div>
+      <img id="lightboxImg" src="" alt="ID Photo" />
+      <button class="lb-close" onclick="closeLightbox()" aria-label="Close lightbox">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    <div class="lb-nav" onclick="event.stopPropagation()">
+      <button class="lb-nav-btn" id="lightboxPrev" onclick="lightboxStep(-1)">
+        <i data-lucide="chevron-left"></i> Front
+      </button>
+      <button class="lb-nav-btn" id="lightboxNext" onclick="lightboxStep(1)">
+        Back <i data-lucide="chevron-right"></i>
+      </button>
+    </div>
+
+    <p class="lb-hint">
+      Click outside &nbsp;·&nbsp; <kbd>Esc</kbd> to close &nbsp;·&nbsp;
+      <kbd>←</kbd> <kbd>→</kbd> to navigate
+    </p>
+
+  </div><!-- /idLightbox -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PROFILE DRAWER
+       ───────────────────────────────────────────────────────────────
+       Slide-in panel opened by the avatar button in the navbar.
+       Toggled via .is-open on #profileDrawer and #drawerBackdrop.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="profile-drawer" id="profileDrawer">
+    <div class="profile-drawer__header">
+      <button class="btn btn--close btn--sm profile-drawer__close" id="drawerCloseBtn" aria-label="Close">
+        <i data-lucide="x"></i>
+      </button>
+      <div class="profile-drawer__avatar" id="drawerAvatar">…</div>
+      <p class="profile-drawer__name" id="drawerName">Loading…</p>
+      <p class="profile-drawer__role" id="drawerRole">—</p>
+      <span class="profile-drawer__id" id="drawerIdNumber">
+        <i data-lucide="id-card"></i> —
+      </span>
+    </div>
+    <nav class="profile-drawer__menu">
+      <a href="pages/features/profile.html" class="profile-drawer__item">
+        <div class="profile-drawer__item-icon"><i data-lucide="user-pen"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">My Barangay</span>
+          <span class="profile-drawer__item-sub">View your profile and ID</span>
+        </div>
+      </a>
+      <a href="pages/features/services.html" class="profile-drawer__item">
+        <div class="profile-drawer__item-icon"><i data-lucide="file-text"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">My Documents</span>
+          <span class="profile-drawer__item-sub">Request or track documents</span>
+        </div>
+      </a>
+      <a href="pages/features/community.html" class="profile-drawer__item">
+        <div class="profile-drawer__item-icon"><i data-lucide="users"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">Community</span>
+          <span class="profile-drawer__item-sub">Bulletin, polls, pet board</span>
+        </div>
+      </a>
+      <button class="profile-drawer__item profile-drawer__item--signout" id="signOutBtn">
+        <div class="profile-drawer__item-icon"><i data-lucide="log-out"></i></div>
+        <div class="profile-drawer__item-body">
+          <span class="profile-drawer__item-title">Sign Out</span>
+        </div>
+      </button>
+    </nav>
+  </div>
+  <div class="profile-drawer-backdrop" id="drawerBackdrop"></div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SIGN-OUT CONFIRM MODAL
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="signoutModal" onclick="this.classList.remove('is-open')">
+    <div class="modal modal--confirm">
+      <div class="modal-confirm__icon"><i data-lucide="log-out"></i></div>
+      <h2 class="modal-confirm__title">Sign out?</h2>
+      <p class="modal-confirm__body">You'll be signed out of your BarangayConnect account on this device.</p>
+      <div class="modal-confirm__footer">
+        <button class="btn btn--outline"
+          onclick="document.getElementById('signoutModal').classList.remove('is-open')">
+          Cancel
+        </button>
+        <button class="btn btn--red btn--full" id="confirmSignOutBtn">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SCRIPTS
+       ───────────────────────────────────────────────────────────────
+       1. Profile drawer     — avatar button toggles slide-in panel
+       2. Lightbox           — full-screen ID photo viewer
+       3. Tab switchers      — switchTab, switchSubTab, switchBulletinSection, etc.
+       4. lucide.createIcons — renders all data-lucide icons
+       5. Admin modules      — feature logic split across JS modules
+  ══════════════════════════════════════════════════════════════════ -->
+
+  <!-- 1. Profile drawer -->
+  <script>
+    const _avatarBtn      = document.getElementById('avatarBtn');
+    const _profileDrawer  = document.getElementById('profileDrawer');
+    const _drawerBackdrop = document.getElementById('drawerBackdrop');
+    const _drawerClose    = document.getElementById('drawerCloseBtn');
+
+    function openDrawer() {
+      _profileDrawer.classList.add('is-open');
+      _drawerBackdrop.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDrawer() {
+      _profileDrawer.classList.remove('is-open');
+      _drawerBackdrop.classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    _avatarBtn?.addEventListener('click', openDrawer);
+    _drawerClose?.addEventListener('click', closeDrawer);
+    _drawerBackdrop?.addEventListener('click', closeDrawer);
+
+    const _signOutBtn   = document.getElementById('signOutBtn');
+    const _signoutModal = document.getElementById('signoutModal');
+
+    _signOutBtn?.addEventListener('click', () => {
+      closeDrawer();
+      _signoutModal.classList.add('is-open');
+    });
+  </script>
+
+  <!-- 2. Lightbox — full-screen ID photo viewer with keyboard navigation -->
+  <script>
+    let _lbUrls = [];
+    let _lbIdx  = 0;
+
+    window.openLightbox = function(urls, startIdx) {
+      _lbUrls = urls;
+      _lbIdx  = startIdx;
+      _renderLightbox();
+      const lb = document.getElementById('idLightbox');
+      lb.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+      lucide.createIcons({ el: lb });
+    };
+
+    window.closeLightbox = function() {
+      document.getElementById('idLightbox').classList.remove('is-open');
+      document.body.style.overflow = '';
+    };
+
+    window.lightboxStep = function(dir) {
+      const next = _lbIdx + dir;
+      if (next < 0 || next >= _lbUrls.length) return;
+      _lbIdx = next;
+      _renderLightbox();
+    };
+
+    function _renderLightbox() {
+      const img   = document.getElementById('lightboxImg');
+      const label = document.getElementById('lightboxLabel');
+      const prev  = document.getElementById('lightboxPrev');
+      const next  = document.getElementById('lightboxNext');
+
+      img.classList.add('is-loading');
+      img.onload  = () => img.classList.remove('is-loading');
+      img.onerror = () => img.classList.remove('is-loading');
+
+      img.src           = _lbUrls[_lbIdx].url;
+      label.textContent = _lbUrls[_lbIdx].label;
+      prev.disabled     = _lbIdx === 0;
+      next.disabled     = _lbIdx === _lbUrls.length - 1;
+    }
+
+    /* Keyboard navigation */
+    document.addEventListener('keydown', (e) => {
+      const lb = document.getElementById('idLightbox');
+      if (!lb.classList.contains('is-open')) return;
+      if (e.key === 'Escape')     { e.preventDefault(); closeLightbox(); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); lightboxStep(-1); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); lightboxStep(1); }
+    });
+  </script>
+
+  <!-- 3. Tab & sub-tab switching -->
+  <script>
+
+    /* Top-level tab switcher */
+    function switchTab(tab) {
+      document.querySelectorAll('.admin-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+      document.querySelectorAll('.admin-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === `panel-${tab}`);
+      });
+    }
+
+    /* Overview sub-tabs */
+    function switchOverviewSubTab(sub, btn) {
+      document.querySelectorAll('[id^="overview-sub-"]').forEach(el => el.hidden = true);
+      document.getElementById('overview-sub-' + sub).hidden = false;
+      document.querySelectorAll('.overview-sub-btn').forEach(b => {
+        b.style.background = '#fff'; b.style.color = '#555'; b.style.borderColor = '#e0e0e0';
+      });
+      btn.style.background = '#1a3a1a'; btn.style.color = '#fff'; btn.style.borderColor = '#1a3a1a';
+    }
+
+    /* Requests & Concerns sub-tabs */
+    function switchRequestsSubTab(sub, btn) {
+      document.querySelectorAll('[id^="requests-sub-"]').forEach(el => el.hidden = true);
+      document.getElementById('requests-sub-' + sub).hidden = false;
+      document.querySelectorAll('.requests-sub-btn').forEach(b => {
+        b.style.background = '#fff'; b.style.color = '#555'; b.style.borderColor = '#e0e0e0';
+      });
+      btn.style.background = '#1a3a1a'; btn.style.color = '#fff'; btn.style.borderColor = '#1a3a1a';
+    }
+
+    /* Community Board sub-tabs */
+    function switchCommunitySubTab(sub, btn) {
+      document.querySelectorAll('[id^="community-sub-"]').forEach(el => el.hidden = true);
+      document.getElementById('community-sub-' + sub).hidden = false;
+      document.querySelectorAll('.community-sub-btn').forEach(b => {
+        b.style.background = '#fff'; b.style.color = '#555'; b.style.borderColor = '#e0e0e0';
+      });
+      btn.style.background = '#1a3a1a'; btn.style.color = '#fff'; btn.style.borderColor = '#1a3a1a';
+    }
+
+    /* Management sub-tabs — re-renders Lucide icons for the users sub-panel */
+    function switchSubTab(sub, btn) {
+      document.querySelectorAll('[id^="sub-"]').forEach(el => el.hidden = true);
+      document.getElementById('sub-' + sub).hidden = false;
+      document.querySelectorAll('.mgmt-sub-btn').forEach(b => {
+        b.style.background  = '#fff';
+        b.style.color       = '#555';
+        b.style.borderColor = '#e0e0e0';
+      });
+      btn.style.background  = '#1a3a1a';
+      btn.style.color       = '#fff';
+      btn.style.borderColor = '#1a3a1a';
+      if (sub === 'users') lucide.createIcons({ el: document.getElementById('sub-users') });
+    }
+
+    /* Alerts sub-tabs — re-renders Lucide icons for the curfew sub-panel */
+    function switchAlertsSubTab(sub, btn) {
+      document.querySelectorAll('[id^="alerts-sub-"]').forEach(el => el.hidden = true);
+      document.getElementById('alerts-sub-' + sub).hidden = false;
+      document.querySelectorAll('.alerts-sub-btn').forEach(b => {
+        b.style.background  = '#fff';
+        b.style.color       = '#555';
+        b.style.borderColor = '#e0e0e0';
+      });
+      btn.style.background  = '#1a3a1a';
+      btn.style.color       = '#fff';
+      btn.style.borderColor = '#1a3a1a';
+      if (sub === 'curfew') lucide.createIcons({ el: document.getElementById('alerts-sub-curfew') });
+    }
+
+    /* Bulletin view toggler — shows/hides bulletin-view-* containers */
+    function switchBulletinView(view, btn) {
+      document.querySelectorAll('[id^="bulletin-view-"]').forEach(el => el.hidden = true);
+      document.getElementById('bulletin-view-' + view).hidden = false;
+
+      document.querySelectorAll(
+        '#bulletin-subfilters .bulletin-view-btn, #bulletin-subfilters .comment-source-btn'
+      ).forEach(b => b.classList.remove('is-active'));
+      if (btn) btn.classList.add('is-active');
+
+      /* Lazy-load comments on first visit */
+      if (view === 'comments' && (!window._allComments || window._allComments.length === 0)) {
+        window.refreshComments?.();
+      }
+    }
+
+    /*
+      Bulletin section switcher — rebuilds the sub-filter row based on section:
+        'posts'    → Official / Community / Pending filters
+        'reports'  → Posts / Comments filters
+        'comments' → Refresh button
+    */
+    function switchBulletinSection(section, btn) {
+      document.querySelectorAll('.bulletin-section-btn').forEach(b => {
+        b.style.background = '#fff'; b.style.color = '#6b7280'; b.style.borderColor = '#e0e0e0';
+      });
+      btn.style.background = '#1a3a1a'; btn.style.color = '#fff'; btn.style.borderColor = '#1a3a1a';
+
+      const subEl = document.getElementById('bulletin-subfilters');
+
+      if (section === 'posts') {
+        subEl.innerHTML = `
+          <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+            color:#9ca3af;letter-spacing:.06em;flex-shrink:0;align-self:center;">View</span>
+          <button class="bulletin-view-btn btn btn--filter is-active" onclick="switchBulletinView('official',this)">
+            <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
+          </button>
+          <button class="bulletin-view-btn btn btn--filter" onclick="switchBulletinView('community',this)">
+            <i data-lucide="users" style="width:11px;height:11px;"></i> Community
+          </button>
+          <button class="bulletin-view-btn btn btn--filter" onclick="switchBulletinView('pending',this)">
+            <i data-lucide="clock" style="width:11px;height:11px;"></i> Pending
+            <span id="pendingPostsBadge"
+              style="display:none;background:#dc2626;color:#fff;
+                     border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
+            </span>
+          </button>`;
+        lucide.createIcons({ el: subEl });
+        switchBulletinView('official', subEl.querySelector('.bulletin-view-btn'));
+
+      } else if (section === 'reports') {
+        subEl.innerHTML = `
+          <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+            color:#9ca3af;letter-spacing:.06em;flex-shrink:0;align-self:center;">View</span>
+          <button class="bulletin-view-btn btn btn--filter is-active" onclick="switchBulletinView('reported',this)">
+            <i data-lucide="file-text" style="width:11px;height:11px;"></i> Posts
+            <span id="reportedPostsBadge"
+              style="display:none;background:#dc2626;color:#fff;
+                     border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
+            </span>
+          </button>
+          <button class="bulletin-view-btn btn btn--filter" onclick="switchBulletinView('reported-comments',this)">
+            <i data-lucide="message-circle" style="width:11px;height:11px;"></i> Comments
+            <span id="reportedCommentsBadge"
+              style="display:none;background:#dc2626;color:#fff;
+                     border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
+            </span>
+          </button>`;
+        lucide.createIcons({ el: subEl });
+        switchBulletinView('reported', subEl.querySelector('.bulletin-view-btn'));
+
+      } else if (section === 'comments') {
+        subEl.innerHTML = `
+          <button class="btn btn--filter" onclick="refreshComments()">
+            <i data-lucide="refresh-cw" style="width:11px;height:11px;"></i> Refresh
+          </button>`;
+        lucide.createIcons({ el: subEl });
+        switchBulletinView('comments', null);
+      }
+    }
+
+    /* Init — activate the first bulletin section button on load */
+    document.addEventListener('DOMContentLoaded', () => {
+      const firstBtn = document.querySelector('.bulletin-section-btn');
+      if (firstBtn) switchBulletinSection('posts', firstBtn);
+    });
+
+  </script>
+
+  <!-- 4. Lucide icon render -->
+  <script>lucide.createIcons();</script>
+
+  <!-- Image viewer utility -->
+  <script type="module">
+    import { openImageViewer } from './js/shared/image-viewer.js';
+    window.openImageViewer = openImageViewer;
+  </script>
+
+  <!-- 5. Admin feature modules -->
+  <script type="module" src="js/features/admin/admin.js"></script>
+  <script type="module" src="js/features/admin/roles-admin.js"></script>
+  <script type="module" src="js/features/admin/alerts-admin.js"></script>
+  <script type="module" src="js/features/admin/curfew-admin.js"></script>
+  <script type="module" src="js/features/admin/bulletin-admin.js"></script>
+  <script type="module" src="js/features/admin/community-posts-admin.js"></script>
+  <script type="module" src="js/features/admin/reported-posts-admin.js"></script>
+  <script type="module" src="js/features/admin/reported-comments-admin.js"></script>
+  <script type="module" src="js/features/admin/comment-manager-admin.js"></script>
+  <script type="module" src="js/features/admin/settings-admin.js"></script>
+
+</body>
+</html>
