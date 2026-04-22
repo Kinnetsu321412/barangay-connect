@@ -19,10 +19,17 @@
     · Firebase initialization (firebase-config.js)
 
   REQUIRED IMPORTS:
+<<<<<<< HEAD
     · css/shared/main.css, css/features/auth/auth.css
     · https://unpkg.com/lucide — icon set
     · js/features/auth/auth.js (module)
     · js/core/firebase-config.js (module)
+=======
+    · css/main.css, css/auth.css
+    · https://unpkg.com/lucide — icon set
+    · js/auth.js (module)
+    · js/firebase-config.js (module)
+>>>>>>> a8186e92af4ca5dd1d4d80ab0d0ece95a2bc75ad
 
   QUICK REFERENCE:
     · #loginForm        — main sign-in form
@@ -46,8 +53,13 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 
+<<<<<<< HEAD
   <link rel="stylesheet" href="css/shared/main.css" />
   <link rel="stylesheet" href="css/features/auth/auth.css" />
+=======
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+>>>>>>> a8186e92af4ca5dd1d4d80ab0d0ece95a2bc75ad
 </head>
 <body class="login-page">
 
@@ -211,14 +223,22 @@
   ══════════════════════════════════════════════════════════════════ -->
   <script>lucide.createIcons();</script>
 
+<<<<<<< HEAD
   <script type="module" src="js/features/auth/auth.js"></script>
+=======
+  <script type="module" src="js/auth.js"></script>
+>>>>>>> a8186e92af4ca5dd1d4d80ab0d0ece95a2bc75ad
 
   <script type="module">
     import { initializeApp }                    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
     import { getAuth, signInAnonymously }       from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
     import { getFirestore, doc, getDoc }        from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
+<<<<<<< HEAD
     import { app } from './js/core/firebase-config.js';
+=======
+    import { app } from './js/firebase-config.js';
+>>>>>>> a8186e92af4ca5dd1d4d80ab0d0ece95a2bc75ad
   </script>
 
 
