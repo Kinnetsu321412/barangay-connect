@@ -78,21 +78,6 @@ let adminUid         = '';
 let currentHousehold = '';
 let pendingChange    = null;
 
-
-/* ================================================
-   TAB SWITCHING
-   Activates the selected panel and tab button,
-   deactivating all others.
-================================================ */
-
-window.switchTab = function (tab) {
-  document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-  document.getElementById(`panel-${tab}`).classList.add('active');
-  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-};
-
-
 /* ================================================
    INIT — auth-gated, admin-only
    Resolves the barangay ID, writes lastSeen for
@@ -276,7 +261,7 @@ function buildUserRow(user) {
   };
 
   return `
-    <div class="user-row" id="row-${user.uid}" ${isMe ? 'style="background:#f8fdf9"' : ''}>
+    <div class="user-row user-row--${user.role}" id="row-${user.uid}" ${isMe ? 'style="background:#f8fdf9"' : ''}>
 
       <div class="user-info">
         <div class="user-avatar user-avatar--${user.role}">${initials}</div>
@@ -304,7 +289,7 @@ function buildUserRow(user) {
 
       <div class="role-badge ${roleBadgeClass}">
         <i data-lucide="${roleIconName(user.role)}"></i>
-        ${roleDisplayName(user.role)}
+        ${{ resident: 'Resident', officer: 'Officer', admin: 'Admin' }[user.role] ?? user.role}
       </div>
 
       <div class="status-dot ${statusClass}">${statusLabel}</div>
@@ -352,7 +337,7 @@ function buildUserRow(user) {
                 style="font-size:.72rem;color:#22c55e;font-weight:600;"></span>
             </div>
           </details>`
-        : `<span style="font-size:.72rem;color:#aaa;">Unlimited posts (${user.role})</span>`}
+        : `<span style="font-size:.72rem;color:#aaa;">Unlimited Posts (${user.role.toUpperCase()})</span>`}
       </div>
 
     </div>`;
@@ -415,14 +400,14 @@ function positionTooltip(tip, anchor) {
 ================================================ */
 
 function getStatusInfo(lastSeen) {
-  if (!lastSeen) return { statusClass: 'status-dot--offline', statusLabel: 'Offline' };
+  return { statusClass: 'status-dot--offline', statusLabel: '' };
 
   const seenDate   = lastSeen?.toDate?.() ?? new Date(lastSeen);
   const minutesAgo = (Date.now() - seenDate.getTime()) / 60000;
 
   if (minutesAgo <= 5)  return { statusClass: 'status-dot--online',  statusLabel: 'Online' };
   if (minutesAgo <= 60) return { statusClass: 'status-dot--recent',  statusLabel: 'Recently active' };
-                        return { statusClass: 'status-dot--offline', statusLabel: 'Offline' };
+                        return { statusClass: 'status-dot--offline', statusLabel: '' };
 }
 
 

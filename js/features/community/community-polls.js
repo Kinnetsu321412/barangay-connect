@@ -440,7 +440,7 @@ function _buildPollCard(poll, isArchived = false) {
     ? `<div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:.4rem .85rem;
         font-size:.75rem;color:#b91c1c;font-weight:600;display:flex;align-items:center;gap:.4rem;">
         <i data-lucide="archive" style="width:13px;height:13px;"></i>
-        Archived — This poll has been removed from public view but preserved for transparency.
+        Archived
       </div>` : '';
 
   const extensionNotice = poll.extensionReason

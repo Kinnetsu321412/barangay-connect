@@ -363,7 +363,7 @@ function renderList(docs) {
     el.innerHTML = `
       <div style="background:#fff;border-radius:12px;padding:2.5rem;text-align:center;
         color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,.07);">
-        <div style="font-size:2rem;margin-bottom:.5rem;">🌙</div>
+        <i data-lucide="moon" style="width:32px;height:32px;color:#d1d5db;display:block;margin:0 auto .75rem;"></i>
         <p style="margin:0;font-size:.9rem;">No curfew schedules yet.<br>
           Use the button below to add one.</p>
       </div>`;
@@ -461,7 +461,7 @@ function buildListRow(id, d, now) {
       <div>
         <div style="font-weight:700;font-size:.9rem;display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;">
           ${esc(d.name)}${liveBadge}
-          ${isEditing ? `<span style="background:#1a3a1a;color:#fff;padding:1px 7px;border-radius:999px;font-size:.65rem;font-weight:700;">Editing</span>` : ''}
+          ${isEditing ? `<span class="admin-badge admin-badge--editing">Editing</span>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:.4rem;margin-top:4px;flex-wrap:wrap;">
           ${typeChip(d.type)}

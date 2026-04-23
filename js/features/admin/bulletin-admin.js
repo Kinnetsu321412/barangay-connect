@@ -219,10 +219,8 @@ function categoryChip(category) {
 /* Returns an inline-styled status pill (Published / Draft) */
 function statusChip(status) {
   return status === 'published'
-    ? `<span style="background:#dcfce7;color:#15803d;padding:2px 9px;
-         border-radius:999px;font-size:.72rem;font-weight:700;">Published</span>`
-    : `<span style="background:#f3f4f6;color:#9ca3af;padding:2px 9px;
-         border-radius:999px;font-size:.72rem;font-weight:700;">Draft</span>`;
+    ? `<span class="admin-badge admin-badge--active">Published</span>`
+    : `<span class="admin-badge admin-badge--inactive">Draft</span>`;
 }
 
 
@@ -319,37 +317,9 @@ function buildListRow(a) {
   const editColor  = isEditing ? '#dc2626'  : '#555';
   const editHover  = isEditing ? '#fee2e2'  : '#f4f6f9';
 
-  const pinnedBadge = a.isPinned ? `
-    <span style="
-      display:       inline-flex;
-      align-items:   center;
-      gap:           3px;
-      background:    #fff8ed;
-      color:         #c2410c;
-      padding:       2px 8px;
-      border-radius: 999px;
-      font-size:     .68rem;
-      font-weight:   700;
-      border:        1px solid #fed7aa;
-    ">
-      <i data-lucide="pin" style="width:10px;height:10px;"></i> Pinned
-    </span>` : '';
+  const pinnedBadge = a.isPinned ? `<span class="admin-badge admin-badge--pinned"><i data-lucide="pin"></i> Pinned</span>` : '';
 
-  const urgentBadge = a.isUrgent ? `
-    <span style="
-      display:       inline-flex;
-      align-items:   center;
-      gap:           3px;
-      background:    #fff0f0;
-      color:         #dc2626;
-      padding:       2px 8px;
-      border-radius: 999px;
-      font-size:     .68rem;
-      font-weight:   700;
-      border:        1px solid #fecaca;
-    ">
-      <i data-lucide="alert-circle" style="width:10px;height:10px;"></i> Urgent
-    </span>` : '';
+  const urgentBadge = a.isUrgent ? `<span class="admin-badge admin-badge--urgent"><i data-lucide="alert-circle"></i> Urgent</span>` : '';
 
   const thumbSection = a.imageURL ? `
     <div style="margin-top:5px;">
@@ -388,14 +358,7 @@ function buildListRow(a) {
           margin-bottom: 4px;
         ">
           ${esc(a.title)}
-          ${isEditing ? `<span style="
-            background:    #1a3a1a;
-            color:         #fff;
-            padding:       1px 7px;
-            border-radius: 999px;
-            font-size:     .65rem;
-            font-weight:   700;
-          ">Editing</span>` : ''}
+          ${isEditing ? `<span class="admin-badge admin-badge--editing">Editing</span>` : ''}
         </div>
         <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
           ${categoryChip(a.category)}

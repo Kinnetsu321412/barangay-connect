@@ -188,7 +188,7 @@ function _renderList() {
     el.innerHTML = `
       <div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;
         color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,.07);">
-        <div style="font-size:2rem;margin-bottom:.5rem;">🗳️</div>
+        <i data-lucide="bar-chart-2" style="width:32px;height:32px;color:#d1d5db;display:block;margin:0 auto .75rem;"></i>
         <p style="margin:0;font-size:.9rem;">No polls yet. Create one above.</p>
       </div>`;
     return;
@@ -262,18 +262,12 @@ function _buildPollRow(p) {
       <div style="margin-bottom:.75rem;">
         <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.25rem;">
           <span style="font-weight:700;font-size:.95rem;">${esc(p.title)}</span>
-          <span style="background:${statusColor}1a;color:${statusColor};padding:2px 8px;
-            border-radius:999px;font-size:.68rem;font-weight:700;border:1px solid ${statusColor}55;">
-            ${p.status.toUpperCase()}
-          </span>
-          ${p.isPinned ? `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;
-            border-radius:999px;font-size:.68rem;font-weight:700;">📌 Pinned</span>` : ''}
+          <span class="admin-badge admin-badge--${p.status}">${p.status.toUpperCase()}</span>
+          ${p.isPinned ? `<span class="admin-badge admin-badge--pinned"><i data-lucide="pin"></i> Pinned</span>` : ''}
           ${p.category ? (() => { const c = _CAT_COLORS[p.category] ?? _CAT_COLORS.general;
             return `<span style="background:${c.bg};color:${c.color};border:1px solid ${c.border};padding:2px
             8px;border-radius:999px;font-size:.68rem;font-weight:600;">${p.category.charAt(0).toUpperCase()+p.category.slice(1)}</span>`; })() : ''}
-          ${p.priority && p.priority !== 'normal' ? `<span style="background:#fef2f2;color:#b91c1c;
-            padding:2px 8px;border-radius:999px;font-size:.68rem;font-weight:700;">
-            ${esc(p.priority).toUpperCase()}</span>` : ''}
+          ${p.priority && p.priority !== 'normal' ? `<span class="admin-badge admin-badge--${p.priority === 'urgent' ? 'urgent' : 'high'}">${esc(p.priority).toUpperCase()}</span>` : ''}
         </div>
         <p style="font-size:.75rem;color:#9ca3af;margin:0 0 .3rem;">
           Deadline: ${deadline} · ${total.toLocaleString()} vote${total !== 1 ? 's' : ''}

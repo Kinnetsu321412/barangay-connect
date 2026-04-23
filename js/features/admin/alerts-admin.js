@@ -751,14 +751,8 @@ function buildAlertRow(barangay, id, d) {
       ">
         ${esc(d.title)}
         ${d.active
-          ? `<span style="background:var(--success-100);color:var(--success-800);
-              font-size:var(--text-2xs);font-weight:var(--fw-bold);
-              padding:2px 8px;border-radius:var(--radius-full);margin-left:6px;
-              vertical-align:middle;">LIVE</span>`
-          : `<span style="background:var(--gray-100);color:var(--gray-500);
-              font-size:var(--text-2xs);font-weight:var(--fw-bold);
-              padding:2px 8px;border-radius:var(--radius-full);margin-left:6px;
-              vertical-align:middle;">INACTIVE</span>`
+          ? `<span class="admin-badge admin-badge--live" style="margin-left:6px;">LIVE</span>`
+          : `<span class="admin-badge admin-badge--inactive" style="margin-left:6px;">INACTIVE</span>`
         }
       </p>
       <p style="font-size:var(--text-sm);color:var(--text-muted);
