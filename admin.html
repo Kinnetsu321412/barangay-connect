@@ -223,14 +223,13 @@
     <div id="panel-overview" class="admin-panel active">
 
       <!-- Sub-tab row -->
-      <!-- Sub-tab row -->
       <div class="admin-subtab-row">
-        <button class="overview-sub-btn admin-subtab-btn active" onclick="switchOverviewSubTab('stats',this)">
-          <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Stats
-        </button>
-        <button class="overview-sub-btn admin-subtab-btn" onclick="switchOverviewSubTab('activity',this)">
-          <i data-lucide="activity" style="width:14px;height:14px;"></i> Recent Activity
-        </button>
+          <button class="overview-sub-btn admin-subtab-btn active" onclick="switchOverviewSubTab('stats',this)">
+            <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Stats
+          </button>
+          <button class="overview-sub-btn admin-subtab-btn" onclick="switchOverviewSubTab('activity',this)">
+            <i data-lucide="activity" style="width:14px;height:14px;"></i> Recent Activity
+          </button>
       </div>
 
       <!-- Stats sub-panel (default) -->
@@ -261,11 +260,11 @@
 
       <!-- Sub-tab row -->
       <div class="admin-subtab-row">
-        <button class="requests-sub-btn admin-subtab-btn active" onclick="switchRequestsSubTab('concerns',this)">
-          <i data-lucide="message-circle" style="width:14px;height:14px;"></i> Concern Queue
-        </button>
-        <button class="requests-sub-btn admin-subtab-btn" onclick="switchRequestsSubTab('documents',this)">
-          <i data-lucide="file-stack" style="width:14px;height:14px;"></i> Document Requests
+          <button class="requests-sub-btn admin-subtab-btn active" onclick="switchRequestsSubTab('concerns',this)">
+            <i data-lucide="message-circle" style="width:14px;height:14px;"></i> Concern Queue
+          </button>
+          <button class="requests-sub-btn admin-subtab-btn" onclick="switchRequestsSubTab('documents',this)">
+            <i data-lucide="file-stack" style="width:14px;height:14px;"></i> Document Requests
         </button>
       </div>
 
@@ -297,18 +296,18 @@
 
       <!-- Sub-tab row -->
       <div class="admin-subtab-row">
-        <button class="community-sub-btn admin-subtab-btn active" onclick="switchCommunitySubTab('bulletin',this)">
-          <i data-lucide="layout-list" style="width:14px;height:14px;"></i> Bulletin Posts
-        </button>
-        <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('pets',this)">
-          <i data-lucide="paw-print" style="width:14px;height:14px;"></i> Pets
-        </button>
-        <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('services',this)">
-          <i data-lucide="briefcase" style="width:14px;height:14px;"></i> Services
-        </button>
-        <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('polls',this)">
-          <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Polls
-        </button>
+          <button class="community-sub-btn admin-subtab-btn is-active" onclick="switchCommunitySubTab('bulletin',this)">
+            <i data-lucide="layout-list" style="width:14px;height:14px;"></i> Bulletin Posts
+          </button>
+          <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('pets',this)">
+            <i data-lucide="paw-print" style="width:14px;height:14px;"></i> Pets
+          </button>
+          <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('services',this)">
+            <i data-lucide="briefcase" style="width:14px;height:14px;"></i> Services
+          </button>
+          <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('polls',this)">
+            <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Polls
+          </button>
       </div>
 
       <!-- ── Bulletin Posts sub-panel ────────────────────────── -->
@@ -503,7 +502,9 @@
         </div>
 
         <!-- Role filter pills -->
-        <div class="role-filters">
+         <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+            color:#9ca3af;letter-spacing:.06em;flex-shrink:0;align-self:center;">View</span>
+        <div class="role-filters" style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
           <button class="role-filter-btn active" data-role-filter="all" onclick="setRoleFilter('all', this)">
             <i data-lucide="users"></i> All Users
           </button>
@@ -511,12 +512,12 @@
             <i data-lucide="user"></i> Resident
           </button>
           <button class="role-filter-btn" data-role-filter="officer" onclick="setRoleFilter('officer', this)">
-            <i data-lucide="shield"></i> Barangay Officer
+            <i data-lucide="shield"></i> Officer
           </button>
           <button class="role-filter-btn" data-role-filter="admin" onclick="setRoleFilter('admin', this)">
             <i data-lucide="settings"></i> Administrator
           </button>
-        </div>
+      </div>
 
         <!-- Household filter bar — populated by JS -->
         <div style="margin-bottom:1.25rem;">
@@ -547,7 +548,7 @@
         <h1 class="panel-heading">Reports</h1>
         <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
                     color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-          <div style="font-size:2rem;margin-bottom:.5rem;">📋</div>
+          <div style="font-size:2rem;margin-bottom:.5rem;"><i data-lucide="clipboard-minus"></i></div>
           <p style="margin:0;font-size:.9rem;">Resident reports will appear here.<br>This section is coming soon.</p>
         </div>
       </div><!-- /sub-reports -->
@@ -884,8 +885,8 @@
     function switchCommunitySubTab(sub, btn) {
       document.querySelectorAll('[id^="community-sub-"]').forEach(el => el.hidden = true);
       document.getElementById('community-sub-' + sub).hidden = false;
-      document.querySelectorAll('.community-sub-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      document.querySelectorAll('.community-sub-btn').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
     }
 
     /* Management sub-tabs — re-renders Lucide icons for the users sub-panel */
@@ -938,19 +939,21 @@
         subEl.innerHTML = `
           <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
             color:#9ca3af;letter-spacing:.06em;flex-shrink:0;align-self:center;">View</span>
-          <button class="bulletin-view-btn admin-subtab-btn is-active" onclick="switchBulletinView('official',this)">
-            <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
-          </button>
-          <button class="bulletin-view-btn admin-subtab-btn" onclick="switchBulletinView('community',this)">
-            <i data-lucide="users" style="width:11px;height:11px;"></i> Community
-          </button>
-          <button class="bulletin-view-btn admin-subtab-btn" onclick="switchBulletinView('pending',this)">
-            <i data-lucide="clock" style="width:11px;height:11px;"></i> Pending
-            <span id="pendingPostsBadge"
-              style="display:none;background:#dc2626;color:#fff;
-                     border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
-            </span>
-          </button>`;
+            <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
+              <button class="bulletin-view-btn admin-subtab-btn is-active" onclick="switchBulletinView('official',this)">
+                <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
+              </button>
+              <button class="bulletin-view-btn admin-subtab-btn" onclick="switchBulletinView('community',this)">
+                <i data-lucide="users" style="width:11px;height:11px;"></i> Community
+              </button>
+              <button class="bulletin-view-btn admin-subtab-btn" onclick="switchBulletinView('pending',this)">
+                <i data-lucide="clock" style="width:11px;height:11px;"></i> Pending
+                <span id="pendingPostsBadge"
+                  style="display:none;background:#dc2626;color:#fff;
+                        border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
+                </span>
+              </button>
+            </div>`;
         lucide.createIcons({ el: subEl });
         switchBulletinView('official', subEl.querySelector('.bulletin-view-btn'));
 
@@ -958,20 +961,22 @@
         subEl.innerHTML = `
           <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
             color:#9ca3af;letter-spacing:.06em;flex-shrink:0;align-self:center;">View</span>
-          <button class="bulletin-view-btn admin-subtab-btn is-active" onclick="switchBulletinView('reported',this)">
-            <i data-lucide="file-text" style="width:11px;height:11px;"></i> Posts
-            <span id="reportedPostsBadge"
-              style="display:none;background:#dc2626;color:#fff;
-                     border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
-            </span>
-          </button>
-          <button class="bulletin-view-btn admin-subtab-btn" onclick="switchBulletinView('reported-comments',this)">
-            <i data-lucide="message-circle" style="width:11px;height:11px;"></i> Comments
-            <span id="reportedCommentsBadge"
-              style="display:none;background:#dc2626;color:#fff;
-                     border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
-            </span>
-          </button>`;
+            <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
+              <button class="bulletin-view-btn admin-subtab-btn is-active" onclick="switchBulletinView('reported',this)">
+                <i data-lucide="file-text" style="width:11px;height:11px;"></i> Posts
+                <span id="reportedPostsBadge"
+                  style="display:none;background:#dc2626;color:#fff;
+                        border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
+                </span>
+              </button>
+              <button class="bulletin-view-btn admin-subtab-btn" onclick="switchBulletinView('reported-comments',this)">
+                <i data-lucide="message-circle" style="width:11px;height:11px;"></i> Comments
+                <span id="reportedCommentsBadge"
+                  style="display:none;background:#dc2626;color:#fff;
+                        border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
+                </span>
+              </button>
+            </div>`;
         lucide.createIcons({ el: subEl });
         switchBulletinView('reported', subEl.querySelector('.bulletin-view-btn'));
 

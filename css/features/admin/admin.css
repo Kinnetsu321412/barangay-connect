@@ -220,7 +220,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 16px;
+  padding: 9px 20px;
   border-radius: var(--radius-full);
   border: 1.5px solid var(--gray-200);
   background: var(--white);
@@ -249,6 +249,58 @@
   background: var(--green-dark);
   color: var(--white);
   border-color: var(--green-dark);
+}
+
+/* Sub-tab rows that use the segmented pill style (no outline) */
+.overview-sub-btn,
+.requests-sub-btn,
+.mgmt-sub-btn,
+.alerts-sub-btn,
+.community-sub-btn {
+  border: none;
+  background: transparent;
+}
+
+.overview-sub-btn:hover,
+.requests-sub-btn:hover,
+.mgmt-sub-btn:hover,
+.alerts-sub-btn:hover,
+.community-sub-btn:hover {
+  background: var(--alpha-ink-06);
+  border: none;
+}
+
+.overview-sub-btn.active,
+.requests-sub-btn.active,
+.mgmt-sub-btn.active,
+.alerts-sub-btn.active,
+.community-sub-btn.active,
+.community-sub-btn.is-active {
+  background: var(--green-dark);
+  color: var(--white);
+  font-weight: var(--fw-bold);
+  border: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.community-sub-btn {
+  border: none !important;
+  background: var(--alpha-ink-07);
+  color: rgba(44,40,40,0.60);
+}
+
+.community-sub-btn:hover {
+  background: var(--alpha-green-10);
+  color: var(--green-dark);
+  border: none !important;
+}
+
+.community-sub-btn.active,
+.community-sub-btn.is-active {
+  background: var(--green-dark);
+  color: var(--white);
+  border: none !important;
+  box-shadow: none;
 }
 
 
@@ -601,8 +653,8 @@
   gap: 6px;
   padding: 6px 16px;
   border-radius: var(--radius-full);
-  border: 1.5px solid var(--gray-200);
-  background: var(--white);
+  border: none;
+  background: transparent;
   color: var(--gray-500);
   font-family: var(--font-display);
   font-size: var(--text-sm);
@@ -625,9 +677,11 @@
 }
 
 .role-filter-btn.active {
-  background: var(--green-dark);
-  color: var(--white);
-  border-color: var(--green-dark);
+  background: var(--white);
+  color: var(--text-dark);
+  font-weight: var(--fw-bold);
+  border: none;
+  box-shadow: var(--shadow-sm);
 }
 
 
@@ -1597,3 +1651,22 @@
   .status-dot,
   .role-actions { grid-column: 1 / -1; }
 }
+
+.bulletin-view-btn {
+  border: none !important;
+  background: transparent;
+  color: var(--gray-500);
+}
+.bulletin-view-btn:hover {
+  background: var(--alpha-ink-06);
+  color: var(--text-dark);
+  border: none !important;
+}
+.bulletin-view-btn.is-active {
+  background: var(--white);
+  color: var(--text-dark);
+  font-weight: var(--fw-bold);
+  border: none !important;
+  box-shadow: var(--shadow-sm);
+}
+
