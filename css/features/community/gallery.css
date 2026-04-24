@@ -172,58 +172,73 @@
   text-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
-/* Hero badge (pinned top-left) */
+/* ── Spotlight badge — matches post-pin-bar language ── */
+/* ── Spotlight badge — matches .gallery-card__admin-btn language ── */
 .gallery-hero__badge {
   position: absolute;
   top: var(--space-md);
-  left: var(--space-md);
-  display: inline-flex;
+  right: var(--space-md);
+  z-index: 10;
+  display: flex;
   align-items: center;
-  gap: 5px;
-  background: var(--alpha-glass-green);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  color: var(--white);
-  font-size: var(--text-xs);
-  font-weight: var(--fw-bold);
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 5px 12px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--overlay-white-22);
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--overlay-white-18);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--overlay-white-25);
+  color: var(--orange);
+  pointer-events: all;
+  cursor: default;
 }
 
 .gallery-hero__badge [data-lucide] {
-  width: 11px;
-  height: 11px;
+  width: 14px;
+  height: 14px;
   fill: var(--orange);
   color: var(--orange);
 }
 
-/* "View Post" link chip on hero overlay */
+.gallery-hero__badge--admin {
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.gallery-hero__badge--admin:hover {
+  background: rgba(185,28,28,0.45);
+  border-color: rgba(255,100,100,0.35);
+}
+
+.gallery-hero__badge--admin:hover [data-lucide] {
+  fill: var(--white);
+  color: var(--white);
+}
+
+/* "View Post" — uses site outline-hero button language */
 .gallery-hero__view-link {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: var(--overlay-white-18);
-  backdrop-filter: blur(6px);
+  gap: 6px;
+  background: transparent;
   color: var(--white);
   font-size: var(--text-xs);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fw-bold);
   font-family: var(--font-display);
-  padding: 5px 12px;
+  padding: 7px 16px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--overlay-white-25);
+  border: 1.5px solid var(--overlay-white-70);
   cursor: pointer;
-  transition: background var(--transition);
+  transition: background var(--transition), color var(--transition);
   align-self: flex-start;
   pointer-events: all;
   text-decoration: none;
 }
 
 .gallery-hero__view-link:hover {
-  background: var(--overlay-white-28);
+  background: var(--white);
+  color: var(--black);
 }
 
 .gallery-hero__view-link [data-lucide] {
@@ -434,44 +449,6 @@
 .gallery-masonry .gallery-card__img {
   height: auto;
 }
-
-/* ================================================
-   HERO CARD — admin demote button (top-right corner)
-   ================================================ */
-
-.gallery-hero__demote-btn {
-  position: absolute;
-  top: var(--space-md);
-  right: var(--space-md);
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--overlay-white-18);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  color: var(--white);
-  font-size: var(--text-xs);
-  font-weight: var(--fw-bold);
-  font-family: var(--font-display);
-  padding: 5px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid rgba(251,191,36,0.4);
-  cursor: pointer;
-  transition: background var(--transition);
-  z-index: 2;
-}
-
-.gallery-hero__demote-btn [data-lucide] {
-  width: 11px;
-  height: 11px;
-  fill: var(--orange);
-  color: var(--orange);
-}
-
-.gallery-hero__demote-btn:hover {
-  background: rgba(0, 0, 0, 0.38);
-}
-
 
 /* ================================================
    GALLERY CARD — admin crown strip
@@ -707,10 +684,13 @@
 }
 
 .gallery-empty__icon {
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
   color: var(--gray-200);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gallery-empty__icon [data-lucide] {
@@ -909,4 +889,553 @@
   font-weight: var(--fw-bold);
   box-shadow: var(--shadow-sm);
   border: none;
+}
+
+/* ================================================
+   ALBUMS — List view
+   ================================================ */
+
+.gallery-albums-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+}
+
+@media (max-width: 1024px) {
+  .gallery-albums-list { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 600px) {
+  .gallery-albums-list { grid-template-columns: 1fr; }
+}
+
+/* "New Album" create button — same grid cell as album cards */
+.gallery-album-create-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--gray-400);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-display);
+  cursor: pointer;
+  min-height: 180px;
+  transition: border-color var(--transition), color var(--transition),
+              background var(--transition);
+}
+
+.gallery-album-create-btn [data-lucide] {
+  width: 18px;
+  height: 18px;
+}
+
+.gallery-album-create-btn:hover {
+  border-color: var(--green-dark);
+  color: var(--green-dark);
+  background: var(--alpha-ink-04);
+}
+
+/* Album card */
+.gallery-album-card {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: box-shadow var(--transition), transform var(--transition);
+}
+
+.gallery-album-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.gallery-album-card__cover {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--gray-100);
+}
+
+.gallery-album-card__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition-slow);
+}
+
+.gallery-album-card:hover .gallery-album-card__cover img {
+  transform: scale(1.04);
+}
+
+.gallery-album-card__cover-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gray-50);
+}
+
+/* Dark overlay on cover — always visible, shows post count */
+.gallery-album-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,0.55) 0%,
+    transparent 55%
+  );
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--space-sm) var(--space-md);
+  pointer-events: none;
+}
+
+.gallery-album-card__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--white);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-display);
+  opacity: 0.9;
+}
+
+.gallery-album-card__count [data-lucide] {
+  width: 12px;
+  height: 12px;
+}
+
+.gallery-album-card__body {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.gallery-album-card__title {
+  font-family: var(--font-display);
+  font-size: var(--text-base-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-dark);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gallery-album-card__desc {
+  font-size: var(--text-xs);
+  color: var(--gray-500);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ================================================
+   ALBUMS — Detail header
+   ================================================ */
+
+.gallery-album-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+
+.gallery-album-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-full);
+  color: var(--gray-600);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-display);
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+  flex-shrink: 0;
+}
+
+.gallery-album-back-btn [data-lucide] {
+  width: 13px;
+  height: 13px;
+}
+
+.gallery-album-back-btn:hover {
+  border-color: var(--text-dark);
+  color: var(--text-dark);
+}
+
+.gallery-album-header__meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.gallery-album-header__title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: var(--fw-extrabold);
+  color: var(--text-dark);
+  margin: 0 0 2px;
+}
+
+.gallery-album-header__desc {
+  font-size: var(--text-sm);
+  color: var(--gray-500);
+  margin: 0;
+}
+
+.gallery-album-edit-btn {
+  flex-shrink: 0;
+}
+
+
+/* ================================================
+   ALBUMS — Add to album picker dropdown
+   ================================================ */
+
+.gallery-album-picker {
+  position: absolute;
+  z-index: 900;
+  min-width: 200px;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-xs);
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gallery-album-picker.is-open {
+  display: flex;
+}
+
+.gallery-album-picker__label {
+  font-size: var(--text-xs);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gray-400);
+  padding: 4px 8px 6px;
+  margin: 0;
+}
+
+.gallery-album-picker__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-dark);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--transition);
+  width: 100%;
+}
+
+.gallery-album-picker__item [data-lucide] {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.gallery-album-picker__item:hover {
+  background: var(--alpha-ink-06);
+}
+
+.gallery-album-picker__item.is-in-album {
+  color: var(--gray-400);
+  cursor: default;
+}
+
+.gallery-album-picker__item.is-in-album:hover {
+  background: transparent;
+}
+
+
+/* ================================================
+   IMAGE VIEWER — album context chip
+   ================================================ */
+
+.gallery-viewer-album {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--overlay-white-12);
+  color: var(--overlay-white-75);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-display);
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--overlay-white-18);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.gallery-viewer-album [data-lucide] {
+  width: 11px;
+  height: 11px;
+}
+
+/* ================================================
+   ALBUMS TOGGLE — badge showing count
+   ================================================ */
+
+.gallery-view-btn[data-view="albums"] {
+  /* Widen slightly to accommodate badge text */
+  width: auto;
+  padding: 0 var(--space-sm);
+  gap: 5px;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-display);
+  white-space: nowrap;
+}
+
+.gallery-albums-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--alpha-ink-07);
+  color: var(--gray-500);
+  font-size: var(--text-2xs);
+  font-weight: var(--fw-bold);
+  font-family: var(--font-display);
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.gallery-view-btn.is-active .gallery-albums-badge {
+  background: var(--alpha-ink-07);
+  color: var(--green-dark);
+}
+
+/* ================================================
+   ALBUM DETAIL — reorder controls
+   ================================================ */
+
+/* Arrow buttons — appear bottom-left on hover */
+.gallery-card__reorder-btns {
+  position: absolute;
+  bottom: var(--space-xs);
+  left: var(--space-xs);
+  display: flex;
+  gap: 3px;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.gallery-card:hover .gallery-card__reorder-btns {
+  opacity: 1;
+}
+
+.gallery-card__reorder-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  background: var(--overlay-white-18);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--overlay-white-25);
+  color: var(--white);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.gallery-card__reorder-btn:hover:not(:disabled) {
+  background: rgba(0,0,0,0.42);
+}
+
+.gallery-card__reorder-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.gallery-card__reorder-btn [data-lucide] {
+  width: 12px;
+  height: 12px;
+}
+
+/* Drag states */
+.gallery-card--reorderable {
+  cursor: grab;
+}
+
+.gallery-card--reorderable.is-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.gallery-card--reorderable.drag-over {
+  outline: 2px solid var(--green-dark);
+  outline-offset: 2px;
+}
+
+/* ================================================
+   BULK SELECTION — card states
+   ================================================ */
+
+/* Checkbox — top-left corner, visible on hover in normal mode,
+   always visible in bulk mode */
+.gallery-bulk-checkbox {
+  position: absolute;
+  top: var(--space-xs);
+  left: var(--space-xs);
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  background: var(--overlay-white-18);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1.5px solid var(--overlay-white-40);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity var(--transition), background var(--transition),
+              border-color var(--transition);
+  pointer-events: none;
+}
+
+.gallery-bulk-checkbox [data-lucide] {
+  color: transparent;
+  transition: color var(--transition);
+}
+
+/* Show checkbox on card hover */
+.gallery-card--reorderable:hover .gallery-bulk-checkbox {
+  opacity: 1;
+}
+
+/* Always show in bulk mode */
+.gallery-card--reorderable.bulk-mode .gallery-bulk-checkbox {
+  opacity: 1;
+}
+
+/* Selected state */
+.gallery-card--reorderable.is-bulk-selected .gallery-bulk-checkbox {
+  background: var(--green-dark);
+  border-color: var(--green-dark);
+  opacity: 1;
+}
+
+.gallery-card--reorderable.is-bulk-selected .gallery-bulk-checkbox [data-lucide] {
+  color: var(--white);
+}
+
+/* Selected card gets a green ring */
+.gallery-card--reorderable.is-bulk-selected {
+  outline: 2.5px solid var(--green-dark);
+  outline-offset: 2px;
+}
+
+/* In bulk mode, suppress the drag cursor */
+.gallery-card--reorderable.bulk-mode {
+  cursor: pointer;
+}
+
+
+/* ================================================
+   BULK SELECTION — floating toolbar
+   ================================================ */
+
+.gallery-bulk-toolbar {
+  position: fixed;
+  bottom: var(--space-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--text-dark);
+  color: var(--white);
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  white-space: nowrap;
+  animation: toastIn .2s ease both;
+}
+
+.gallery-bulk-toolbar__cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: var(--white);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition);
+}
+
+.gallery-bulk-toolbar__cancel:hover {
+  background: rgba(255,255,255,0.25);
+}
+
+.gallery-bulk-toolbar__cancel [data-lucide] {
+  width: 13px;
+  height: 13px;
+}
+
+.gallery-bulk-toolbar__count {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-display);
+  flex-shrink: 0;
+}
+
+.gallery-bulk-toolbar__select-all {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: var(--radius-full);
+  color: var(--white);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-display);
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background var(--transition);
+  flex-shrink: 0;
+}
+
+.gallery-bulk-toolbar__select-all:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+.gallery-bulk-toolbar__add {
+  flex-shrink: 0;
+}
+
+.gallery-bulk-toolbar__add:disabled {
+  opacity: 0.4;
+  cursor: default;
 }

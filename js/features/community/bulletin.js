@@ -690,6 +690,7 @@ function buildPostRow(post) {
 
   const actionBtns = [
     canFeature && (post.imageURLs?.length || post.imageURL)  ? `<button class="post-action-icon${post.isFeatured ? ' is-featured-active' : (post.pendingFeatured ? ' is-pending-active' : '')}" onclick="toggleFeatured('${pid}','${isCPost ? 'communityPosts' : 'announcements'}')" title="${post.isFeatured ? 'Remove from Gallery' : (post.pendingFeatured ? 'Cancel Feature Request' : 'Add to Gallery')}"><i data-lucide="${post.pendingFeatured && !post.isFeatured ? 'clock' : 'star'}"></i></button>` : '',
+    canFeature && (post.imageURLs?.length || post.imageURL) ? `<button class="post-action-icon" onclick="window._addPostToAlbum('${pid}','${isCPost ? 'communityPosts' : 'announcements'}',this)" title="Add to Album"><i data-lucide="folder-plus"></i></button>` : '',
     canAdminDel ? `<button class="post-action-icon post-action-icon--danger" onclick="adminDeleteCommunityPost('${pid}')" title="Delete"><i data-lucide="trash-2"></i></button>` : '',
     isOwn       ? `<button class="post-action-icon" onclick="editCommunityPost('${pid}')" title="Edit"><i data-lucide="pencil"></i></button>` : '',
     isOwn       ? `<button class="post-action-icon post-action-icon--danger" onclick="deleteCommunityPost('${pid}')" title="Delete"><i data-lucide="trash-2"></i></button>` : '',
