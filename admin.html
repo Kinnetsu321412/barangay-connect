@@ -478,7 +478,27 @@
       <div id="sub-pending">
         <h1 class="panel-heading">Pending Registrations</h1>
 
-        <div class="roles-search-wrap" style="margin-bottom:1.5rem;">
+        <div style="margin:var(--space-lg) 0 var(--space-md);padding-bottom:var(--space-md);border-bottom:2px solid var(--gray-100);display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#9ca3af;letter-spacing:.06em;">Sort</span>
+          <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
+            <button class="bulletin-view-btn admin-subtab-btn is-active" id="pendingSortNewest" onclick="setPendingSort('newest',this)">Newest</button>
+            <button class="bulletin-view-btn admin-subtab-btn" id="pendingSortOldest" onclick="setPendingSort('oldest',this)">Oldest</button>
+            <button class="bulletin-view-btn admin-subtab-btn" id="pendingSortName" onclick="setPendingSort('name',this)">Name</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#9ca3af;letter-spacing:.06em;">ID Type</span>
+          <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
+            <button class="bulletin-view-btn admin-subtab-btn is-active" id="pendingIdAll" onclick="setPendingIdType('all',this)">All</button>
+            <button class="bulletin-view-btn admin-subtab-btn" onclick="setPendingIdType('PhilSys',this)">PhilSys</button>
+            <button class="bulletin-view-btn admin-subtab-btn" onclick="setPendingIdType('Drivers License',this)">Driver's</button>
+            <button class="bulletin-view-btn admin-subtab-btn" onclick="setPendingIdType('Passport',this)">Passport</button>
+            <button class="bulletin-view-btn admin-subtab-btn" onclick="setPendingIdType('Voter',this)">Voter</button>
+          </div>
+        </div>
+      </div>
+      <div class="roles-search-wrap" style="margin-bottom:1.5rem;">
           <i data-lucide="search"></i>
           <input type="text" id="pendingSearch"
             placeholder="Search by name, email, or resident ID…"
@@ -577,7 +597,6 @@
       <!-- ── Sub: Site Alerts ─────────────────────────────────── -->
       <div id="alerts-sub-alerts">
         <h1 class="panel-heading">Site Alerts</h1>
-        <h2 style="font-size:1rem;font-weight:700;margin-bottom:1rem;">All Alerts</h2>
         <div id="alertsList" style="display:flex;flex-direction:column;gap:0.75rem;">
           <p style="color:#aaa;">Loading…</p>
         </div>
@@ -1028,7 +1047,7 @@
     });
 
   </script>
-
+  
   
 
   <!-- Image viewer utility -->
@@ -1049,6 +1068,105 @@
   <script type="module" src="js/features/admin/comment-manager-admin.js"></script>
   <script type="module" src="js/features/admin/settings-admin.js"></script>
   <script type="module" src="js/features/admin/polls-admin.js"></script>
+
+  <!-- Tab state persistence — saves/restores across reloads -->
+  <script>
+    const _TS_KEY = 'adminTabState';
+
+    function _saveTab() {
+      try { localStorage.setItem(_TS_KEY, JSON.stringify(_tabState)); } catch(e) {}
+    }
+
+    const _tabState = (() => {
+      try { return JSON.parse(localStorage.getItem(_TS_KEY)) || {}; } catch(e) { return {}; }
+    })();
+
+    /* Patch each switch function to auto-save */
+    const _origSwitchTab        = switchTab;
+    const _origSubTab           = switchSubTab;
+    const _origAlertsSubTab     = switchAlertsSubTab;
+    const _origCommunitySubTab  = switchCommunitySubTab;
+    const _origOverviewSubTab   = switchOverviewSubTab;
+    const _origRequestsSubTab   = switchRequestsSubTab;
+    const _origBulletinSection  = switchBulletinSection;
+    const _origBulletinView     = window.switchBulletinView;
+
+    switchTab = function(tab, btn) {
+      _tabState.tab = tab; _saveTab();
+      _origSwitchTab(tab, btn);
+    };
+    switchSubTab = function(sub, btn) {
+      _tabState.subMgmt = sub; _saveTab();
+      _origSubTab(sub, btn);
+    };
+    switchAlertsSubTab = function(sub, btn) {
+      _tabState.subAlerts = sub; _saveTab();
+      _origAlertsSubTab(sub, btn);
+    };
+    switchCommunitySubTab = function(sub, btn) {
+      _tabState.subCommunity = sub; _saveTab();
+      _origCommunitySubTab(sub, btn);
+    };
+    switchOverviewSubTab = function(sub, btn) {
+      _tabState.subOverview = sub; _saveTab();
+      _origOverviewSubTab(sub, btn);
+    };
+    switchRequestsSubTab = function(sub, btn) {
+      _tabState.subRequests = sub; _saveTab();
+      _origRequestsSubTab(sub, btn);
+    };
+    switchBulletinSection = function(section, btn) {
+      _tabState.bulletinSection = section; _saveTab();
+      _origBulletinSection(section, btn);
+    };
+    window.switchBulletinView = function(view, btn) {
+      _tabState.bulletinView = view; _saveTab();
+      _origBulletinView?.(view, btn);
+    };
+
+    /* Restore on load */
+    document.addEventListener('DOMContentLoaded', () => {
+      const s = _tabState;
+
+      if (s.tab) {
+        const btn = document.querySelector(`.admin-tabs [data-tab="${s.tab}"]`);
+        if (btn) _origSwitchTab(s.tab, btn);
+      }
+
+      if (s.subMgmt) {
+        const btn = document.querySelector(`.mgmt-sub-btn[data-sub="${s.subMgmt}"]`);
+        if (btn) _origSubTab(s.subMgmt, btn);
+      }
+
+      if (s.subAlerts) {
+        const btn = document.querySelector(`.alerts-sub-btn[data-sub="${s.subAlerts}"]`);
+        if (btn) _origAlertsSubTab(s.subAlerts, btn);
+      }
+
+      if (s.subCommunity) {
+        const btn = document.querySelector(`.community-sub-btn[onclick*="'${s.subCommunity}'"]`);
+        if (btn) _origCommunitySubTab(s.subCommunity, btn);
+      }
+
+      if (s.subOverview) {
+        const btn = document.querySelector(`[onclick*="switchOverviewSubTab('${s.subOverview}')"]`);
+        if (btn) _origOverviewSubTab(s.subOverview, btn);
+      }
+
+      if (s.bulletinSection) {
+        const btn = document.querySelector(`.bulletin-section-btn[onclick*="'${s.bulletinSection}'"]`);
+        if (btn) _origBulletinSection(s.bulletinSection, btn);
+      }
+
+      if (s.bulletinView) {
+        /* switchBulletinSection already sets a default view; override only if different */
+        setTimeout(() => {
+          const btn = document.querySelector(`[onclick*="switchBulletinView('${s.bulletinView}')"]`);
+          if (btn) window.switchBulletinView(s.bulletinView, btn);
+        }, 0);
+      }
+    });
+  </script>
 
 </body>
 </html>

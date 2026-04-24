@@ -379,6 +379,8 @@ function renderList(docs) {
         </span>
         <span style="font-size:.75rem;color:#aaa;">Active-status updates every 60 s</span>
       </div>
+      <div style="display:flex;align-items:center;gap:.5rem;">
+      <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#9ca3af;letter-spacing:.06em;min-width:48px;">Type</span>
       <div style="display:inline-flex;background:var(--alpha-ink-07);
         border-radius:var(--radius-full);padding:3px;gap:2px;">
         <button class="bulletin-view-btn admin-subtab-btn curfew-type-btn ${_curfewTypeFilter === 'all' ? 'is-active' : ''}" onclick="setCurfewTypeFilter('all',this)">All</button>
@@ -391,6 +393,7 @@ function renderList(docs) {
         <button class="bulletin-view-btn admin-subtab-btn curfew-type-btn ${_curfewTypeFilter === 'manual' ? 'is-active' : ''}" onclick="setCurfewTypeFilter('manual',this)">
           <i data-lucide="sliders" style="width:11px;height:11px;"></i> Manual
         </button>
+      </div>
       </div>
     </div>`;
 

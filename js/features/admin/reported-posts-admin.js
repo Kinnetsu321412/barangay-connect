@@ -339,14 +339,16 @@ window.viewReportedPost = async function (postId) {
       flex:1 1 calc(50% - .25rem);min-width:120px;max-width:100%;
       border-radius:8px;overflow:hidden;background:#f3f4f6;
       border:1px solid #e5e7eb;cursor:zoom-in;
-      display:flex;align-items:center;justify-content:center;`;
+      display:flex;align-items:center;justify-content:center;
+      height:180px;`;
 
     const img         = document.createElement('img');
-    img.src           = url;
     img.alt           = `Image ${i + 1}`;
     img.style.cssText = `
       width:100%;height:180px;object-fit:contain;display:block;
-      transition:transform .2s;`;
+      transition:transform .2s;opacity:0;transition:opacity .2s,transform .2s;`;
+    img.onload  = () => { img.style.opacity = '1'; };
+    img.src     = url;
 
     img.onmouseover = () => img.style.transform = 'scale(1.03)';
     img.onmouseout  = () => img.style.transform = 'scale(1)';

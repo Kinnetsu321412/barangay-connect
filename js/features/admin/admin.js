@@ -95,7 +95,9 @@ onAuthStateChanged(auth, async (user) => {
 */
 
 let _pendingTotal = 0;
-let allUsers = [];
+let allUsers        = [];
+let _pendingSort    = 'newest';
+let _pendingIdType  = 'all';
 
 function loadPendingUsers(barangay, currentUid) {
   const container    = document.getElementById('pendingList');
@@ -104,45 +106,49 @@ function loadPendingUsers(barangay, currentUid) {
   const searchInput  = document.getElementById('pendingSearch');
 
   /* Filters allUsers by the current search term and re-renders the list */
+  window._renderPendingFiltered = (term) => renderFiltered(term ?? searchInput?.value.trim().toLowerCase() ?? '');
+
   function renderFiltered(term) {
     container.innerHTML = '';
 
-    if (!term) {
-      if (allUsers.length === 0) { emptyState.hidden = false; return; }
-      emptyState.hidden = true;
-      allUsers.forEach(user => container.appendChild(buildCard(user)));
+    let list = [...allUsers];
+
+    if (_pendingIdType !== 'all') {
+      list = list.filter(u => (u.idType ?? '').toLowerCase().includes(_pendingIdType.toLowerCase()));
+    }
+
+    if (term) {
+      const termClean = term.replace(/-/g, '');
+      list = list.filter(u => {
+        const name    = (u.fullName ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`).toLowerCase();
+        const mail    = (u.email ?? '').toLowerCase();
+        const id      = (u.residentIdNumber ?? '').toLowerCase();
+        const idClean = id.replace(/-/g, '');
+        return name.includes(term) || mail.includes(term) || id.includes(term) || idClean.includes(termClean);
+      });
+    }
+
+    if (_pendingSort === 'newest') {
+      list.sort((a, b) => (b.createdAt?.toDate?.() ?? new Date(0)) - (a.createdAt?.toDate?.() ?? new Date(0)));
+    } else if (_pendingSort === 'oldest') {
+      list.sort((a, b) => (a.createdAt?.toDate?.() ?? new Date(0)) - (b.createdAt?.toDate?.() ?? new Date(0)));
+    } else {
+      list.sort((a, b) => {
+        const an = (a.fullName ?? `${a.firstName} ${a.lastName}`).toLowerCase();
+        const bn = (b.fullName ?? `${b.firstName} ${b.lastName}`).toLowerCase();
+        return an.localeCompare(bn);
+      });
+    }
+
+    if (list.length === 0) {
+      emptyState.hidden = false;
+      container.innerHTML = (term || _pendingIdType !== 'all')
+        ? `<p style="color:#888;padding:1rem 0">No results for the current filter.</p>` : '';
       return;
     }
 
-    /* Strip dashes from both sides so "BAN2024" matches "BRY-BAN-2024-00001" */
-    const termClean = term.replace(/-/g, '');
-
-    const filtered = allUsers.filter(u => {
-      const name    = (u.fullName ?? `${u.firstName ?? ''} ${u.lastName ?? ''}`).toLowerCase();
-      const mail    = (u.email ?? '').toLowerCase();
-      const id      = (u.residentIdNumber ?? '').toLowerCase();
-      const idClean = id.replace(/-/g, '');
-
-      return (
-        name.includes(term)         ||
-        mail.includes(term)         ||
-        id.includes(term)           ||
-        idClean.includes(termClean)
-      );
-    });
-
-    if (filtered.length === 0) {
-      container.innerHTML = `<p style="color:#888;padding:1rem 0">No results for "${term}".</p>`;
-      return;
-    }
-
-    filtered.forEach(user => container.appendChild(buildCard(user)));
-  }
-
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      renderFiltered(searchInput.value.trim().toLowerCase());
-    });
+    emptyState.hidden = true;
+    list.forEach(user => container.appendChild(buildCard(user)));
   }
 
   /* Real-time listener — scoped to pending status for this barangay */
@@ -184,11 +190,28 @@ function loadPendingUsers(barangay, currentUid) {
       return aName.localeCompare(bName);
     });
 
-    /* Re-apply the active search term after a live list refresh */
-    const term = searchInput?.value.trim().toLowerCase() ?? '';
-    renderFiltered(term);
+    /* Re-apply active search + filters after a live list refresh */
+    renderFiltered(searchInput?.value.trim().toLowerCase() ?? '');
   });
 }
+
+window.setPendingSort = function (sort, btn) {
+  _pendingSort = sort;
+  document.querySelectorAll('#pendingSortNewest,#pendingSortOldest,#pendingSortName')
+    .forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  const searchInput = document.getElementById('pendingSearch');
+  _renderPendingFiltered(searchInput?.value.trim().toLowerCase() ?? '');
+};
+
+window.setPendingIdType = function (type, btn) {
+  _pendingIdType = type;
+  document.querySelectorAll('[onclick^="setPendingIdType"]')
+    .forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  const searchInput = document.getElementById('pendingSearch');
+  _renderPendingFiltered(searchInput?.value.trim().toLowerCase() ?? '');
+};
 
 
 // ================================================

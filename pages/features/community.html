@@ -1454,5 +1454,20 @@
   <script type="module" src="../../js/features/profile/profile.js"></script>
   <script type="module" src="../../js/features/community/community-polls.js"></script>
 
+  <script>
+    const _CK = 'communityTab';
+    document.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem(_CK);
+      if (saved) {
+        const btn = document.querySelector(`.community-tabs [data-tab="${saved}"]`);
+        if (btn) btn.click();
+      }
+      document.querySelectorAll('.community-tabs [data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          try { localStorage.setItem(_CK, btn.dataset.tab); } catch(e) {}
+        });
+      });
+    });
+  </script>
 </body>
 </html>

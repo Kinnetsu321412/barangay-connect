@@ -130,6 +130,10 @@ function injectConfirmModal() {
     background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);padding:1rem;
   `;
   el.innerHTML = `
+    <style>
+      #apmCancelBtn1:hover,#apmCancelBtn2:hover{background:#f3f4f6!important;}
+      #apmProceedBtn:hover,#apmPublishNowBtn:hover{background:#6f1c1c!important;}
+    </style>
     <div id="apmCard" style="background:#fff;border-radius:20px;width:100%;max-width:460px;
       max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.22);padding:2rem;">
 
@@ -165,13 +169,17 @@ function injectConfirmModal() {
         <div style="display:flex;gap:.5rem;">
           <button id="apmCancelBtn1" style="flex:1;padding:.65rem 1rem;border-radius:999px;
             border:1.5px solid #e5e7eb;background:#fff;color:#374151;font-family:inherit;
-            font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;
+            font-size:.85rem;font-weight:600;cursor:pointer;
+            onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'"
+            display:flex;align-items:center;
             justify-content:center;gap:.4rem;">
             <i data-lucide="x" style="width:14px;height:14px;"></i> Cancel
           </button>
           <button id="apmProceedBtn" style="flex:2;padding:.65rem 1rem;border-radius:999px;
             border:none;background:#7f1d1d;color:#fff;font-family:inherit;
-            font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;
+            font-size:.85rem;font-weight:700;cursor:pointer;
+            onmouseover="this.style.background='#6f1c1c'" onmouseout="this.style.background='#7f1d1d'"
+            display:flex;align-items:center;
             justify-content:center;gap:.4rem;">
             <i data-lucide="arrow-right" style="width:14px;height:14px;"></i> I Understand, Proceed
           </button>
@@ -210,13 +218,17 @@ function injectConfirmModal() {
           <div style="display:flex;gap:.5rem;">
             <button id="apmCancelBtn2" style="flex:1;padding:.65rem 1rem;border-radius:999px;
               border:1.5px solid #e5e7eb;background:#fff;color:#374151;font-family:inherit;
-              font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;
+              font-size:.85rem;font-weight:600;cursor:pointer;
+              onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='#fff'"
+              display:flex;align-items:center;
               justify-content:center;gap:.4rem;">
               <i data-lucide="x" style="width:14px;height:14px;"></i> Cancel
             </button>
             <button id="apmPublishNowBtn" style="flex:2;padding:.65rem 1rem;border-radius:999px;
               border:none;background:#7f1d1d;color:#fff;font-family:inherit;
-              font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;
+              font-size:.85rem;font-weight:700;cursor:pointer;
+              onmouseover="this.style.background='#6f1c1c'" onmouseout="this.style.background='#7f1d1d'"
+              display:flex;align-items:center;
               justify-content:center;gap:.4rem;">
               <i data-lucide="send" style="width:14px;height:14px;"></i> Publish Now
             </button>
@@ -271,23 +283,19 @@ function showPublishConfirm(alertData) {
     step1.hidden = false;
     step2.hidden = true;
 
-    /* Build summary */
-    const expiryLine = alertData.expiresAt
-      ? `<br><span style="color:#9ca3af;">⏱ Auto-expires: <strong style="color:#374151;">${
-          alertData.expiresAt.toDate().toLocaleString('en-PH', {
-            month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
-          })}</strong></span>`
-      : '';
-
     summary.innerHTML = `
-      <strong style="font-size:.88rem;display:block;margin-bottom:.25rem;">${esc(alertData.title)}</strong>
-      <span style="color:#6b7280;">${esc(alertData.message)}</span><br>
-      <span style="color:#9ca3af;font-size:.78rem;">
-        ${SEVERITY_LABELS[alertData.severity] ?? alertData.severity}
-        &nbsp;·&nbsp; Type: ${esc((alertData.type||'').replace(/\b\w/g,c=>c.toUpperCase()))}
-        &nbsp;·&nbsp; ${alertData.dismissible ? 'Dismissible' : '<strong style="color:#dc2626;">Non-dismissible</strong>'}
-        ${expiryLine}
-      </span>
+      <strong style="font-size:.92rem;display:block;margin-bottom:.4rem;color:#1a1a1a;line-height:1.4;">${esc(alertData.title)}</strong>
+      <p style="font-size:.82rem;color:#6b7280;margin:0 0 .75rem;line-height:1.5;">${esc(alertData.message)}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:.35rem;">
+        <span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;padding:2px 10px;border-radius:999px;font-size:.7rem;font-weight:700;">${SEVERITY_LABELS[alertData.severity] ?? alertData.severity}</span>
+        <span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;padding:2px 10px;border-radius:999px;font-size:.7rem;font-weight:700;">${esc((alertData.type||'').replace(/\b\w/g,c=>c.toUpperCase()))}</span>
+        ${alertData.dismissible
+          ? `<span style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;padding:2px 10px;border-radius:999px;font-size:.7rem;font-weight:700;">Dismissible</span>`
+          : `<span style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:2px 10px;border-radius:999px;font-size:.7rem;font-weight:700;">Non-dismissible</span>`}
+        ${alertData.expiresAt
+          ? `<span style="background:#fff8ed;color:#92400e;border:1px solid #fed7aa;padding:2px 10px;border-radius:999px;font-size:.7rem;font-weight:700;">⏱ ${alertData.expiresAt.toDate().toLocaleString('en-PH',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>`
+          : ''}
+      </div>
     `;
 
     lucide.createIcons({ el: document.getElementById('apmCard') });
@@ -426,8 +434,10 @@ function renderAlertForm(col) {
         </div>
         <div>
           <label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:4px">Message</label>
-          <textarea id="alertMessage" rows="2" placeholder="Brief description visible to all residents…"
-            style="width:100%;padding:0.55rem 0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-size:0.875rem;outline:none;resize:vertical;"></textarea>
+          <textarea id="alertMessage" rows="3" placeholder="Brief description visible to all residents…"
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,180)+'px'"
+            style="width:100%;padding:0.55rem 0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-size:0.875rem;
+            outline:none;resize:none;min-height:72px;max-height:180px;overflow-y:auto;transition:height .1s;"></textarea>
         </div>
         <div>
           <label style="display:flex;align-items:center;gap:0.5rem;font-size:0.875rem;font-weight:500;cursor:pointer;margin-bottom:0.5rem;">
@@ -601,7 +611,7 @@ function renderAlertList(barangay, docs) {
       display:inline-block;flex-shrink:0;"></span>`;
 
   const filterHtml = `
-  <div style="display:flex;flex-direction:row;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+  <div style="display:flex;flex-direction:row;align-items:center;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;">
     <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
       <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
         color:#9ca3af;letter-spacing:.06em;min-width:48px;">Severity</span>

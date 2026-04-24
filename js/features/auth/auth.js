@@ -242,9 +242,9 @@ if (loginForm) {
 /* Redirects to the appropriate landing page based on the user's role */
 function redirectByRole(role) {
   switch (role) {
-    case 'admin':   window.location.href = '../admin.html';    break;
-    case 'officer': window.location.href = 'pages/features/home.html'; break;
-    default:        window.location.href = 'pages/features/home.html'; break;
+    case 'admin':   window.location.href = '/admin.html';    break;
+    case 'officer': window.location.href = '/pages/features/home.html'; break;
+    default:        window.location.href = '/pages/features/home.html'; break;
   }
 }
 
