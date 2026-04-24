@@ -620,8 +620,8 @@ function renderAlertList(barangay, docs) {
         <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='all'?'is-active':''}" onclick="setAlertSeverityFilter('all',this)">All</button>
         <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='blue'?'is-active':''}" onclick="setAlertSeverityFilter('blue',this)">🔵 Blue</button>
         <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='green'?'is-active':''}" onclick="setAlertSeverityFilter('green',this)">🟢 Green</button>
-        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='red'?'is-active':''}" onclick="setAlertSeverityFilter('red',this)">🔴 Red</button>
         <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='orange'?'is-active':''}" onclick="setAlertSeverityFilter('orange',this)">🟠 Orange</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='red'?'is-active':''}" onclick="setAlertSeverityFilter('red',this)">🔴 Red</button>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
