@@ -63,10 +63,12 @@
   <link rel="stylesheet" href="../../css/shared/frames.css" />
   <link rel="stylesheet" href="../../css/features/community/community.css" />
   <link rel="stylesheet" href="../../css/features/community/polls.css" />
+  <link rel="stylesheet" href="../../css/features/community/gallery.css" />
 
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script type="module" src="../../js/shared/nav-auth.js"></script>
   <script type="module" src="../../js/features/profile/alerts.js"></script>
+  
 </head>
 
 <!--
@@ -213,52 +215,69 @@
          FAB:           .btn .btn--fab from buttons.css.
     ──────────────────────────────────────────────────────────────── -->
     <section class="tab-panel tab-panel--bulletin is-active" id="tab-bulletin" role="tabpanel">
-      <div class="community-panel-inner">
+  <div class="community-panel-inner">
 
-        <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.25rem;">
+    <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.25rem;">
 
-          <!-- Category filter pills -->
-          <div class="bulletin-filters" id="bulletinCategoryFilters">
-            <button class="btn btn--filter is-active">All</button>
-            <button class="btn btn--filter">General</button>
-            <button class="btn btn--filter">Announcements</button>
-            <button class="btn btn--filter">Health</button>
-            <button class="btn btn--filter">Infrastructure</button>
-            <button class="btn btn--filter">Safety</button>
-            <button class="btn btn--filter">Events</button>
+      <!-- Row 1: category pills -->
+      <div class="gallery-controls-row">
+        <div class="bulletin-filters" id="bulletinCategoryFilters" style="margin-bottom:0;">
+          <button class="btn btn--filter is-active">All</button>
+          <button class="btn btn--filter">General</button>
+          <button class="btn btn--filter">Announcements</button>
+          <button class="btn btn--filter">Health</button>
+          <button class="btn btn--filter">Infrastructure</button>
+          <button class="btn btn--filter">Safety</button>
+          <button class="btn btn--filter">Events</button>
+        </div>
+      </div>
+
+      <!-- Row 2: Source + Sort side by side -->
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+
+        <div style="display:flex;align-items:center;gap:.4rem;">
+          <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+            color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Source</span>
+          <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
+            <button class="btn btn--filter bulletin-source-seg__btn is-active" data-source="all">All</button>
+            <button class="btn btn--filter bulletin-source-seg__btn" data-source="official">
+              <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
+            </button>
+            <button class="btn btn--filter bulletin-source-seg__btn" data-source="community">
+              <i data-lucide="users" style="width:11px;height:11px;"></i> Community
+            </button>
           </div>
-
-          <!-- Source toggle — visually separated row -->
-          <div style="display:flex;align-items:center;gap:.4rem;">
-            <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
-              color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">View</span>
-            <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
-              <button class="btn btn--filter bulletin-source-seg__btn is-active" data-source="all">All</button>
-              <button class="btn btn--filter bulletin-source-seg__btn" data-source="official">
-                <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
-              </button>
-              <button class="btn btn--filter bulletin-source-seg__btn" data-source="community">
-                <i data-lucide="users" style="width:11px;height:11px;"></i> Community
-              </button>
-            </div>
-          </div>
-
         </div>
 
-        <!-- Post list — rendered dynamically by bulletin.js -->
-        <div class="bulletin-list" id="bulletinList"></div>
+        <div style="display:flex;align-items:center;gap:.4rem;">
+          <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+            color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Sort</span>
+          <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
+            <button class="btn btn--filter bulletin-source-seg__btn bulletin-sort-seg__btn is-active" data-sort="newest">Newest</button>
+            <button class="btn btn--filter bulletin-source-seg__btn bulletin-sort-seg__btn" data-sort="oldest">Oldest</button>
+            <button class="btn btn--filter bulletin-source-seg__btn bulletin-sort-seg__btn" data-sort="popular">
+              <i data-lucide="heart" style="width:11px;height:11px;"></i> Most Liked
+            </button>
+            <button class="btn btn--filter bulletin-source-seg__btn bulletin-sort-seg__btn" data-sort="commented">
+              <i data-lucide="message-circle" style="width:11px;height:11px;"></i> Most Comments
+            </button>
+          </div>
+        </div>
 
-      </div><!-- /community-panel-inner -->
+      </div>
 
-      <!--
-        FAB — fixed bottom-right, opens new post modal.
-        CLASS: .btn .btn--fab from buttons.css.
-      -->
-      <button class="btn btn--fab" aria-label="New post" onclick="openModal('newPostModal')">
-        <i data-lucide="plus"></i>
-      </button>
+    </div>
 
-    </section><!-- /tab-panel--bulletin -->
+    <!-- Post list -->
+    <div class="bulletin-list" id="bulletinList"></div>
+
+  </div><!-- /community-panel-inner -->
+
+  <button class="btn btn--fab" aria-label="New post" onclick="openModal('newPostModal')">
+    <i data-lucide="plus"></i>
+  </button>
+
+</section><!-- /tab-panel--bulletin -->
 
 
     <!-- ─────────────────────────────────────────────────────────────
@@ -393,93 +412,76 @@
     <!-- ─────────────────────────────────────────────────────────────
          TAB PANEL: GALLERY
          ─────────────────────────────────────────────────────────────
-         Filter row (.gallery-filters-row) holds filter pills left
-         and photo count right. Masonry 4-column grid below.
-         .gallery-item--tall spans 2 rows for the masonry effect.
-         Tag overlay: .gallery-item__tag uses .tag classes from components.css.
+         Dynamic featured gallery powered by gallery.js.
+         Hero card pinned at top, masonry/grid below.
+         Filter pills and view toggle wired by initGallery().
     ──────────────────────────────────────────────────────────────── -->
-    <section class="tab-panel tab-panel--gallery" id="tab-gallery" role="tabpanel">
+   <section class="tab-panel tab-panel--gallery" id="tab-gallery" role="tabpanel">
       <div class="community-panel-inner">
 
-        <!-- Filter row + photo count -->
-        <div class="gallery-filters-row">
-          <div class="gallery-filters">
-            <button class="btn btn--filter is-active">All</button>
-            <button class="btn btn--filter">Health</button>
-            <button class="btn btn--filter">Sports</button>
-            <button class="btn btn--filter">Events</button>
-            <button class="btn btn--filter">Environment</button>
-            <button class="btn btn--filter">Livelihood</button>
-            <button class="btn btn--filter">Youth</button>
+        <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.25rem;">
+
+          <!-- Row 1: category pills + view toggle -->
+          <div class="gallery-controls-row">
+            <div class="gallery-category-filters" id="galleryCategoryFilters">
+              <button class="btn btn--filter is-active" data-gallery-filter="all">All</button>
+            </div>
+            <div class="gallery-view-toggle" id="galleryViewToggle">
+              <button class="gallery-view-btn is-active" data-view="masonry" title="Masonry view">
+                <i data-lucide="layout-dashboard"></i>
+              </button>
+              <button class="gallery-view-btn" data-view="grid" title="Grid view">
+                <i data-lucide="grid-2x2"></i>
+              </button>
+            </div>
           </div>
-          <span class="gallery-photo-count">
-            <i data-lucide="camera"></i> 8 photos
-          </span>
+
+          <!-- Row 2: Source + Sort side by side -->
+          <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+
+            <div style="display:flex;align-items:center;gap:.4rem;">
+              <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+                color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Source</span>
+              <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-source-seg__btn is-active" data-source="all">All</button>
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-source-seg__btn" data-source="official">
+                  <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
+                </button>
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-source-seg__btn" data-source="community">
+                  <i data-lucide="users" style="width:11px;height:11px;"></i> Community
+                </button>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:.4rem;">
+              <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+                color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Sort</span>
+              <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn is-active" data-sort="newest">Newest</button>
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn" data-sort="oldest">Oldest</button>
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn" data-sort="popular">
+                  <i data-lucide="heart" style="width:11px;height:11px;"></i> Most Liked
+                </button>
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn" data-sort="commented">
+                  <i data-lucide="message-circle" style="width:11px;height:11px;"></i> Most Comments
+                </button>
+              </div>
+            </div>
+
+          </div>
+
         </div>
 
-        <!-- Masonry grid — .gallery-grid from community.css -->
-        <div class="gallery-grid">
+        <!-- Admin/officer pending feature approval queue (injected by gallery.js) -->
+        <div id="galleryPendingSlot"></div>
 
-          <div class="gallery-item">
-            <div class="gallery-item__img-wrap">
-              <img src="../../assets/images/gallery/medical-mission.jpg" alt="Free Medical Mission" class="gallery-item__img" />
-              <span class="gallery-item__tag tag tag--green">Health</span>
-            </div>
-            <p class="gallery-item__caption">Free Medical Mission</p>
-          </div>
+        <!-- Hero card slot -->
+        <div id="galleryHeroSlot"></div>
 
-          <div class="gallery-item">
-            <div class="gallery-item__img-wrap">
-              <img src="../../assets/images/gallery/blood-donation.jpg" alt="Blood Donation Drive" class="gallery-item__img" />
-              <span class="gallery-item__tag tag tag--green">Health</span>
-            </div>
-            <p class="gallery-item__caption">Blood Donation Drive</p>
-          </div>
+        <!-- Masonry / grid -->
+        <div class="gallery-masonry" id="galleryGrid"></div>
 
-          <!-- Tall item — spans 2 grid rows -->
-          <div class="gallery-item gallery-item--tall">
-            <div class="gallery-item__img-wrap">
-              <img src="../../assets/images/gallery/basketball.jpg" alt="Barangay Basketball Tournament" class="gallery-item__img" />
-              <span class="gallery-item__tag tag tag--blue">Sports</span>
-            </div>
-            <p class="gallery-item__caption">Barangay Basketball Tournament</p>
-          </div>
-
-          <div class="gallery-item">
-            <div class="gallery-item__img-wrap">
-              <img src="../../assets/images/gallery/fiesta.jpg" alt="Fiesta 2025" class="gallery-item__img" />
-              <span class="gallery-item__tag tag tag--amber">Events</span>
-            </div>
-            <p class="gallery-item__caption">Fiesta 2025</p>
-          </div>
-
-          <div class="gallery-item">
-            <div class="gallery-item__img-wrap">
-              <img src="../../assets/images/gallery/cleanup.jpg" alt="Environmental Clean-Up Drive" class="gallery-item__img" />
-              <span class="gallery-item__tag tag tag--green">Environment</span>
-            </div>
-            <p class="gallery-item__caption">Environmental Clean-Up Drive</p>
-          </div>
-
-          <div class="gallery-item">
-            <div class="gallery-item__img-wrap">
-              <img src="../../assets/images/gallery/livelihood.jpg" alt="Livelihood Skills Training" class="gallery-item__img" />
-              <span class="gallery-item__tag tag tag--amber">Livelihood</span>
-            </div>
-            <p class="gallery-item__caption">Livelihood Skills Training</p>
-          </div>
-
-          <div class="gallery-item">
-            <div class="gallery-item__img-wrap">
-              <img src="../../assets/images/gallery/youth-seminar.jpg" alt="Youth Leadership Seminar" class="gallery-item__img" />
-              <span class="gallery-item__tag tag tag--gray">Youth</span>
-            </div>
-            <p class="gallery-item__caption">Youth Leadership Seminar</p>
-          </div>
-
-        </div><!-- /gallery-grid -->
-
-      </div><!-- /community-panel-inner -->
+      </div>
     </section><!-- /tab-panel--gallery -->
 
 
@@ -1171,6 +1173,11 @@
           btn.classList.add('is-active');
           btn.setAttribute('aria-selected', 'true');
           document.getElementById('tab-' + target)?.classList.add('is-active');
+          
+          /* ── Gallery lazy init — start subscriptions when tab is opened ── */
+          if (target === 'gallery' && window.initGallery) {
+            window.initGallery();
+          }
 
           /* ── Notification scroll — check if a pending scroll was set by a notification click ── */
           if (window._pendingScrollTo) {
@@ -1246,6 +1253,7 @@
 
     import { initBulletin }       from '../../js/features/community/bulletin.js';
     import { submitCommunityPost } from '../../js/features/community/community-posts.js';
+    import { initGallery }        from '../../js/features/community/gallery.js';
 
     let _selectedFiles = [];
 
@@ -1349,6 +1357,7 @@
 
     /* ─── Override openModal to show approval warning for new post ─── */
     import { getModerationSettings } from '../../js/features/community/community-posts.js';
+    window.initGallery = initGallery;
 
     const _origOpenModal = window.openModal;
     window.openModal = async function (id) {
@@ -1454,6 +1463,7 @@
   <script src="../../js/features/community/community-animations.js" defer></script>
   <script type="module" src="../../js/features/profile/profile.js"></script>
   <script type="module" src="../../js/features/community/community-polls.js"></script>
+  <script type="module" src="../../js/features/community/gallery.js"></script>
 
   <script>
     const _CK = 'communityTab';

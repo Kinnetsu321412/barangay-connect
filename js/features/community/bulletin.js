@@ -101,7 +101,8 @@ let _currentUserName   = 'Resident';
 let _currentUserRole   = 'resident';
 const PAGE_SIZE        = 10;
 let _currentPage       = 0;
-let _scrollHandled = false;
+let _sortMode          = 'newest'; // 'newest' | 'oldest' | 'popular' | 'commented'
+let _scrollHandled     = false;
 
 
 // ================================================
@@ -308,6 +309,19 @@ export async function initBulletin() {
     });
   });
 
+  /* Sort sub-filter */
+  document.querySelectorAll('.bulletin-sort-seg__btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.bulletin-sort-seg__btn')
+        .forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      _sortMode    = btn.dataset.sort ?? 'newest';
+      _currentPage = 0;
+      _clearHashPage();
+      renderBulletin(listEl);
+    });
+  });
+
   /* Category filter pills */
   document.querySelectorAll('#bulletinCategoryFilters .btn--filter').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -346,13 +360,28 @@ function renderBulletin(listEl) {
 
   const now = new Date();
 
-  /* Merge and sort: pinned first, then by createdAt descending */
+  /* Merge and sort: pinned always first, then by _sortMode */
   const combined = [
     ..._allPosts.map(p => ({ ...p, _type: 'announcement' })),
     ..._allCommunityPosts,
   ].sort((a, b) => {
     if (a.isPinned && !b.isPinned) return -1;
     if (!a.isPinned && b.isPinned) return  1;
+
+    if (_sortMode === 'oldest') {
+      const ta = a.createdAt?.toDate?.() ?? new Date(0);
+      const tb = b.createdAt?.toDate?.() ?? new Date(0);
+      return ta - tb;
+    }
+    if (_sortMode === 'popular') {
+      const ra = Object.values(a.reactions ?? {}).reduce((s, v) => s + v, 0) + (a.likeCount ?? 0);
+      const rb = Object.values(b.reactions ?? {}).reduce((s, v) => s + v, 0) + (b.likeCount ?? 0);
+      return rb - ra;
+    }
+    if (_sortMode === 'commented') {
+      return (Number(b.commentCount) || 0) - (Number(a.commentCount) || 0);
+    }
+    /* default: newest */
     const ta = a.createdAt?.toDate?.() ?? new Date(0);
     const tb = b.createdAt?.toDate?.() ?? new Date(0);
     return tb - ta;
@@ -417,6 +446,56 @@ function renderBulletin(listEl) {
             ? summary.html
             : `<span style="color:var(--gray-400);font-size:var(--text-xs);font-family:var(--font-display);font-weight:var(--fw-semibold);">Like</span>`;
         }
+      }
+
+    /* Patch featured star button — including pending state */
+      const canSeePending = _currentUserRole === 'admin' || _currentUserRole === 'officer';
+      const starBtn = article.querySelector('.post-action-icon[onclick*="toggleFeatured"]');
+      if (starBtn) {
+        starBtn.classList.toggle('is-featured-active', !!post.isFeatured);
+        starBtn.classList.toggle('is-pending-active', !!post.pendingFeatured && !post.isFeatured);
+        starBtn.title = post.isFeatured
+          ? 'Remove from Gallery'
+          : (post.pendingFeatured ? 'Cancel Feature Request' : 'Add to Gallery');
+        const starIcon = starBtn.querySelector('[data-lucide]');
+        if (starIcon) {
+          const newIcon = post.pendingFeatured && !post.isFeatured ? 'clock' : 'star';
+          if (starIcon.getAttribute('data-lucide') !== newIcon) {
+            starIcon.setAttribute('data-lucide', newIcon);
+            lucide.createIcons({ el: starBtn });
+          }
+        }
+      }
+
+      /* Patch featured / pending badge */
+      const existingBadge = article.querySelector('.post-featured-badge');
+      if (post.isFeatured) {
+        if (!existingBadge || existingBadge.classList.contains('post-featured-badge--pending')) {
+          existingBadge?.remove();
+          const tagsRow = article.querySelector('.post-row__tags');
+          if (tagsRow) {
+            const badge     = document.createElement('span');
+            badge.className = 'post-featured-badge';
+            badge.title     = post.featuredByName ? `Featured by ${post.featuredByName}` : 'Featured in Gallery';
+            badge.innerHTML = `<i data-lucide="star" style="width:10px;height:10px;fill:var(--orange);color:var(--orange);pointer-events:none;"></i> Featured`;
+            tagsRow.appendChild(badge);
+            lucide.createIcons({ el: badge });
+          }
+        }
+      } else if (post.pendingFeatured && canSeePending) {
+        if (!existingBadge) {
+          const tagsRow = article.querySelector('.post-row__tags');
+          if (tagsRow) {
+            const badge     = document.createElement('span');
+            badge.className = 'post-featured-badge post-featured-badge--pending';
+            badge.title     = 'Pending admin approval';
+            badge.innerHTML = `<i data-lucide="clock" style="width:10px;height:10px;pointer-events:none;"></i> Pending`;
+            tagsRow.appendChild(badge);
+            lucide.createIcons({ el: badge });
+          }
+        }
+      } else if (existingBadge) {
+        existingBadge.remove();
       }
     });
 
@@ -610,7 +689,7 @@ function buildPostRow(post) {
   const canFeature = _currentUserRole === 'admin' || _currentUserRole === 'officer';
 
   const actionBtns = [
-    canFeature  ? `<button class="post-action-icon" onclick="toggleFeatured('${pid}','${isCPost ? 'communityPosts' : 'announcements'}')" title="${post.isFeatured ? 'Remove from Gallery' : 'Add to Gallery'}" style="${post.isFeatured ? 'color:var(--orange);' : ''}"><i data-lucide="star"></i></button>` : '',
+    canFeature && (post.imageURLs?.length || post.imageURL)  ? `<button class="post-action-icon${post.isFeatured ? ' is-featured-active' : (post.pendingFeatured ? ' is-pending-active' : '')}" onclick="toggleFeatured('${pid}','${isCPost ? 'communityPosts' : 'announcements'}')" title="${post.isFeatured ? 'Remove from Gallery' : (post.pendingFeatured ? 'Cancel Feature Request' : 'Add to Gallery')}"><i data-lucide="${post.pendingFeatured && !post.isFeatured ? 'clock' : 'star'}"></i></button>` : '',
     canAdminDel ? `<button class="post-action-icon post-action-icon--danger" onclick="adminDeleteCommunityPost('${pid}')" title="Delete"><i data-lucide="trash-2"></i></button>` : '',
     isOwn       ? `<button class="post-action-icon" onclick="editCommunityPost('${pid}')" title="Edit"><i data-lucide="pencil"></i></button>` : '',
     isOwn       ? `<button class="post-action-icon post-action-icon--danger" onclick="deleteCommunityPost('${pid}')" title="Delete"><i data-lucide="trash-2"></i></button>` : '',
@@ -642,8 +721,14 @@ function buildPostRow(post) {
           style="cursor:pointer">${esc(meta.label)}</span>
         <span class="post-row__time">${time}</span>
         ${post.isEdited ? `<span class="post-edited-label">edited</span>` : ''}
-        ${post.isFeatured && canFeature ? `<span class="post-featured-badge"><i data-lucide="star"
-          style="width:10px;height:10px;fill:var(--orange);color:var(--orange);pointer-events:none;"></i> Featured</span>` : ''}
+        ${post.isFeatured
+          ? `<span class="post-featured-badge"
+              title="${post.featuredByName ? `Featured by ${esc(post.featuredByName)}` : 'Featured in Gallery'}">
+              <i data-lucide="star" style="width:10px;height:10px;fill:var(--orange);color:var(--orange);pointer-events:none;"></i> Featured</span>`
+          : (post.pendingFeatured && canFeature
+            ? `<span class="post-featured-badge post-featured-badge--pending" title="Pending admin approval">
+                <i data-lucide="clock" style="width:10px;height:10px;pointer-events:none;"></i> Pending</span>`
+            : '')}
       </div>
 
       <h3 class="post-row__title">${esc(post.title)}</h3>
@@ -1083,30 +1168,101 @@ window.toggleFeatured = async function (postId, col) {
   if (_currentUserRole !== 'admin' && _currentUserRole !== 'officer') return;
   if (!_currentUid || !BARANGAY_ID) return;
 
-  const post               = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
-  const isCurrentlyFeatured = post?.isFeatured ?? false;
+  const post                = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
+  const isCurrentlyFeatured = post?.isFeatured     ?? false;
+  const isPending           = post?.pendingFeatured ?? false;
 
   const ok = await showConfirm({
-    title:   isCurrentlyFeatured ? 'Remove from Gallery?' : 'Add to Gallery?',
+    title:   isCurrentlyFeatured ? 'Remove from Gallery?'
+           : isPending           ? 'Cancel Feature Request?'
+           :                       'Add to Gallery?',
     body:    isCurrentlyFeatured
-      ? 'This post will no longer appear in the Featured Gallery.'
-      : 'This post will be highlighted in the Featured Gallery.',
-    confirm: isCurrentlyFeatured ? 'Remove' : 'Add to Gallery',
+           ? 'This post will no longer appear in the Featured Gallery.'
+           : isPending
+           ? 'The pending feature request will be cancelled.'
+           : 'This post will be highlighted in the Featured Gallery.',
+    confirm: isCurrentlyFeatured ? 'Remove'
+           : isPending           ? 'Cancel Request'
+           :                       'Add to Gallery',
     cancel:  'Go Back',
-    variant: isCurrentlyFeatured ? 'warning' : 'confirm',
+    variant: isCurrentlyFeatured || isPending ? 'warning' : 'confirm',
   });
   if (!ok) return;
 
   try {
-    const { doc: _d, updateDoc, serverTimestamp: _ts, deleteField } =
-      await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const {
+      doc: _d, updateDoc, serverTimestamp: _ts, deleteField,
+      getDoc, getDocs, collection: _col, query: _q, where: _w,
+    } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
     const postRef = _d(db, 'barangays', BARANGAY_ID, col, postId);
 
-    if (isCurrentlyFeatured) {
-      await updateDoc(postRef, { isFeatured: false, featuredAt: deleteField() });
+    /* ── Remove or cancel pending ── */
+    if (isCurrentlyFeatured || isPending) {
+      await updateDoc(postRef, {
+        isFeatured:      false,
+        pendingFeatured: deleteField(),
+        featuredAt:      deleteField(),
+        featuredBy:      deleteField(),
+        featuredByName:  deleteField(),
+        isHeroFeatured:  deleteField(),
+      });
+      return;
+    }
+
+    /* ── Read settings (cap + approval flag) ── */
+    const settingsSnap = await getDoc(_d(db, 'barangays', BARANGAY_ID, 'meta', 'settings'));
+    const settings     = settingsSnap.exists() ? settingsSnap.data() : {};
+    const cap          = Number(settings.featuredPostLimit ?? 20);
+
+    /* ── Cap check: count featured posts across both collections ── */
+    const [annoSnap, comSnap] = await Promise.all([
+      getDocs(_q(_col(db, 'barangays', BARANGAY_ID, 'announcements'),   _w('isFeatured', '==', true))),
+      getDocs(_q(_col(db, 'barangays', BARANGAY_ID, 'communityPosts'), _w('isFeatured', '==', true))),
+    ]);
+    if (annoSnap.size + comSnap.size >= cap) {
+      showToast(`Gallery is full (${cap} posts max). Remove a featured post first.`, 'error');
+      return;
+    }
+
+    /* ── Block posts without images — gallery is image-only ── */
+    const postImages = post?.imageURLs?.length ? post.imageURLs
+      : (post?.imageURL ? [post.imageURL] : []);
+
+    if (!postImages.length) {
+      showToast('Only posts with images can be added to the Gallery.', 'error');
+      return;
+    }
+
+    /* ── Cover selection for multi-image posts ── */
+    let coverIndex = 0;
+
+    if (postImages.length > 1 && window.showCoverSelectModal) {
+      const result = await window.showCoverSelectModal(post, col);
+      if (!result.confirmed) return;
+      coverIndex = result.coverIndex ?? 0;
+    }
+
+    /* ── Approval gate: officers submit for review if setting is on ── */
+    const requireApproval = settings.requireApprovalToFeature ?? false;
+
+    if (requireApproval && _currentUserRole === 'officer') {
+      await updateDoc(postRef, {
+        pendingFeatured:    true,
+        featuredCoverIndex: coverIndex,
+        featuredBy:         _currentUid,
+        featuredByName:     _currentUserName,
+      });
+      showToast('Feature request submitted — awaiting admin approval.');
     } else {
-      await updateDoc(postRef, { isFeatured: true, featuredAt: _ts() });
+      await updateDoc(postRef, {
+        isFeatured:         true,
+        featuredAt:         _ts(),
+        featuredCoverIndex: coverIndex,
+        featuredBy:         _currentUid,
+        featuredByName:     _currentUserName,
+      });
+      showToast('Post added to the Featured Gallery!');
     }
   } catch (err) {
     console.error('[toggleFeatured]', err);

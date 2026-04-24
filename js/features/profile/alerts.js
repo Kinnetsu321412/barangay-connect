@@ -310,7 +310,7 @@ function listenCurfews(barangay, userDob = null) {
       const today   = now.toISOString().slice(0, 10);
       const hhmm    = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()];
-      console.log('[curfew check]', { hhmm, dayName, schedules });
+      //console.log('[curfew check]', { hhmm, dayName, schedules });
 
       let active = null;
 
