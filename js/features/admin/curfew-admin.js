@@ -74,6 +74,8 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 
 // ================================================
 // CONFIGURATION
@@ -96,6 +98,7 @@ let _alertsCol        = null;
 let _exceptions       = [];
 let _schedules        = [];
 let _liveTimer        = null;
+let _curfewTypeFilter = 'all';
 
 
 // ================================================
@@ -351,7 +354,6 @@ function renderList(docs) {
   const el = document.getElementById('curfewList');
   if (!el) return;
 
-  /* Update active-schedule badge count */
   const badge  = document.getElementById('curfewBadgeCount');
   const active = docs.filter(d => d.data().active).length;
   if (badge) {
@@ -359,32 +361,65 @@ function renderList(docs) {
     badge.style.display = active > 0 ? 'inline' : 'none';
   }
 
+  const filtered = _curfewTypeFilter === 'all'
+    ? docs : docs.filter(d => d.data().type === _curfewTypeFilter);
+
+  /* Header + filter row — always rendered regardless of filtered results */
+  const headerHtml = `
+    <style>@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}</style>
+    <div style="margin-bottom:.75rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        flex-wrap:wrap;gap:.5rem;margin-bottom:.5rem;">
+        <span id="curfewLivePill" style="display:none;align-items:center;gap:.4rem;
+          background:#dcfce7;color:#15803d;padding:4px 12px;border-radius:999px;
+          font-size:.75rem;font-weight:700;border:1.5px solid #86efac;">
+          <span style="width:7px;height:7px;background:#16a34a;border-radius:50%;
+            animation:pulse 1.5s infinite;display:inline-block;"></span>
+          Curfew enforcing now
+        </span>
+        <span style="font-size:.75rem;color:#aaa;">Active-status updates every 60 s</span>
+      </div>
+      <div style="display:inline-flex;background:var(--alpha-ink-07);
+        border-radius:var(--radius-full);padding:3px;gap:2px;">
+        <button class="bulletin-view-btn admin-subtab-btn curfew-type-btn ${_curfewTypeFilter === 'all' ? 'is-active' : ''}" onclick="setCurfewTypeFilter('all',this)">All</button>
+        <button class="bulletin-view-btn admin-subtab-btn curfew-type-btn ${_curfewTypeFilter === 'weekly' ? 'is-active' : ''}" onclick="setCurfewTypeFilter('weekly',this)">
+          <i data-lucide="repeat" style="width:11px;height:11px;"></i> Weekly
+        </button>
+        <button class="bulletin-view-btn admin-subtab-btn curfew-type-btn ${_curfewTypeFilter === 'once' ? 'is-active' : ''}" onclick="setCurfewTypeFilter('once',this)">
+          <i data-lucide="calendar" style="width:11px;height:11px;"></i> One-time
+        </button>
+        <button class="bulletin-view-btn admin-subtab-btn curfew-type-btn ${_curfewTypeFilter === 'manual' ? 'is-active' : ''}" onclick="setCurfewTypeFilter('manual',this)">
+          <i data-lucide="sliders" style="width:11px;height:11px;"></i> Manual
+        </button>
+      </div>
+    </div>`;
+
   if (!docs.length) {
-    el.innerHTML = `
+    el.innerHTML = headerHtml + `
       <div style="background:#fff;border-radius:12px;padding:2.5rem;text-align:center;
         color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,.07);">
         <i data-lucide="moon" style="width:32px;height:32px;color:#d1d5db;display:block;margin:0 auto .75rem;"></i>
-        <p style="margin:0;font-size:.9rem;">No curfew schedules yet.<br>
-          Use the button below to add one.</p>
+        <p style="margin:0;font-size:.9rem;">No curfew schedules yet.<br>Use the button below to add one.</p>
       </div>`;
+    lucide.createIcons({ el });
+    updateActiveBadges();
+    return;
+  }
+
+  if (!filtered.length) {
+    el.innerHTML = headerHtml + `
+      <div style="background:#fff;border-radius:12px;padding:2.5rem;text-align:center;
+        color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,.07);">
+        <i data-lucide="filter-x" style="width:32px;height:32px;color:#d1d5db;display:block;margin:0 auto .75rem;"></i>
+        <p style="margin:0;font-size:.9rem;">No schedules match this filter.</p>
+      </div>`;
+    lucide.createIcons({ el });
     updateActiveBadges();
     return;
   }
 
   const now = new Date();
-  el.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;
-      margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
-      <span id="curfewLivePill" style="display:none;align-items:center;gap:.4rem;
-        background:#dcfce7;color:#15803d;padding:4px 12px;border-radius:999px;
-        font-size:.75rem;font-weight:700;border:1.5px solid #86efac;">
-        <span style="width:7px;height:7px;background:#16a34a;border-radius:50%;
-          animation:pulse 1.5s infinite;display:inline-block;"></span>
-        Curfew enforcing now
-      </span>
-      <span style="font-size:.75rem;color:#aaa;">Active-status updates every 60 s</span>
-    </div>
-    <style>@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}</style>
+  el.innerHTML = headerHtml + `
     <div style="background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);overflow:hidden">
       <div style="display:grid;grid-template-columns:2fr 1.5fr 1fr auto;
         padding:.55rem 1.25rem;border-bottom:1.5px solid #f0f0f0;
@@ -393,7 +428,7 @@ function renderList(docs) {
         <span>Name &amp; Type</span><span>Hours &amp; Status</span>
         <span>Next trigger</span><span></span>
       </div>
-      ${docs.map(d => buildListRow(d.id, d.data(), now)).join('')}
+      ${filtered.map(d => buildListRow(d.id, d.data(), now)).join('')}
     </div>`;
 
   lucide.createIcons({ el });
@@ -552,6 +587,14 @@ window.curfewToggle = async function (id, newState) {
   }
 };
 
+window.setCurfewTypeFilter = function (type, btn) {
+  _curfewTypeFilter = type;
+  document.querySelectorAll('.curfew-type-btn')
+    .forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  renderList(_schedules.map(s => ({ id: s.id, data: () => s })));
+};
+
 /* Duplicates a schedule as a new paused document */
 window.curfewDuplicate = async function (id) {
   const schedule = _schedules.find(s => s.id === id);
@@ -568,14 +611,13 @@ window.curfewDuplicate = async function (id) {
 
 /* Confirms and permanently deletes a schedule document */
 window.curfewDelete = async function (id, name) {
-  const ok = await showConfirmModal({
-    title:        'Delete Schedule?',
-    body:         `This will permanently remove <strong>${esc(name)}</strong>. Residents won't see it again.`,
-    confirmLabel: 'Delete',
-    iconName:     'trash-2',
-    iconType:     'admin',
-    danger:       true,
-  });
+  const ok = await showConfirm({
+  title:   'Delete Schedule?',
+  body:    `This will permanently remove <strong>${esc(name)}</strong>. Residents won't see it again.`,
+  confirm: 'Delete',
+  cancel:  'Go Back',
+  variant: 'danger',
+});
   if (!ok) return;
 
   try {
@@ -687,13 +729,12 @@ window.curfewEdit = async function (id) {
   /* Clicking Edit/Cancel on the currently-editing row */
   if (_editId === id) {
     if (_isFormDirty()) {
-      const ok = await showConfirmModal({
-        title:        'Discard Changes?',
-        body:         `Unsaved edits to <strong>${esc(_editOriginalData?.name || 'this schedule')}</strong> will be lost.`,
-        confirmLabel: 'Discard',
-        iconName:     'alert-triangle',
-        iconType:     'officer',
-        danger:       false,
+      const ok = await showConfirm({
+        title:   'Discard Changes?',
+        body:    `Unsaved edits to <strong>${esc(_editOriginalData?.name || 'this schedule')}</strong> will be lost.`,
+        confirm: 'Discard',
+        cancel:  'Keep Editing',
+        variant: 'warning',
       });
       if (!ok) return;
     }
@@ -707,13 +748,12 @@ window.curfewEdit = async function (id) {
   /* Switching to a different edit while the form is already open */
   if (_editId || _formVisible) {
     if (_isFormDirty()) {
-      const ok = await showConfirmModal({
-        title:        'Discard Changes?',
-        body:         'Unsaved changes will be lost.',
-        confirmLabel: 'Discard',
-        iconName:     'alert-triangle',
-        iconType:     'officer',
-        danger:       false,
+      const ok = await showConfirm({
+        title:   'Discard Changes?',
+        body:    'Unsaved changes will be lost.',
+        confirm: 'Discard',
+        cancel:  'Keep Editing',
+        variant: 'warning',
       });
       if (!ok) return;
     }
@@ -740,9 +780,12 @@ window.curfewCancelEdit = async function () {
     const body  = _editId
       ? `Unsaved edits to <strong>${esc(_editOriginalData?.name || 'this schedule')}</strong> will be lost.`
       : 'Your new schedule setup will be discarded.';
-    const ok = await showConfirmModal({
-      title, body, confirmLabel: 'Discard',
-      iconName: 'alert-triangle', iconType: 'officer', danger: false,
+    const ok = await showConfirm({
+      title,
+      body,
+      confirm: 'Discard',
+      cancel:  'Keep Editing',
+      variant: 'warning',
     });
     if (!ok) return;
   }
@@ -778,51 +821,6 @@ function _isFormDirty() {
     start !== (d.startTime || '22:00')  ||
     end   !== (d.endTime   || '05:00')
   );
-}
-
-
-// ================================================
-// CONFIRM MODAL
-// ================================================
-
-/*
-   Generic confirm dialog that uses the existing #roleModal structure.
-   Falls back to window.confirm() if the modal element is absent.
-   Replaces the old showDeleteConfirm — accepts any title/body/labels.
-*/
-function showConfirmModal({ title, body, confirmLabel = 'Confirm', iconName = 'alert-triangle', iconType = 'officer', danger = true }) {
-  return new Promise(resolve => {
-    const backdrop = document.getElementById('roleModal');
-    if (!backdrop) { resolve(window.confirm(title)); return; }
-
-    const icon    = document.getElementById('modalIcon');
-    const titleEl = document.getElementById('modalTitle');
-    const bodyEl  = document.getElementById('modalBody');
-    const wrap    = document.getElementById('adminConfirmWrap');
-    const btn     = document.getElementById('modalConfirmBtn');
-
-    icon.className      = `modal__icon modal__icon--${iconType}`;
-    icon.innerHTML      = `<i data-lucide="${iconName}"></i>`;
-    titleEl.textContent = title;
-    bodyEl.innerHTML    = body;
-    wrap.classList.remove('visible');
-    btn.textContent     = confirmLabel;
-    btn.className       = `modal__btn modal__btn--confirm${danger ? ' admin-confirm' : ''}`;
-    btn.disabled        = false;
-
-    lucide.createIcons({ el: icon });
-    backdrop.classList.add('visible');
-
-    function cleanup(result) {
-      backdrop.classList.remove('visible');
-      btn.onclick = null;
-      backdrop.querySelector('.modal__btn--cancel').onclick = window.closeModal;
-      resolve(result);
-    }
-
-    btn.onclick = () => cleanup(true);
-    backdrop.querySelector('.modal__btn--cancel').onclick = () => cleanup(false);
-  });
 }
 
 

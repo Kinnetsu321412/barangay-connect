@@ -140,7 +140,7 @@ if (IS_LOCAL) {
     resolved = true;
 
     if (!firebaseUser) {
-      window.location.href = '../index.html';
+      window.location.href = '/index.html';;
       return;
     }
 
@@ -148,7 +148,7 @@ if (IS_LOCAL) {
       const indexSnap = await getDoc(userIndexDoc(firebaseUser.uid));
       if (!indexSnap.exists()) {
         await signOut(auth);
-        window.location.href = '../index.html';
+        window.location.href = '/index.html';;
         return;
       }
 
@@ -156,7 +156,7 @@ if (IS_LOCAL) {
 
       if (status !== 'active') {
         await signOut(auth);
-        window.location.href = '../index.html';
+        window.location.href = '/index.html';;
         return;
       }
 
@@ -240,7 +240,7 @@ function initPage(userData, isDemo) {
       if (!IS_LOCAL) {
         try { await signOut(auth); } catch (_) {}
       }
-      window.location.href = '../index.html';
+      window.location.href = '/index.html';;
     });
   }
 

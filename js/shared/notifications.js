@@ -337,7 +337,7 @@ export async function sendNotification(barangayId, recipientUid, data) {
     if (!onCommunity) {
       // Navigate cross-page — community.html reads ?tab= and ?scrollTo= on load
       window.location.href =
-        `community.html?tab=${targetTab}&scrollTo=${encodeURIComponent(postId)}`;
+  `/pages/features/community.html?tab=${targetTab}&scrollTo=${encodeURIComponent(postId)}`;
       return;
     }
 

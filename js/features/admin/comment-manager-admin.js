@@ -69,6 +69,8 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 
 // ================================================
 // MODULE STATE
@@ -115,6 +117,7 @@ onAuthStateChanged(auth, async (user) => {
 */
 
 async function loadAllComments() {
+  if (window._commentsLoading) return; window._commentsLoading = true;
   if (!_bid) return;
 
   const listEl = document.getElementById('commentManagerList');
@@ -177,15 +180,18 @@ async function loadAllComments() {
 
       for (const commentNode of topLevel) {
         _allComments.push({
-          commentId:  commentNode.id,
-          postId:     postDoc.id,
-          postTitle:  postData.title ?? '(no title)',
-          postSource: src.label,
-          col:        src.col,
-          replyCount: commentNode.replies.length,
-          replies:    commentNode.replies,
-          ...commentNode,
-        });
+        commentId:  commentNode.id,
+        postId:     postDoc.id,
+        postTitle:  postData.title   ?? '(no title)',
+        postBody:   postData.body    ?? '',
+        postAuthor: postData.authorName ?? '—',
+        postDate:   postData.createdAt ?? null,
+        postSource: src.label,
+        col:        src.col,
+        replyCount: commentNode.replies.length,
+        replies:    commentNode.replies,
+        ...commentNode,
+      });
       }
     }
   }
@@ -197,6 +203,7 @@ async function loadAllComments() {
     return tb - ta;
   });
 
+  window._commentsLoading = false;
   renderComments();
 }
 
@@ -227,21 +234,100 @@ function renderComments() {
 
   if (!list.length) {
     listEl.innerHTML = `
-      <div style="
-        background:    #fff;
-        border-radius: 12px;
-        padding:       3rem;
-        text-align:    center;
-        color:         #aaa;
-        box-shadow:    0 1px 4px rgba(0,0,0,.07);
-      ">
+      <div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;
+        color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,.07);">
         <div style="font-size:2rem;margin-bottom:.5rem;">💬</div>
         <p style="margin:0;font-size:.9rem;">No comments found.</p>
       </div>`;
     return;
   }
 
-  listEl.innerHTML = list.map(c => buildCommentRow(c)).join('');
+  /* Group by postId so comments appear under their parent post */
+  const groups = new Map();
+  for (const c of list) {
+    if (!groups.has(c.postId)) {
+      groups.set(c.postId, {
+      postId:     c.postId,
+      postTitle:  c.postTitle,
+      postBody:   c.postBody,
+      postAuthor: c.postAuthor,
+      postDate:   c.postDate,
+      col:        c.col,
+      postSource: c.postSource,
+      comments:   [],
+    });
+    }
+    groups.get(c.postId).comments.push(c);
+  }
+
+  let html = '';
+  for (const [, group] of groups) {
+    const gid = `grp-${group.postId}`;
+    const sourceChip = group.col === 'announcements'
+      ? `<span style="background:#f0fdf4;color:#15803d;padding:2px 8px;
+          border-radius:999px;font-size:.68rem;font-weight:700;
+          border:1px solid #bbf7d0;">✓ Official</span>`
+      : `<span style="background:#f9fafb;color:#6b7280;padding:2px 8px;
+          border-radius:999px;font-size:.68rem;font-weight:700;
+          border:1px solid #e5e7eb;">Community</span>`;
+
+    html += `
+      <div style="background:#f9fafb;border:1.5px solid #e5e7eb;
+        border-radius:12px;overflow:hidden;margin-bottom:1rem;">
+
+        <!-- Post group header -->
+        <div style="display:flex;align-items:center;gap:.5rem;
+          padding:.75rem 1rem;background:#fff;
+          border-bottom:1.5px solid #e5e7eb;flex-wrap:wrap;cursor:pointer;"
+          onclick="
+            const body = document.getElementById('${gid}-body');
+            const chev = this.querySelector('.grp-chev');
+            const open = body.style.display !== 'none';
+            body.style.display = open ? 'none' : 'flex';
+            chev.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+          ">
+          <i data-lucide="chevron-right" class="grp-chev"
+            style="width:14px;height:14px;flex-shrink:0;
+              transition:transform .2s;transform:rotate(90deg);"></i>
+          ${sourceChip}
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:.85rem;font-weight:700;color:#374151;
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+              title="${esc(group.postTitle)}">
+              ${esc(group.postTitle)}
+            </div>
+            <div style="font-size:.72rem;color:#9ca3af;margin-top:1px;">
+              by ${esc(group.postAuthor)} ·
+              ${group.postDate?.toDate?.()?.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}) ?? '—'}
+            </div>
+            ${group.postBody ? `
+              <div style="font-size:.75rem;color:#6b7280;margin-top:2px;
+                overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                ${esc(group.postBody.slice(0, 100))}${group.postBody.length > 100 ? '…' : ''}
+              </div>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
+            <button onclick="event.stopPropagation();viewReportedPost('${esc(group.postId)}')"
+              style="display:inline-flex;align-items:center;gap:.3rem;padding:.3rem .7rem;
+                border-radius:7px;background:#f3f4f6;color:#374151;border:1.5px solid #e5e7eb;
+                font-size:.75rem;font-weight:600;cursor:pointer;">
+              <i data-lucide="eye" style="width:11px;height:11px;"></i> View Post
+            </button>
+            <span style="font-size:.72rem;color:#9ca3af;white-space:nowrap;">
+              ${group.comments.length} comment${group.comments.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </div>
+
+        <!-- Comments under this post -->
+        <div id="${gid}-body" style="display:flex;flex-direction:column;gap:.5rem;padding:.75rem;">
+          ${group.comments.map(c => buildCommentRow(c, false)).join('')}
+        </div>
+
+      </div>`;
+  }
+
+  listEl.innerHTML = html;
   lucide.createIcons({ el: listEl });
 }
 
@@ -375,7 +461,7 @@ function buildReplyRows(replies, postId, col, depth = 0) {
 // ================================================
 
 /* Constructs and returns the HTML string for a single top-level comment card */
-function buildCommentRow(c) {
+function buildCommentRow(c, showPostContext = true) {
   const time = c.createdAt?.toDate?.()
     ?.toLocaleDateString('en-PH', {
       month:  'short',
@@ -445,7 +531,7 @@ function buildCommentRow(c) {
       box-shadow:    0 1px 4px rgba(0,0,0,.07);
     " id="comment-row-${esc(c.commentId)}">
 
-      <!-- Post context: source chip + post title -->
+      ${showPostContext ? `
       <div style="
         display:     flex;
         align-items: center;
@@ -466,7 +552,7 @@ function buildCommentRow(c) {
         " title="${esc(c.postTitle)}">
           ${esc(c.postTitle)}
         </span>
-      </div>
+      </div>` : ''}
 
       <!-- Comment content -->
       <div style="display:flex;gap:.6rem;align-items:flex-start;">
@@ -572,7 +658,8 @@ window.toggleAdminReplies = function (commentId) {
 */
 
 window.adminDeleteComment = async function (postId, commentId, col) {
-  if (!confirm('Delete this comment? This cannot be undone.')) return;
+  const ok = await showConfirm({ title: 'Delete Comment?', body: 'This comment and all its replies will be permanently removed.', confirm: 'Delete', cancel: 'Go Back', variant: 'danger' });
+if (!ok) return;
   if (!_bid) return;
 
   try {

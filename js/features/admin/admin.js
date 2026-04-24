@@ -55,6 +55,8 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 
 // ================================================
 // AUTH GUARD
@@ -67,13 +69,13 @@ import {
 */
 
 onAuthStateChanged(auth, async (user) => {
-  if (!user) { window.location.href = '../index.html'; return; }
+  if (!user) { window.location.href = '/index.html';; return; }
 
   const indexSnap = await getDoc(userIndexDoc(user.uid));
-  if (!indexSnap.exists()) { window.location.href = '../index.html'; return; }
+  if (!indexSnap.exists()) { window.location.href = '/index.html';; return; }
 
   const { barangay, role } = indexSnap.data();
-  if (role !== 'admin') { window.location.href = '../index.html'; return; }
+  if (role !== 'admin') { window.location.href = '/index.html';; return; }
 
   loadPendingUsers(barangay, user.uid);
 });
@@ -92,6 +94,7 @@ onAuthStateChanged(auth, async (user) => {
    match formatted strings like "BRY-BAN-2024-00001".
 */
 
+let _pendingTotal = 0;
 let allUsers = [];
 
 function loadPendingUsers(barangay, currentUid) {
@@ -151,6 +154,7 @@ function loadPendingUsers(barangay, currentUid) {
     /* Update all pending count badges */
     const badge = document.getElementById('pendingBadgeCount');
     if (badge) {
+      _pendingTotal = snapshot.size;
       badge.textContent  = snapshot.size;
       badge.style.display = snapshot.size > 0 ? 'inline' : 'none';
 
@@ -324,7 +328,10 @@ function buildCard(user) {
 */
 
 window.approveUser = async function(uid, barangay, name) {
-  if (!confirm(`Approve ${name}? They will be able to sign in immediately.`)) return;
+  const ok = await showConfirm({ title: 'Approve Applicant?',
+  body: `<strong>${name}</strong> will be able to sign in immediately.`,
+  confirm: 'Approve', cancel: 'Go Back', variant: 'confirm' });
+  if (!ok) return;
 
   const btn      = document.querySelector(`#card-${uid} .btn--success`);
   const feedback = document.getElementById(`feedback-${uid}`);
@@ -376,7 +383,10 @@ window.approveUser = async function(uid, barangay, name) {
 */
 
 window.rejectUser = async function(uid, barangay, name) {
-  if (!confirm(`Reject ${name}? This will permanently delete their application.`)) return;
+  const ok = await showConfirm({ title: 'Reject Applicant?',
+    body: `This will permanently delete <strong>${name}</strong>'s application.`,
+    confirm: 'Reject', cancel: 'Go Back', variant: 'danger' });
+  if (!ok) return;
 
   const btn      = document.querySelector(`#card-${uid} .btn--danger`);
   const feedback = document.getElementById(`feedback-${uid}`);

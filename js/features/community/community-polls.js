@@ -78,6 +78,8 @@ import {
 
 import { notifyAllInBarangay } from '../../shared/notifications.js';
 
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 // ================================================
 // CATEGORY MAP
 // ================================================
@@ -665,40 +667,18 @@ function _buildEmptyState() {
    is committed. Uses a lazily-created fixed overlay so the
    community.html does not need any extra markup.
 */
-window._bcVote = function (pollId, optionId, optionText) {
+window._bcVote = async function (pollId, optionId, optionText) {
+  const ok = await showConfirm({
+    title:   'Confirm Vote?',
+    body:    `You are about to vote for <strong>${esc(optionText)}</strong>. This cannot be undone.`,
+    confirm: 'Confirm Vote',
+    cancel:  'Cancel',
+    variant: 'warning',
+  });
+  if (!ok) return;
   _pendingConfirm = { pollId, optionId, optionText };
-
-  let overlay = document.getElementById('_bcConfirmOverlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id        = '_bcConfirmOverlay';
-    overlay.className = 'poll-confirm-overlay';
-    document.body.appendChild(overlay);
-  }
-
-  overlay.innerHTML = `
-    <div class="poll-confirm">
-      <p class="poll-confirm__msg">
-        You are about to vote for <strong>${esc(optionText)}</strong>.
-        This action cannot be undone. Do you wish to proceed?
-      </p>
-      <div class="poll-confirm__actions">
-        <button class="btn btn--outline btn--sm"
-          onclick="window._bcCancelVote()">Cancel</button>
-        <button class="btn btn--green btn--sm"
-          onclick="window._bcConfirmVote()">Confirm Vote</button>
-      </div>
-    </div>`;
-
-  overlay.classList.add('is-open');
-  if (typeof lucide !== 'undefined') lucide.createIcons({ el: overlay });
+  await window._bcConfirmVote();
 };
-
-window._bcCancelVote = function () {
-  _pendingConfirm = null;
-  document.getElementById('_bcConfirmOverlay')?.classList.remove('is-open');
-};
-
 
 // ================================================
 // VOTE TRANSACTION

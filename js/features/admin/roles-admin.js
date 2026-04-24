@@ -252,11 +252,18 @@ function buildUserRow(user) {
     else if (isCurrent) { disabled = 'disabled'; tooltip = `Already ${roleDisplayName(role)}`; }
     else                { tooltip = `Set as ${roleDisplayName(role)}`; }
 
+    const _rc  = { resident:'#15803d', officer:'#c2410c', admin:'#dc2626' }[role] ?? '#6b7280';
+    const _rbd = isCurrent ? _rc : '#e0e0e0';
+    const _rbg = isCurrent ? ({ resident:'#f0fdf4', officer:'#fff7ed', admin:'#fef2f2' }[role] ?? '#f9fafb') : '#fff';
+
     return `<button
       class="role-action-btn ${colorClass} ${currentClass}"
       data-tooltip="${tooltip}"
       onclick="openRoleModal('${user.uid}', '${escapeAttr(user.fullName)}', '${user.role}', '${role}', ${isSuperAdmin}, ${isMe})"
       ${disabled}
+    style="width:32px;height:32px;border-radius:50%;style="width:32px;height:32px;border-radius:50%;border:1.5px solid ${_rbd};
+    background:${_rbg};cursor:pointer;display:inline-flex;align-items:center;
+    justify-content:center;color:${isCurrent ? _rc : '#d1d5db'};transition:all .15s;"
     ><i data-lucide="${icon}"></i></button>`;
   };
 
@@ -562,6 +569,16 @@ function showToast(message, type = 'success') {
    share a householdId. Hides the bar when empty.
 ================================================ */
 
+window.toggleHouseholdPanel = function () {
+  const panel   = document.getElementById('householdPanel');
+  const chevron = document.getElementById('householdChevron');
+  const isOpen  = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'flex';
+  panel.style.flexWrap = 'wrap';
+  panel.style.gap = 'var(--space-sm)';
+  if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+};
+
 window.setHouseholdFilter = function (id) {
   currentHousehold = id;
   renderUsers();
@@ -582,13 +599,17 @@ function buildHouseholdBar() {
 
   const section = bar.closest('div[style]') ?? bar.parentElement;
 
+  const householdSection = document.getElementById('householdSection');
+  const householdCount   = document.getElementById('householdCount');
+
   if (grouped.length === 0 && !currentHousehold) {
-    if (section) section.style.display = 'none';
+    if (householdSection) householdSection.style.display = 'none';
     bar.innerHTML = '';
     return;
   }
 
-  if (section) section.style.display = '';
+  if (householdSection) householdSection.style.display = '';
+  if (householdCount)   householdCount.textContent = `(${grouped.length})`;
 
   bar.innerHTML = grouped.map(hid => {
     const count   = counts[hid];

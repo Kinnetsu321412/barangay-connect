@@ -60,6 +60,8 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 
 /* ================================================
    MODULE STATE
@@ -100,6 +102,8 @@ onAuthStateChanged(auth, async (user) => {
     if (badge) {
       badge.textContent   = reports.length;
       badge.style.display = reports.length ? 'inline' : 'none';
+      badge.style.background = 'rgba(0,0,0,0.12)';
+      badge.style.color      = '#374151';
     }
 
     renderReports(reports);
@@ -198,7 +202,8 @@ window.dismissReport = async function (reportId) {
 ================================================ */
 
 window.deleteReportedPost = async function (reportId, postId) {
-  if (!confirm('Delete this post and dismiss the report?')) return;
+  const ok = await showConfirm({ title: 'Delete Post?', body: 'The post will be deleted and the report dismissed.', confirm: 'Delete', cancel: 'Go Back', variant: 'danger' });
+if (!ok) return;
   if (!_bid) return;
 
   try {
@@ -218,7 +223,7 @@ window.deleteReportedPost = async function (reportId, postId) {
         const myRole = mySnap.exists() ? mySnap.data().role : 'officer';
 
         if (myRole === 'officer' && postAuthorRole === 'admin') {
-          alert('Officers cannot delete admin posts.');
+          await showConfirm({ title: 'Not Allowed', body: 'Officers cannot delete admin posts.', confirm: 'OK', cancel: '', variant: 'warning' });
           return;
         }
 
@@ -227,7 +232,7 @@ window.deleteReportedPost = async function (reportId, postId) {
         break;
       } catch (err) {
         if (err.code === 'permission-denied') {
-          alert('You do not have permission to delete this post.');
+          await showConfirm({ title: 'Permission Denied', body: 'You do not have permission to delete this post.', confirm: 'OK', cancel: '', variant: 'warning' });
           return;
         }
       }

@@ -98,14 +98,15 @@ onAuthStateChanged(auth, async (user) => {
     if (badge) {
       badge.textContent   = posts.length;
       badge.style.display = posts.length > 0 ? 'inline' : 'none';
-
+      badge.style.background = 'rgba(0,0,0,0.12)';
+      badge.style.color      = '#374151';
       const mainBadge = document.getElementById('reportsMainBadge');
-      if (mainBadge) {
-        mainBadge.textContent   = posts.length;
-        mainBadge.style.display = posts.length > 0 ? 'inline' : 'none';
-      }
+    if (mainBadge) {
+      mainBadge.textContent   = posts.length;
+      mainBadge.style.display = posts.length > 0 ? 'inline' : 'none';
     }
-
+  }
+    window._pendingPostsCount = posts.length;
     renderPendingPosts(posts);
   });
 });
@@ -225,7 +226,8 @@ function buildPendingRow(p) {
 
 /* Sets the post status to 'published', making it visible to all residents */
 window.approvePost = async function (id) {
-  if (!confirm('Approve this post? It will be visible to all residents.')) return;
+  const ok = await showConfirm({ title: 'Approve Post?', body: 'This post will be visible to all residents.', confirm: 'Approve', cancel: 'Go Back', variant: 'confirm' });
+if (!ok) return;
   if (!_col) return;
   try {
     await updateDoc(doc(_col, id), {
@@ -240,7 +242,8 @@ window.approvePost = async function (id) {
 
 /* Permanently deletes the post document from Firestore */
 window.rejectPost = async function (id, title) {
-  if (!confirm(`Reject and delete "${title}"?`)) return;
+  const ok = await showConfirm({ title: 'Reject Post?', body: `<strong>${title}</strong> will be permanently deleted.`, confirm: 'Reject', cancel: 'Go Back', variant: 'danger' });
+if (!ok) return;
   if (!_col) return;
   try {
     await deleteDoc(doc(_col, id));

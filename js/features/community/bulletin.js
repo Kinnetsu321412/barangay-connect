@@ -84,6 +84,8 @@ import {
 import { initNotifications }                            from '../../shared/notifications.js';
 import { openImageViewer as _openViewer, _injectImageViewer } from '../../shared/image-viewer.js';
 
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 
 // ================================================
 // MODULE STATE
@@ -1046,7 +1048,8 @@ window.submitReport = async function () {
 /* Deletes a community post as an admin or officer */
 window.adminDeleteCommunityPost = async function (postId) {
   if (_currentUserRole !== 'admin' && _currentUserRole !== 'officer') return;
-  if (!confirm('Delete this community post as admin? This cannot be undone.')) return;
+  const ok = await showConfirm({ title: 'Delete Post?', body: 'This community post will be permanently deleted.', confirm: 'Delete', cancel: 'Go Back', variant: 'danger' });
+if (!ok) return;
   try {
     const { doc: _d, deleteDoc } =
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
@@ -1057,7 +1060,8 @@ window.adminDeleteCommunityPost = async function (postId) {
 /* Deletes the current user's own community post */
 window.deleteCommunityPost = async function (postId) {
   if (!_currentUid || !BARANGAY_ID) return;
-  if (!confirm('Delete your post? This cannot be undone.')) return;
+  const ok = await showConfirm({ title: 'Delete Post?', body: 'Your post will be permanently deleted.', confirm: 'Delete', cancel: 'Go Back', variant: 'danger' });
+if (!ok) return;
   try {
     const { doc: _d, deleteDoc } =
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");

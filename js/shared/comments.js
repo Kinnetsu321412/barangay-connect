@@ -810,7 +810,8 @@ window.handleReplySubmit = async function (postId, commentId, parentCol, inputId
 /* Deletes a comment from Firestore and decrements the post's commentCount */
 window.deleteComment = async function (postId, commentId, parentCol) {
   if (!_barangayId) return;
-  if (!confirm('Delete this comment? This cannot be undone.')) return;
+  const ok = await showConfirm({ title: 'Delete Comment?', body: 'This comment and all its replies will be permanently removed.', confirm: 'Delete', cancel: 'Go Back', variant: 'danger' });
+if (!ok) return;
 
   const resolvedCol = parentCol || _parentCol;
   try {

@@ -326,8 +326,8 @@
           <button class="bulletin-section-btn admin-subtab-btn" onclick="switchBulletinSection('reports',this)">
             <i data-lucide="flag" style="width:11px;height:11px;"></i> Reports
             <span id="reportsMainBadge"
-              style="display:none;background:#dc2626;color:#fff;
-                     border-radius:999px;padding:0 5px;font-size:.68rem;">
+              style="display:none;background:rgba(255,255,255,0.22);
+              border-radius:999px;padding:0 5px;font-size:.68rem;">
             </span>
           </button>
           <button class="bulletin-section-btn admin-subtab-btn" onclick="switchBulletinSection('comments',this)">
@@ -520,13 +520,18 @@
       </div>
 
         <!-- Household filter bar — populated by JS -->
-        <div style="margin-bottom:1.25rem;">
-          <p style="font-size:0.72rem;font-weight:600;text-transform:uppercase;
-                    color:#aaa;margin-bottom:0.5rem;letter-spacing:0.08em;">
-            Households
-          </p>
+        <div id="householdSection" style="margin-bottom:1.25rem;display:none;">
+        <button class="role-filter-btn" id="householdToggleBtn"
+          onclick="window.toggleHouseholdPanel()"
+          style="margin-bottom:.5rem;border:1.5px solid var(--gray-200);">
+          <i data-lucide="home"></i>
+          Households <span id="householdCount" style="font-weight:700;"></span>
+          <i data-lucide="chevron-down" id="householdChevron" style="width:12px;height:12px;transition:transform .2s;"></i>
+        </button>
+        <div id="householdPanel" style="display:none;">
           <div class="role-filters" id="householdBar"></div>
         </div>
+      </div>
 
         <!-- Search -->
         <div class="roles-search-wrap">
@@ -863,6 +868,14 @@
       document.querySelectorAll('.admin-panel').forEach(panel => {
         panel.classList.toggle('active', panel.id === `panel-${tab}`);
       });
+      
+      /* Re-apply pending badge in case it was reset */
+      if (typeof _pendingTotal !== 'undefined') {
+        const _pb = document.getElementById('pendingBadgeCount');
+        if (_pb) { _pb.textContent = _pendingTotal; _pb.style.display = _pendingTotal > 0 ? 'inline' : 'none'; }
+        const _sb = document.getElementById('pendingSubBadge');
+        if (_sb) { _sb.textContent = _pendingTotal; _sb.style.display = _pendingTotal > 0 ? 'inline' : 'none'; }
+      }
     }
 
     /* Overview sub-tabs */
@@ -949,13 +962,19 @@
               <button class="bulletin-view-btn admin-subtab-btn" onclick="switchBulletinView('pending',this)">
                 <i data-lucide="clock" style="width:11px;height:11px;"></i> Pending
                 <span id="pendingPostsBadge"
-                  style="display:none;background:#dc2626;color:#fff;
-                        border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
+                  style="display:none;background:rgba(255,255,255,0.22);
+                  border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
                 </span>
               </button>
             </div>`;
         lucide.createIcons({ el: subEl });
         switchBulletinView('official', subEl.querySelector('.bulletin-view-btn'));
+        /* Restore pending badge after HTML rebuild */
+        const _ppb = document.getElementById('pendingPostsBadge');
+        if (_ppb && window._pendingPostsCount != null) {
+          _ppb.textContent   = window._pendingPostsCount;
+          _ppb.style.display = window._pendingPostsCount > 0 ? 'inline' : 'none';
+        }
 
       } else if (section === 'reports') {
         subEl.innerHTML = `
@@ -965,15 +984,15 @@
               <button class="bulletin-view-btn admin-subtab-btn is-active" onclick="switchBulletinView('reported',this)">
                 <i data-lucide="file-text" style="width:11px;height:11px;"></i> Posts
                 <span id="reportedPostsBadge"
-                  style="display:none;background:#dc2626;color:#fff;
-                        border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
+                  style="display:none;background:rgba(255,255,255,0.22);
+                  border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
                 </span>
               </button>
               <button class="bulletin-view-btn admin-subtab-btn" onclick="switchBulletinView('reported-comments',this)">
                 <i data-lucide="message-circle" style="width:11px;height:11px;"></i> Comments
                 <span id="reportedCommentsBadge"
-                  style="display:none;background:#dc2626;color:#fff;
-                        border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
+                  style="display:none;background:rgba(255,255,255,0.22);
+                  border-radius:999px;padding:0 5px;font-size:.68rem;margin-left:2px;">
                 </span>
               </button>
             </div>`;

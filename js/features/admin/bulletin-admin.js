@@ -954,7 +954,10 @@ window.announcementSave = async function () {
 
 /* Permanently removes an announcement document after a native confirm */
 window.announcementDelete = async function (id, title) {
-  if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+  const ok = await showConfirm({ title: 'Delete Post?',
+    body: `<strong>${title}</strong> will be permanently removed.`,
+    confirm: 'Delete', cancel: 'Go Back', variant: 'danger' });
+  if (!ok) return;
   try {
     await deleteDoc(doc(_col, id));
     showAnnouncementToast('Post deleted.', 'success');
@@ -1203,7 +1206,10 @@ window.setBulletinAdminTab = function (tab) {
 
 /* Permanently removes a post document from the specified sub-collection */
 window.adminDeletePost = async function (id, col) {
-  if (!confirm('Delete this post permanently?')) return;
+  const ok = await showConfirm({ title: 'Delete Post?',
+    body: 'This post will be permanently removed.',
+    confirm: 'Delete', cancel: 'Go Back', variant: 'danger' });
+if (!ok) return;
   try {
     await deleteDoc(doc(db, 'barangays', toBid(_barangay), col, id));
   } catch (err) {

@@ -60,6 +60,8 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 
 /* ================================================
    MODULE STATE
@@ -100,6 +102,8 @@ onAuthStateChanged(auth, async (user) => {
     if (badge) {
       badge.textContent   = reports.length;
       badge.style.display = reports.length ? 'inline' : 'none';
+      badge.style.background = 'rgba(0,0,0,0.12)';
+      badge.style.color      = '#374151';
     }
 
     renderReportedComments(reports);
@@ -207,6 +211,8 @@ async function renderReportedComments(reports) {
 ================================================ */
 
 window.dismissCommentReport = async function (reportId) {
+  const ok = await showConfirm({ title: 'Dismiss Report?', body: 'The comment will stay up and this report will be marked as dismissed.', confirm: 'Dismiss', cancel: 'Go Back', variant: 'warning' });
+  if (!ok) return;
   if (!_bid) return;
   await updateDoc(doc(db, 'barangays', _bid, 'reportedComments', reportId), {
     status:    'dismissed',
@@ -223,7 +229,8 @@ window.dismissCommentReport = async function (reportId) {
 ================================================ */
 
 window.deleteReportedComment = async function (reportId, postId, commentId) {
-  if (!confirm('Delete this comment permanently?')) return;
+  const ok = await showConfirm({ title: 'Delete Comment?', body: 'This comment will be permanently removed.', confirm: 'Delete', cancel: 'Go Back', variant: 'danger' });
+if (!ok) return;
   if (!_bid) return;
 
   for (const col of ['communityPosts', 'announcements']) {

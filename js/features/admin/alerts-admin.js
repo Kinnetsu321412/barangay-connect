@@ -58,6 +58,8 @@ import {
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 
 // ================================================
 // CONSTANTS — Severity Maps
@@ -78,10 +80,10 @@ const SEVERITY_FALLBACK = {
 
 /* Human-readable labels rendered in the publish confirm summary */
 const SEVERITY_LABELS = {
-  red:    '🔴 Red — Emergency',
-  orange: '🟠 Orange — Advisory',
-  green:  '🟢 Green — Resolved',
-  blue:   '🔵 Blue — Info',
+  green:  '🟢 Green',
+  blue:   '🔵 Blue',
+  orange: '🟠 Orange',
+  red:    '🔴 Red',
 };
 
 
@@ -102,6 +104,10 @@ const RING_CIRC          = 2 * Math.PI * RING_R;  // 188.5 — used by the ring 
 let _countdownTimer   = null;   // setInterval handle for the publish countdown
 let _currentCol       = null;   // Firestore collection ref, set by initAlertsAdmin
 let _alertFormVisible = false;  // tracks whether the create form is expanded
+let _alertSeverityFilter = 'all';
+let _alertTypeFilter     = 'all';
+let _alertDocs           = [];
+let _alertBarangay       = null;
 
 
 // ================================================
@@ -117,110 +123,112 @@ function injectConfirmModal() {
   if (document.getElementById('alertPublishModal')) return;
 
   const el = document.createElement('div');
+  el.id = 'alertPublishModal';
+  el.style.cssText = `
+    position:fixed;inset:0;z-index:2000;display:none;
+    align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);padding:1rem;
+  `;
   el.innerHTML = `
-    <div class="modal-backdrop" id="alertPublishModal"
-         role="dialog" aria-modal="true" aria-labelledby="apmTitle">
-      <div class="modal">
+    <div id="apmCard" style="background:#fff;border-radius:20px;width:100%;max-width:460px;
+      max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.22);padding:2rem;">
 
-        <!-- STEP 1: Warning notice -->
-        <div id="apmStep1">
-          <div class="modal__icon modal__icon--officer" id="apmIcon">
-            <i data-lucide="triangle-alert"></i>
+      <!-- STEP 1 -->
+      <div id="apmStep1">
+        <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;">
+          <div style="width:44px;height:44px;border-radius:50%;background:#fff8ed;border:2px solid #fed7aa;
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i data-lucide="triangle-alert" style="width:20px;height:20px;color:#d97706;"></i>
           </div>
-          <div class="modal__title" id="apmTitle">Broadcast Alert?</div>
-          <div class="modal__body" id="apmBody"></div>
-          <div class="modal__actions">
-            <button class="modal__btn modal__btn--cancel" id="apmCancelBtn1">
-              <i data-lucide="x"></i> Cancel
-            </button>
-            <button class="modal__btn modal__btn--confirm admin-confirm"
-                    id="apmProceedBtn">
-              <i data-lucide="arrow-right"></i> I Understand, Proceed
-            </button>
+          <div>
+            <h2 style="font-size:1.1rem;font-weight:800;color:#1a1a1a;margin:0;">Broadcast Alert?</h2>
+            <p style="font-size:.8rem;color:#9ca3af;margin:0;">Review before publishing</p>
           </div>
         </div>
 
-        <!-- STEP 2: Countdown (hidden until step 1 confirmed) -->
-        <div id="apmStep2" hidden>
-          <div class="modal__icon modal__icon--officer">
-            <i data-lucide="clock"></i>
+        <!-- Warning notice -->
+        <div style="background:#fff8ed;border:1.5px solid #fed7aa;border-radius:12px;
+          padding:.875rem 1rem;margin-bottom:1rem;display:flex;gap:.6rem;align-items:flex-start;">
+          <i data-lucide="users" style="width:16px;height:16px;color:#d97706;flex-shrink:0;margin-top:2px;"></i>
+          <p style="font-size:.82rem;font-weight:600;color:#92400e;margin:0;line-height:1.5;">
+            This alert will be <strong>immediately visible to every resident</strong>
+            currently viewing the site. Non-dismissible alerts cannot be closed until you deactivate them.
+          </p>
+        </div>
+
+        <!-- Alert summary -->
+        <div id="apmSummary" style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:12px;
+          padding:.875rem 1rem;margin-bottom:1.5rem;font-size:.82rem;color:#374151;line-height:1.6;">
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:.5rem;">
+          <button id="apmCancelBtn1" style="flex:1;padding:.65rem 1rem;border-radius:999px;
+            border:1.5px solid #e5e7eb;background:#fff;color:#374151;font-family:inherit;
+            font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;
+            justify-content:center;gap:.4rem;">
+            <i data-lucide="x" style="width:14px;height:14px;"></i> Cancel
+          </button>
+          <button id="apmProceedBtn" style="flex:2;padding:.65rem 1rem;border-radius:999px;
+            border:none;background:#7f1d1d;color:#fff;font-family:inherit;
+            font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;
+            justify-content:center;gap:.4rem;">
+            <i data-lucide="arrow-right" style="width:14px;height:14px;"></i> I Understand, Proceed
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div id="apmStep2" hidden>
+        <div style="text-align:center;padding:.5rem 0;">
+          <div style="width:44px;height:44px;border-radius:50%;background:#fff8ed;border:2px solid #fed7aa;
+            display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;">
+            <i data-lucide="clock" style="width:20px;height:20px;color:#d97706;"></i>
           </div>
-          <div class="modal__title">Publishing in…</div>
-          <div class="modal__body">
-            <p style="
-              font-size:   var(--text-base-sm);
-              color:       var(--text-muted);
-              text-align:  center;
-              margin:      0;
-              line-height: var(--lh-relaxed);
-            ">
-              The alert will go live when the timer hits zero.<br>
-              You can still cancel now.
-            </p>
-          </div>
+          <h2 style="font-size:1.1rem;font-weight:800;color:#1a1a1a;margin:0 0 .35rem;">Publishing in…</h2>
+          <p style="font-size:.82rem;color:#9ca3af;margin:0 0 1.5rem;line-height:1.5;">
+            The alert will go live when the timer hits zero.<br>You can still cancel now.
+          </p>
 
           <!-- Countdown ring -->
-          <div style="
-            display:        flex;
-            flex-direction: column;
-            align-items:    center;
-            gap:            var(--space-sm);
-            margin:         var(--space-lg) 0;
-          ">
-            <div style="position: relative; width: 72px; height: 72px;">
-              <svg width="72" height="72" style="transform: rotate(-90deg);">
-                <circle cx="36" cy="36" r="30"
-                  fill="none"
-                  stroke="var(--gray-100)"
-                  stroke-width="5" />
-                <circle id="apmRing" cx="36" cy="36" r="30"
-                  fill="none"
-                  stroke="var(--orange)"
-                  stroke-width="5"
-                  stroke-linecap="round"
-                  stroke-dasharray="188.5"
-                  stroke-dashoffset="0"
-                  style="transition: stroke-dashoffset 1s linear, stroke 0.3s;" />
-              </svg>
-              <span id="apmCountNum" style="
-                position:        absolute;
-                inset:           0;
-                display:         flex;
-                align-items:     center;
-                justify-content: center;
-                font-family:     var(--font-display);
-                font-weight:     var(--fw-black);
-                font-size:       var(--text-2xl);
-                color:           var(--orange-hover);
-                transition:      color 0.3s;
-              ">5</span>
-            </div>
-            <p style="
-              font-size: var(--text-sm);
-              color:     var(--text-muted);
-              margin:    0;
-            ">
-              Auto-publishing in <strong id="apmCountLabel">5</strong>s…
-            </p>
+          <div style="position:relative;width:80px;height:80px;margin:0 auto 1rem;">
+            <svg width="80" height="80" style="transform:rotate(-90deg);">
+              <circle cx="40" cy="40" r="34" fill="none" stroke="#f3f4f6" stroke-width="6"/>
+              <circle id="apmRing" cx="40" cy="40" r="34" fill="none" stroke="#f97316"
+                stroke-width="6" stroke-linecap="round"
+                stroke-dasharray="213.6" stroke-dashoffset="0"
+                style="transition:stroke-dashoffset 1s linear,stroke .3s;"/>
+            </svg>
+            <span id="apmCountNum" style="position:absolute;inset:0;display:flex;align-items:center;
+              justify-content:center;font-size:1.6rem;font-weight:900;color:#f97316;">5</span>
           </div>
+          <p style="font-size:.8rem;color:#9ca3af;margin:0 0 1.5rem;">
+            Auto-publishing in <strong id="apmCountLabel" style="color:#374151;">5</strong>s…
+          </p>
 
-          <div class="modal__actions">
-            <button class="modal__btn modal__btn--cancel" id="apmCancelBtn2">
-              <i data-lucide="x"></i> Cancel
+          <!-- Actions -->
+          <div style="display:flex;gap:.5rem;">
+            <button id="apmCancelBtn2" style="flex:1;padding:.65rem 1rem;border-radius:999px;
+              border:1.5px solid #e5e7eb;background:#fff;color:#374151;font-family:inherit;
+              font-size:.85rem;font-weight:600;cursor:pointer;display:flex;align-items:center;
+              justify-content:center;gap:.4rem;">
+              <i data-lucide="x" style="width:14px;height:14px;"></i> Cancel
             </button>
-            <button class="modal__btn modal__btn--confirm admin-confirm"
-                    id="apmPublishNowBtn">
-              <i data-lucide="send"></i> Publish Now
+            <button id="apmPublishNowBtn" style="flex:2;padding:.65rem 1rem;border-radius:999px;
+              border:none;background:#7f1d1d;color:#fff;font-family:inherit;
+              font-size:.85rem;font-weight:700;cursor:pointer;display:flex;align-items:center;
+              justify-content:center;gap:.4rem;">
+              <i data-lucide="send" style="width:14px;height:14px;"></i> Publish Now
             </button>
           </div>
         </div>
-
       </div>
+
     </div>
   `;
 
-  document.body.appendChild(el.firstElementChild);
-  lucide.createIcons({ el: document.getElementById('alertPublishModal') });
+  document.body.appendChild(el);
+  lucide.createIcons({ el });
 }
 
 
@@ -248,8 +256,7 @@ function showPublishConfirm(alertData) {
     const modal      = document.getElementById('alertPublishModal');
     const step1      = document.getElementById('apmStep1');
     const step2      = document.getElementById('apmStep2');
-    const body       = document.getElementById('apmBody');
-    const icon       = document.getElementById('apmIcon');
+    const summary    = document.getElementById('apmSummary');
     const ring       = document.getElementById('apmRing');
     const countNum   = document.getElementById('apmCountNum');
     const countLabel = document.getElementById('apmCountLabel');
@@ -258,80 +265,33 @@ function showPublishConfirm(alertData) {
     const proceedBtn = document.getElementById('apmProceedBtn');
     const nowBtn     = document.getElementById('apmPublishNowBtn');
 
+    const RING_CIRC = 213.6;
+
     /* Reset to step 1 */
     step1.hidden = false;
     step2.hidden = true;
 
-    /* Colour the icon to match severity */
-    icon.className = 'modal__icon';
-    if      (alertData.severity === 'red')   icon.classList.add('modal__icon--admin');
-    else if (alertData.severity === 'green') icon.classList.add('modal__icon--resident');
-    else                                     icon.classList.add('modal__icon--officer');
-
-    /* Build expiry line for the summary block */
+    /* Build summary */
     const expiryLine = alertData.expiresAt
-      ? `<br>⏱ Auto-expires: <strong>${alertData.expiresAt.toDate().toLocaleString('en-PH', {
-          month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-        })}</strong>`
+      ? `<br><span style="color:#9ca3af;">⏱ Auto-expires: <strong style="color:#374151;">${
+          alertData.expiresAt.toDate().toLocaleString('en-PH', {
+            month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
+          })}</strong></span>`
       : '';
 
-    body.innerHTML = `
-      <!-- Broadcast warning notice -->
-      <div style="
-        background:    var(--amber-50);
-        border:        1.5px solid var(--amber-200);
-        border-radius: var(--radius-md);
-        padding:       var(--space-md);
-        margin-bottom: var(--space-md);
-        display:       flex;
-        gap:           var(--space-sm);
-        align-items:   flex-start;
-      ">
-        <i data-lucide="users" style="
-          color:       var(--orange-hover);
-          flex-shrink: 0;
-          margin-top:  2px;
-          width: 18px; height: 18px;
-        "></i>
-        <p style="
-          font-size:   var(--text-base-sm);
-          font-weight: var(--fw-semibold);
-          color:       var(--amber-950);
-          margin:      0;
-          line-height: var(--lh-snug);
-        ">
-          This alert will be <strong>immediately visible to every resident</strong>
-          currently viewing the site. Non-dismissible alerts cannot be closed
-          by residents until you deactivate them.
-        </p>
-      </div>
-
-      <!-- Alert summary -->
-      <div style="
-        background:    var(--gray-50);
-        border:        1.5px solid var(--gray-200);
-        border-radius: var(--radius-md);
-        padding:       var(--space-md);
-        font-size:     var(--text-sm);
-        color:         var(--text-dark);
-        line-height:   var(--lh-relaxed);
-      ">
-        <strong>${esc(alertData.title)}</strong><br>
-        ${esc(alertData.message)}<br>
-        <span style="color: var(--text-muted);">
-          ${SEVERITY_LABELS[alertData.severity] ?? alertData.severity}
-          &nbsp;·&nbsp; Type: ${alertData.type}
-          &nbsp;·&nbsp; ${alertData.dismissible ? 'Dismissible' : '⚠️ Non-dismissible'}
-          ${expiryLine}
-        </span>
-      </div>
+    summary.innerHTML = `
+      <strong style="font-size:.88rem;display:block;margin-bottom:.25rem;">${esc(alertData.title)}</strong>
+      <span style="color:#6b7280;">${esc(alertData.message)}</span><br>
+      <span style="color:#9ca3af;font-size:.78rem;">
+        ${SEVERITY_LABELS[alertData.severity] ?? alertData.severity}
+        &nbsp;·&nbsp; Type: ${esc((alertData.type||'').replace(/\b\w/g,c=>c.toUpperCase()))}
+        &nbsp;·&nbsp; ${alertData.dismissible ? 'Dismissible' : '<strong style="color:#dc2626;">Non-dismissible</strong>'}
+        ${expiryLine}
+      </span>
     `;
 
-    lucide.createIcons({ el: body });
-    modal.classList.add('visible');
-
-
-    // ---- Step 1 handlers ----
+    lucide.createIcons({ el: document.getElementById('apmCard') });
+    modal.style.display = 'flex';
 
     function onCancel() {
       cleanup();
@@ -341,82 +301,49 @@ function showPublishConfirm(alertData) {
     function onProceed() {
       step1.hidden = true;
       step2.hidden = false;
+      lucide.createIcons({ el: document.getElementById('apmCard') });
       startCountdown();
     }
 
     cancelBtn1.addEventListener('click', onCancel,  { once: true });
     proceedBtn.addEventListener('click', onProceed, { once: true });
-
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) onCancel();
-    }, { once: true });
-
-
-    // ---- Step 2: countdown ----
+    modal.addEventListener('click', (e) => { if (e.target === modal) onCancel(); }, { once: true });
 
     function startCountdown() {
       let remaining = COUNTDOWN_SECS;
-
-      ring.style.strokeDasharray  = String(RING_CIRC);
       ring.style.strokeDashoffset = '0';
-      ring.style.stroke           = 'var(--orange)';
-      countNum.style.color        = 'var(--orange-hover)';
-      countNum.textContent        = remaining;
-      countLabel.textContent      = remaining;
+      ring.style.stroke = '#f97316';
+      countNum.style.color = '#f97316';
+      countNum.textContent = remaining;
+      countLabel.textContent = remaining;
 
       function tick() {
         remaining -= 1;
-        countNum.textContent   = remaining;
+        countNum.textContent = remaining;
         countLabel.textContent = remaining;
-
-        const progress = (COUNTDOWN_SECS - remaining) / COUNTDOWN_SECS;
-        ring.style.strokeDashoffset = String(RING_CIRC * progress);
-
-        /* Turn red in the last 2 seconds as a visual urgency cue */
+        ring.style.strokeDashoffset = String(RING_CIRC * ((COUNTDOWN_SECS - remaining) / COUNTDOWN_SECS));
         if (remaining <= 2) {
-          ring.style.stroke    = 'var(--red)';
-          countNum.style.color = 'var(--red)';
+          ring.style.stroke = '#dc2626';
+          countNum.style.color = '#dc2626';
         }
-
-        if (remaining <= 0) {
-          cleanup();
-          resolve();
-        }
+        if (remaining <= 0) { cleanup(); resolve(); }
       }
 
       _countdownTimer = setInterval(tick, 1000);
-
       cancelBtn2.addEventListener('click', onCancel,     { once: true });
       nowBtn.addEventListener(    'click', onPublishNow, { once: true });
     }
 
-    function onPublishNow() {
-      cleanup();
-      resolve();
-    }
-
-
-    // ---- Shared cleanup ----
+    function onPublishNow() { cleanup(); resolve(); }
 
     function cleanup() {
       clearInterval(_countdownTimer);
       _countdownTimer = null;
-
-      /* Reset visual state for the next open */
-      ring.style.stroke    = 'var(--orange)';
-      countNum.style.color = 'var(--orange-hover)';
-
-      modal.classList.remove('visible');
-
-      /*
-         Belt-and-suspenders listener removal. Most listeners use {once:true},
-         but cancelBtn2 may fire after the countdown already cleaned up —
-         safe to call removeEventListener on a listener that no longer exists.
-      */
+      modal.style.display = 'none';
       cancelBtn1.removeEventListener('click', onCancel);
       cancelBtn2.removeEventListener('click', onCancel);
       proceedBtn.removeEventListener('click', onProceed);
-      nowBtn.removeEventListener(    'click', onPublishNow);
+      nowBtn.removeEventListener(   'click', onPublishNow);
     }
   });
 }
@@ -464,15 +391,15 @@ function renderAlertForm(col) {
           Cancel
         </button>
       </div>
-      <form id="alertCreateForm" style="display:grid;gap:1rem;">
+      <form id="alertCreateForm" style="display:grid;gap:1rem;" novalidate>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
           <div>
             <label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:4px">Severity</label>
             <select id="alertSeverity" style="width:100%;padding:0.55rem 0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-size:0.875rem;outline:none;">
-              <option value="orange">🟠 Orange — Advisory</option>
-              <option value="red">🔴 Red — Emergency</option>
-              <option value="blue">🔵 Blue — Info</option>
-              <option value="green">🟢 Green — Resolved</option>
+              <option value="blue">🔵 Blue</option>
+              <option value="green">🟢 Green</option>  
+              <option value="orange">🟠 Orange</option>
+              <option value="red">🔴 Red</option>
             </select>
           </div>
           <div>
@@ -494,12 +421,12 @@ function renderAlertForm(col) {
         </div>
         <div>
           <label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:4px">Title</label>
-          <input id="alertTitle" type="text" required placeholder="e.g. Weather Advisory, Typhoon Carina"
+          <input id="alertTitle" type="text" placeholder="e.g. Weather Advisory, Typhoon Carina"
             style="width:100%;padding:0.55rem 0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-size:0.875rem;outline:none;" />
         </div>
         <div>
           <label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:4px">Message</label>
-          <textarea id="alertMessage" required rows="2" placeholder="Brief description visible to all residents…"
+          <textarea id="alertMessage" rows="2" placeholder="Brief description visible to all residents…"
             style="width:100%;padding:0.55rem 0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-size:0.875rem;outline:none;resize:vertical;"></textarea>
         </div>
         <div>
@@ -566,6 +493,10 @@ async function handleCreateAlert(col) {
     expiresAt = Timestamp.fromDate(new Date(expiresVal));
   }
 
+  if (!title) { showAdminToast('Please enter an alert title.', 'error'); return; }
+  if (!message) { showAdminToast('Please enter an alert message.', 'error'); return; }
+  if (useExpiry && !expiresVal) { showAdminToast('Please set an expiry date or uncheck the expiry option.', 'error'); return; }
+
   const alertData = {
     type, severity, title, message,
     source: 'admin', active: true, dismissible, expiresAt,
@@ -622,11 +553,15 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 function initAlertsAdmin(barangay) {
+  _alertBarangay = barangay;
   const col = collection(db, 'barangays', toBid(barangay), 'siteAlerts');
   _currentCol = col;
 
   const q = query(col, orderBy('createdAt', 'desc'));
-  onSnapshot(q, (snap) => renderAlertList(barangay, snap.docs));
+  onSnapshot(q, (snap) => {
+  _alertDocs = snap.docs;
+  renderAlertList(barangay, snap.docs);
+});
 
   renderAlertForm(col);
 
@@ -652,34 +587,76 @@ function renderAlertList(barangay, docs) {
   const container = document.getElementById('alertsList');
   if (!container) return;
 
-  if (!docs.length) {
-    container.innerHTML = `
-      <div style="
-        background:    var(--white);
-        border-radius: var(--radius-md);
-        padding:       var(--space-2xl) var(--space-lg);
-        box-shadow:    var(--shadow-sm);
-        text-align:    center;
-        color:         var(--gray-400);
-      ">
-        <i data-lucide="bell-off" style="
-          width: 32px; height: 32px;
-          margin-bottom: var(--space-sm);
-          color: var(--gray-200);
-          display: block;
-          margin-inline: auto;
-        "></i>
-        <p style="font-size: var(--text-sm); margin: 0;">
-          No alerts yet. Use the form above to broadcast one.
-        </p>
+  const filtered = _alertSeverityFilter === 'all' && _alertTypeFilter === 'all'
+  ? docs
+  : docs.filter(d => {
+      const data = d.data();
+      const okSev  = _alertSeverityFilter === 'all' || data.severity === _alertSeverityFilter;
+      const okType = _alertTypeFilter     === 'all' || data.type     === _alertTypeFilter;
+      return okSev && okType;
+    });
+
+  const _dot = (color) =>
+    `<span style="width:8px;height:8px;border-radius:50%;background:${color};
+      display:inline-block;flex-shrink:0;"></span>`;
+
+  const filterHtml = `
+  <div style="display:flex;flex-direction:row;align-items:center;gap:.75rem;margin-bottom:1rem;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+      <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+        color:#9ca3af;letter-spacing:.06em;min-width:48px;">Severity</span>
+      <div style="display:inline-flex;background:var(--alpha-ink-07);
+        border-radius:var(--radius-full);padding:3px;gap:2px;">
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='all'?'is-active':''}" onclick="setAlertSeverityFilter('all',this)">All</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='blue'?'is-active':''}" onclick="setAlertSeverityFilter('blue',this)">🔵 Blue</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='green'?'is-active':''}" onclick="setAlertSeverityFilter('green',this)">🟢 Green</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='red'?'is-active':''}" onclick="setAlertSeverityFilter('red',this)">🔴 Red</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='orange'?'is-active':''}" onclick="setAlertSeverityFilter('orange',this)">🟠 Orange</button>
       </div>
-    `;
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+      <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+        color:#9ca3af;letter-spacing:.06em;min-width:48px;">Type</span>
+      <div style="display:inline-flex;background:var(--alpha-ink-07);
+        border-radius:var(--radius-full);padding:3px;gap:2px;flex-wrap:wrap;">
+        <button class="bulletin-view-btn admin-subtab-btn alert-type-btn ${_alertTypeFilter==='all'?'is-active':''}" onclick="setAlertTypeFilter('all',this)">All</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-type-btn ${_alertTypeFilter==='weather'?'is-active':''}" onclick="setAlertTypeFilter('weather',this)">Weather</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-type-btn ${_alertTypeFilter==='earthquake'?'is-active':''}" onclick="setAlertTypeFilter('earthquake',this)">Earthquake</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-type-btn ${_alertTypeFilter==='emergency'?'is-active':''}" onclick="setAlertTypeFilter('emergency',this)">Emergency</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-type-btn ${_alertTypeFilter==='maintenance'?'is-active':''}" onclick="setAlertTypeFilter('maintenance',this)">Maintenance</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-type-btn ${_alertTypeFilter==='info'?'is-active':''}" onclick="setAlertTypeFilter('info',this)">Info</button>
+      </div>
+    </div>
+  </div>`;
+
+  if (!docs.length) {
+    container.innerHTML = filterHtml + `
+      <div style="background:var(--white);border-radius:var(--radius-md);
+        padding:var(--space-2xl) var(--space-lg);box-shadow:var(--shadow-sm);
+        text-align:center;color:var(--gray-400);">
+        <i data-lucide="bell-off" style="width:32px;height:32px;margin-bottom:var(--space-sm);
+          color:var(--gray-200);display:block;margin-inline:auto;"></i>
+        <p style="font-size:var(--text-sm);margin:0;">No alerts yet. Use the form below to broadcast one.</p>
+      </div>`;
     lucide.createIcons({ el: container });
     return;
   }
 
-  container.innerHTML = '';
-  docs.forEach(docSnap => {
+  if (!filtered.length) {
+    container.innerHTML = filterHtml + `
+      <div style="background:var(--white);border-radius:var(--radius-md);
+        padding:var(--space-2xl) var(--space-lg);box-shadow:var(--shadow-sm);
+        text-align:center;color:var(--gray-400);">
+        <i data-lucide="filter-x" style="width:32px;height:32px;margin-bottom:var(--space-sm);
+          color:var(--gray-200);display:block;margin-inline:auto;"></i>
+        <p style="font-size:var(--text-sm);margin:0;">No alerts match this filter.</p>
+      </div>`;
+    lucide.createIcons({ el: container });
+    return;
+  }
+
+  container.innerHTML = filterHtml;
+  filtered.forEach(docSnap => {
     container.appendChild(buildAlertRow(barangay, docSnap.id, docSnap.data()));
   });
   lucide.createIcons({ el: container });
@@ -760,7 +737,7 @@ function buildAlertRow(barangay, id, d) {
         ${esc(d.message)}
       </p>
       <p style="font-size:var(--text-2xs);color:var(--gray-400);margin:0;">
-        ${esc(d.type)} &middot; ${esc(d.source)}
+        ${esc((d.type||'').replace(/\b\w/g,c=>c.toUpperCase()))} &middot; ${esc((d.source||'').replace(/\b\w/g,c=>c.toUpperCase()))}
         &middot; Created ${created} &middot; ${expires}
         ${d.dismissible
           ? ''
@@ -798,6 +775,22 @@ function buildAlertRow(barangay, id, d) {
 // ALERT ACTIONS — Toggle / Delete
 // ================================================
 
+window.setAlertSeverityFilter = function (severity, btn) {
+  _alertSeverityFilter = severity;
+  document.querySelectorAll('.alert-severity-btn')
+    .forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  renderAlertList(_alertBarangay, _alertDocs);
+};
+
+window.setAlertTypeFilter = function (type, btn) {
+  _alertTypeFilter = type;
+  document.querySelectorAll('.alert-type-btn')
+    .forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  renderAlertList(_alertBarangay, _alertDocs);
+};
+
 /* Flips the active flag on an alert document */
 window.toggleAlert = async function(id, barangayId, newState) {
   try {
@@ -813,7 +806,9 @@ window.toggleAlert = async function(id, barangayId, newState) {
 
 /* Permanently removes an alert document after a native confirm */
 window.deleteAlert = async function(id, barangay) {
-  if (!confirm('Permanently delete this alert? This cannot be undone.')) return;
+  const ok = await showConfirm({ title: 'Delete Alert?',
+    body: 'This alert will be permanently removed and residents will no longer see it.', confirm: 'Delete', cancel: 'Go Back', variant: 'danger' });
+  if (!ok) return;
   try {
     await deleteDoc(doc(db, 'barangays', toBid(barangay), 'siteAlerts', id));
     showAdminToast('Alert deleted.', 'success');

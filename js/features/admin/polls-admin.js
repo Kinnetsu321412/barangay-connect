@@ -193,10 +193,10 @@ function _renderShell() {
     </div>
 
     <div class="admin-subtab-row" style="margin-bottom:.75rem;">
-      <button class="admin-subtab-btn active" onclick="window._pollAdminTab('active',this)">
+      <button class="bulletin-view-btn admin-subtab-btn is-active" onclick="window._pollAdminTab('active',this)">
         <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Active &amp; Closed
       </button>
-      <button class="admin-subtab-btn" onclick="window._pollAdminTab('archived',this)">
+      <button class="bulletin-view-btn admin-subtab-btn" onclick="window._pollAdminTab('archived',this)">
         <i data-lucide="archive" style="width:14px;height:14px;"></i> Archived
         <span id="pollArchivedCount" style="display:none;background:rgba(0,0,0,.08);
           border-radius:999px;padding:0 6px;font-size:.68rem;font-weight:700;"></span>
@@ -774,7 +774,8 @@ window.editPoll = function (pollId) {
 };
 
 window.publishPoll = async function (pollId) {
-  if (!confirm('Publish this poll? It will become visible to all residents.')) return;
+  const ok = await showConfirm({ title: 'Publish Poll?', body: 'This poll will become visible to all residents.', confirm: 'Publish', cancel: 'Go Back', variant: 'confirm' });
+if (!ok) return;
   try {
     await updateDoc(pollDoc(_bid, pollId), { status: 'active', updatedAt: serverTimestamp() });
     await _logAction(pollId, 'publish', null);
@@ -871,7 +872,8 @@ window._submitExtend = async function (pollId) {
 // ================================================
 
 window.closePoll = async function (pollId) {
-  if (!confirm('Close this poll early? Residents will no longer be able to vote.')) return;
+  const ok = await showConfirm({ title: 'Close Poll Early?', body: 'Residents will no longer be able to vote.', confirm: 'Close Poll', cancel: 'Go Back', variant: 'warning' });
+if (!ok) return;
   try {
     await updateDoc(pollDoc(_bid, pollId), { status: 'closed', updatedAt: serverTimestamp() });
     await _logAction(pollId, 'close_early', null);
@@ -896,8 +898,8 @@ window.deletePoll = async function (pollId, hasVotes) {
   const canHardDelete = !hasVotes; // zero votes = safe to permanently delete, regardless of status
 
   const confirmed = canHardDelete
-    ? confirm('This poll has no votes and is still a draft. Delete it permanently? This cannot be undone.')
-    : confirm('Archive this poll? It will be closed and moved to the archive for transparency. Residents who voted can still see the results.');
+  ? await showConfirm({ title: 'Delete Poll?', body: 'This poll has no votes. It will be permanently deleted.', confirm: 'Delete', cancel: 'Go Back', variant: 'danger' })
+  : await showConfirm({ title: 'Archive Poll?', body: 'This poll will be closed and moved to the archive. Results remain visible.', confirm: 'Archive', cancel: 'Go Back', variant: 'warning' });
 
   if (!confirmed) return;
 
@@ -1027,8 +1029,8 @@ window._pollAdminTab = function (tab, btn) {
   _adminTab    = tab;
   _adminFilter = 'all';
   document.querySelectorAll('.admin-subtab-btn[onclick*="_pollAdminTab"]')
-    .forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+    .forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
   document.querySelectorAll('.bulletin-view-btn[onclick*="_pollAdminFilter"]')
     .forEach(b => b.classList.remove('is-active'));
   document.querySelector('.bulletin-view-btn[onclick*="_pollAdminFilter"]')
