@@ -73,10 +73,10 @@ const STORAGE_KEY   = 'bc_dismissed_alerts';
 */
 
 const ALERT_SOUNDS = {
-  red:    new Audio('../assets/sounds/alert-red.mp3'),    // emergency — loud / urgent
-  orange: new Audio('../assets/sounds/alert-orange.mp3'), // advisory  — moderate
-  green:  new Audio('../assets/sounds/alert-green.mp3'),  // resolved  — soft chime
-  blue:   new Audio('../assets/sounds/alert-blue.mp3'),   // info      — subtle
+  red:    new Audio('/assets/sounds/alert-red.mp3'),
+  orange: new Audio('/assets/sounds/alert-orange.mp3'),
+  green:  new Audio('/assets/sounds/alert-green.mp3'),
+  blue:   new Audio('/assets/sounds/alert-blue.mp3'),
 };
 
 /* Preload so there is no delay on first playback */
@@ -161,10 +161,11 @@ function getStack() {
     el = document.createElement('div');
     el.id = 'js-alert-stack';
     el.style.cssText = `
-      position: sticky;
+      position: fixed;
       top: var(--navbar-h);
       z-index: 399;
       width: 100%;
+      left: 0;
     `;
 
     const navbar = document.querySelector('.navbar');

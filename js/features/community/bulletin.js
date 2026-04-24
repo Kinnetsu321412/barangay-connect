@@ -605,10 +605,12 @@ function buildPostRow(post) {
     _currentUserRole === 'admin' ||
     (_currentUserRole === 'officer' && post.authorRole !== 'admin')
   );
-  const isOwn   = isCPost && post.authorId === _currentUid && _currentUserRole === 'resident';
-  const isOther = isCPost && post.authorId !== _currentUid;
+  const isOwn      = isCPost && post.authorId === _currentUid && _currentUserRole === 'resident';
+  const isOther    = isCPost && post.authorId !== _currentUid;
+  const canFeature = _currentUserRole === 'admin' || _currentUserRole === 'officer';
 
   const actionBtns = [
+    canFeature  ? `<button class="post-action-icon" onclick="toggleFeatured('${pid}','${isCPost ? 'communityPosts' : 'announcements'}')" title="${post.isFeatured ? 'Remove from Gallery' : 'Add to Gallery'}" style="${post.isFeatured ? 'color:var(--orange);' : ''}"><i data-lucide="star"></i></button>` : '',
     canAdminDel ? `<button class="post-action-icon post-action-icon--danger" onclick="adminDeleteCommunityPost('${pid}')" title="Delete"><i data-lucide="trash-2"></i></button>` : '',
     isOwn       ? `<button class="post-action-icon" onclick="editCommunityPost('${pid}')" title="Edit"><i data-lucide="pencil"></i></button>` : '',
     isOwn       ? `<button class="post-action-icon post-action-icon--danger" onclick="deleteCommunityPost('${pid}')" title="Delete"><i data-lucide="trash-2"></i></button>` : '',
@@ -640,6 +642,8 @@ function buildPostRow(post) {
           style="cursor:pointer">${esc(meta.label)}</span>
         <span class="post-row__time">${time}</span>
         ${post.isEdited ? `<span class="post-edited-label">edited</span>` : ''}
+        ${post.isFeatured && canFeature ? `<span class="post-featured-badge"><i data-lucide="star"
+          style="width:10px;height:10px;fill:var(--orange);color:var(--orange);pointer-events:none;"></i> Featured</span>` : ''}
       </div>
 
       <h3 class="post-row__title">${esc(post.title)}</h3>
@@ -1067,6 +1071,46 @@ if (!ok) return;
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await deleteDoc(_d(db, 'barangays', BARANGAY_ID, 'communityPosts', postId));
   } catch (err) { console.error('[delete post]', err); }
+};
+
+// ================================================
+// FEATURED — Toggle Gallery Flag
+// ================================================
+
+/* Toggles isFeatured + featuredAt on a post for gallery curation.
+   Works on both communityPosts and announcements collections. */
+window.toggleFeatured = async function (postId, col) {
+  if (_currentUserRole !== 'admin' && _currentUserRole !== 'officer') return;
+  if (!_currentUid || !BARANGAY_ID) return;
+
+  const post               = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
+  const isCurrentlyFeatured = post?.isFeatured ?? false;
+
+  const ok = await showConfirm({
+    title:   isCurrentlyFeatured ? 'Remove from Gallery?' : 'Add to Gallery?',
+    body:    isCurrentlyFeatured
+      ? 'This post will no longer appear in the Featured Gallery.'
+      : 'This post will be highlighted in the Featured Gallery.',
+    confirm: isCurrentlyFeatured ? 'Remove' : 'Add to Gallery',
+    cancel:  'Go Back',
+    variant: isCurrentlyFeatured ? 'warning' : 'confirm',
+  });
+  if (!ok) return;
+
+  try {
+    const { doc: _d, updateDoc, serverTimestamp: _ts, deleteField } =
+      await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+
+    const postRef = _d(db, 'barangays', BARANGAY_ID, col, postId);
+
+    if (isCurrentlyFeatured) {
+      await updateDoc(postRef, { isFeatured: false, featuredAt: deleteField() });
+    } else {
+      await updateDoc(postRef, { isFeatured: true, featuredAt: _ts() });
+    }
+  } catch (err) {
+    console.error('[toggleFeatured]', err);
+  }
 };
 
 
