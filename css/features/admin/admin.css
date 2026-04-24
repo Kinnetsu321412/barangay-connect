@@ -259,6 +259,8 @@
 .community-sub-btn {
   border: none;
   background: transparent;
+  padding: 10px 22px;
+  font-size: var(--text-base-sm);
 }
 
 .overview-sub-btn:hover,
@@ -287,6 +289,8 @@
   border: none !important;
   background: var(--alpha-ink-07);
   color: rgba(44,40,40,0.60);
+  padding: 10px 22px;
+  font-size: var(--text-base-sm);
 }
 
 .community-sub-btn:hover {
@@ -1656,7 +1660,15 @@
   border: none !important;
   background: transparent;
   color: var(--gray-500);
+  padding: 6px 14px;
+  font-size: var(--text-xs);
 }
+
+.bulletin-section-btn {
+  padding: 6px 14px;
+  font-size: var(--text-xs);
+}
+
 .bulletin-view-btn:hover {
   background: var(--alpha-ink-06);
   color: var(--text-dark);

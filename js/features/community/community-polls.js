@@ -112,6 +112,15 @@ let _unsub         = null;
 */
 let _votedMap      = new Map();
 
+/*
+   Cached eligibility fields from the full user doc.
+   Populated in bootstrap after auth resolves.
+*/
+let _userProfile = {
+  role: 'resident',
+  dob:  null,   // "YYYY-MM-DD"
+};
+
 /* Holds the pending vote data between confirm-show and confirm-submit */
 let _pendingConfirm  = null;
 let _unsubArchived   = null;
@@ -141,6 +150,66 @@ export function initCommunityPolls(barangayId, uid, userName, role, containerId 
   _subscribeArchived();
 }
 
+// ================================================
+// ELIGIBILITY
+// ================================================
+
+function _isEligible(poll) {
+  /* ── Role check ── */
+  const targetRoles = poll.targetRoles ?? 'all';
+  if (targetRoles !== 'all') {
+    const role = _userProfile.role;
+    const isOfficial = role === 'admin' || role === 'officer';
+    if (targetRoles === 'officials' && !isOfficial) return false;
+    if (targetRoles === 'residents' &&  isOfficial) return false;
+  }
+
+  /* ── Group / age check ── */
+  const targetGroups = poll.targetGroups ?? 'all';
+  if (targetGroups === 'all') return true;
+
+  const age = (() => {
+    if (!_userProfile.dob) return null;
+    const today = new Date();
+    const born  = new Date(_userProfile.dob + 'T00:00:00');
+    let a = today.getFullYear() - born.getFullYear();
+    if (today < new Date(today.getFullYear(), born.getMonth(), born.getDate())) a--;
+    return a;
+  })();
+
+  if (age === null) return false;
+
+  if (targetGroups === 'youth')  return age >= 15 && age <= 30;
+  if (targetGroups === 'adult')  return age >= 31 && age <= 59;
+  if (targetGroups === 'senior') return age >= 60;
+  if (targetGroups === 'custom_age') {
+    const ok_min = poll.minAge == null || age >= poll.minAge;
+    const ok_max = poll.maxAge == null || age <= poll.maxAge;
+    return ok_min && ok_max;
+  }
+
+  return true;
+}
+
+function _eligibilityLabel(poll) {
+  const rolePart = {
+    residents: 'residents',
+    officials: 'officials',
+  }[poll.targetRoles ?? 'all'];
+
+  const groupPart = {
+    youth:      'youth (15–30)',
+    adult:      'adults (31–59)',
+    senior:     'seniors (60+)',
+    custom_age: poll.minAge != null || poll.maxAge != null
+      ? `ages ${poll.minAge ?? 0}–${poll.maxAge ?? '∞'}` : 'custom age range',
+  }[poll.targetGroups ?? 'all'];
+
+  const parts = [rolePart, groupPart].filter(Boolean);
+  return parts.length ? `For ${parts.join(' · ')} only` : '';
+}
+
+
 
 // ================================================
 // SUBSCRIPTION
@@ -166,6 +235,7 @@ function _subscribe() {
     const polls = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     _autoCloseExpired(polls);       // closes polls past their endDate
+    _autoPublishScheduled(polls);   // publishes scheduled polls past their startDate
     _autoArchiveClosedPolls(polls); // archives old closed polls
     _checkNearDeadline(polls);
     if (_uid) await _prefetchVotes(polls.map(p => p.id));
@@ -235,6 +305,34 @@ async function _autoArchiveClosedPolls(polls) {
   }
 }
 
+/*
+   Flips scheduled → active when the poll's startDate has arrived.
+   Idempotent — safe to call on every snapshot.
+*/
+async function _autoPublishScheduled(polls) {
+  const now = Date.now();
+  for (const poll of polls) {
+    if (poll.status !== 'scheduled') continue;
+    const start = poll.startDate?.toMillis?.();
+    if (!start || start > now) continue;
+    try {
+      await updateDoc(pollDoc(_barangayId, poll.id), {
+        status:    'active',
+        updatedAt: serverTimestamp(),
+      });
+      try {
+        await addDoc(pollActionsCol(_barangayId, poll.id), {
+          actionType:  'auto_publish',
+          performedBy: _uid ?? 'system',
+          role:        _role,
+          reason:      'Poll reached its scheduled start date',
+          timestamp:   serverTimestamp(),
+        });
+      } catch { /* non-fatal */ }
+    } catch { /* non-fatal */ }
+  }
+}
+
 async function _autoCloseExpired(polls) {
   const now = Date.now();
   for (const poll of polls) {
@@ -266,10 +364,34 @@ async function _autoCloseExpired(polls) {
 async function _checkNearDeadline(polls) {
   const now   = Date.now();
   const in24h = now + 86_400_000;
+  const in72h = now + 3 * 86_400_000;
+
   for (const poll of polls) {
-    if (poll.status !== 'active' || poll.nearDeadlineNotified) continue;
+    if (poll.status !== 'active') continue;
     const end = poll.endDate?.toMillis?.();
-    if (!end || end < now || end > in24h) continue;
+    if (!end || end < now) continue;
+
+    /* 72h reminder — fires independently of the 24h alert */
+    if (!poll.reminder72hSent && end <= in72h && end > in24h) {
+      try {
+        await updateDoc(pollDoc(_barangayId, poll.id), {
+          reminder72hSent: true,
+          updatedAt: serverTimestamp(),
+        });
+        if (_role === 'admin' || _role === 'officer') {
+          notifyAllInBarangay(_barangayId, {
+            type:        'poll_deadline',
+            actorId:     _uid ?? 'system',
+            postId:      poll.id,
+            postTitle:   poll.title,
+            description: `Closes in 3 days — ${poll.description ?? ''}`,
+          }, { targetRoles: poll.targetRoles });
+        }
+      } catch { /* non-fatal */ }
+    }
+
+    if (poll.nearDeadlineNotified) continue;
+    if (end > in24h) continue;
     try {
       await updateDoc(pollDoc(_barangayId, poll.id), {
         nearDeadlineNotified: true,
@@ -282,7 +404,7 @@ async function _checkNearDeadline(polls) {
             postId:      poll.id,
             postTitle:   poll.title,
             description: poll.description ?? null,
-        });
+        }, { targetRoles: poll.targetRoles });
         }
     } catch { /* non-fatal */ }
   }
@@ -323,6 +445,10 @@ function _render(polls) {
   // If called from archived sub, polls param is null — use last active polls from closure
   // We cache them on the wrapper element to survive cross-sub calls
   if (polls !== null) _container._activePolls = polls;
+  /* Cache all polls for the vote-guard lookup */
+  const allKnown = [...(_container._activePolls ?? []), ..._archivedPolls];
+  document._bcPollCache = Object.fromEntries(allKnown.map(p => [p.id, p]));
+
   const activePolls   = _container._activePolls ?? [];
   const archivedPolls = _archivedPolls;
 
@@ -342,7 +468,8 @@ function _render(polls) {
       </button>
     </div>`;
 
-  const shown = _activeTab === 'archived' ? archivedPolls : activePolls;
+  const shown = (_activeTab === 'archived' ? archivedPolls : activePolls)
+    .filter(p => _activeTab === 'archived' || _isEligible(p));
 
   let body;
   if (_activeTab === 'archived' && !shown.length) {
@@ -373,7 +500,7 @@ window._bcTab = function (tab) {
 
 function _buildPollCard(poll, isArchived = false) {
   const votedOptionId = _votedMap.get(poll.id) ?? null;
-  const closed        = poll.status === 'closed';
+  const closed = poll.status === 'closed' || isArchived;
   const voted         = votedOptionId !== null;
 
   /*
@@ -382,14 +509,15 @@ function _buildPollCard(poll, isArchived = false) {
        · Poll is closed, OR
        · Admin set allowLiveResults = true
   */
-  const showResults = voted || closed || poll.allowLiveResults;
+  const showResults = voted || closed || poll.allowLiveResults || isArchived;
   const total       = poll.totalVotes ?? 0;
 
   // ── Options ──────────────────────────────────────────────────
   const options = Object.entries(poll.options ?? {})
     .sort(([, a], [, b]) => (a.order ?? 0) - (b.order ?? 0));
 
-  const optionsHtml = options.map(([optId, opt]) => {
+    const eligible = _isEligible(poll);
+    const optionsHtml = options.map(([optId, opt]) => {
     const count   = opt.voteCount ?? 0;
     const pct     = total > 0 ? Math.round(count / total * 100) : 0;
     const isSel   = optId === votedOptionId;
@@ -399,7 +527,7 @@ function _buildPollCard(poll, isArchived = false) {
     ].filter(Boolean).join(' ');
 
     /* Click handler only attached when vote is still possible */
-    const canVote  = !voted && !closed && _uid;
+    const canVote  = !voted && !closed && _uid && eligible && !isArchived;
     const onClickA = canVote
         ? `data-pid="${esc(poll.id)}" data-oid="${esc(optId)}" data-otxt="${esc(opt.optionText)}" onclick="window._bcVote(this.dataset.pid,this.dataset.oid,this.dataset.otxt)"`
         : 'data-disabled="true"';
@@ -416,6 +544,33 @@ function _buildPollCard(poll, isArchived = false) {
   // ── Meta row (chips + deadline) ───────────────────────────────
   const _cm    = _CAT[poll.category] ?? _CAT.general;
   const catChip = `<span class="tag ${_cm.cls}">${_cm.label}</span>`;
+
+  const _roleLabel = { residents: 'Residents', officials: 'Officials' }[poll.targetRoles ?? 'all'];
+  const _groupLabel = {
+    youth:      'Youth 15–30',
+    adult:      'Adults 31–59',
+    senior:     'Seniors 60+',
+    custom_age: poll.minAge != null || poll.maxAge != null
+      ? `Ages ${poll.minAge ?? 0}–${poll.maxAge ?? '∞'}` : 'Custom Age',
+  }[poll.targetGroups ?? 'all'] ?? null;
+
+  const _cRolePill = _roleLabel ? (() => {
+  const s = poll.targetRoles === 'residents'
+    ? 'background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;'
+    : 'background:#fff8ed;color:#92400e;border:1px solid #fed7aa;';
+  return `<span class="tag" style="${s}"><i data-lucide="users" style="width:10px;height:10px;display:inline;vertical-align:middle;margin-right:2px;"></i>${_roleLabel}</span>`;
+})() : '';
+const _grpStylesC = {
+  youth:      'background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;',
+  adult:      'background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;',
+  senior:     'background:#fef3c7;color:#854d0e;border:1px solid #fed7aa;',
+  custom_age: 'background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;',
+};
+const _cGroupPill = _groupLabel ? (() => {
+  const s = _grpStylesC[poll.targetGroups] || 'background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;';
+  return `<span class="tag" style="${s}"><i data-lucide="users" style="width:10px;height:10px;display:inline;vertical-align:middle;margin-right:2px;"></i>${_groupLabel}</span>`;
+})() : '';
+const audienceChip = _cRolePill + _cGroupPill;
 
   const priChip = poll.priority && poll.priority !== 'normal'
   ? `<span class="tag ${poll.priority === 'urgent' ? 'tag--red' : 'tag--amber'}">${poll.priority.charAt(0).toUpperCase() + poll.priority.slice(1)}</span>`
@@ -459,10 +614,12 @@ function _buildPollCard(poll, isArchived = false) {
 
   // ── Footer ───────────────────────────────────────────────────
   let footerMsg;
-  if (!_uid)         footerMsg = 'Sign in to vote.';
-  else if (closed)   footerMsg = 'Final results';
-  else if (voted)    footerMsg = 'Results shown · Thank you for voting';
-  else               footerMsg = 'Tap an option to cast your vote';
+  if (isArchived)      footerMsg = 'Archived · Final results';
+  else if (!_uid)      footerMsg = 'Sign in to vote.';
+  else if (closed)     footerMsg = 'Final results';
+  else if (voted)      footerMsg = 'Results shown · Thank you for voting';
+  else if (!eligible)  footerMsg = _eligibilityLabel(poll);
+  else                 footerMsg = 'Tap an option to cast your vote';
 
   const footerHtml = `
     <p class="poll-card__meta">
@@ -474,7 +631,7 @@ function _buildPollCard(poll, isArchived = false) {
       ${archivedBanner}${pinnedBar}
       <div class="poll-card__header">
         <div style="flex:1;min-width:0;">
-          <div class="poll-meta-row">${catChip}${priChip}${dlChip}</div>
+          <div class="poll-meta-row">${catChip}${priChip}${audienceChip}${dlChip}</div>
           <h3 class="poll-card__question">${esc(poll.title)}</h3>
           ${poll.description
             ? `<p class="poll-card__desc">${esc(poll.description)}</p>` : ''}
@@ -568,6 +725,12 @@ window._bcConfirmVote = async function () {
     return;
   }
 
+  const poll = (document._bcPollCache ?? {})[pollId];
+  if (poll && !_isEligible(poll)) {
+    _showToast('You are not eligible to vote on this poll.', 'error');
+    return;
+  }
+
   try {
     const voteRef = voteDoc(_barangayId, pollId, _uid);
     const pollRef = pollDoc(_barangayId, pollId);
@@ -587,11 +750,25 @@ window._bcConfirmVote = async function () {
         createdAt: serverTimestamp(),
       });
 
-      /* Atomic field-path increment on embedded options map */
+      /* Compute age group for demographic analytics */
+      const _ageGroup = (() => {
+        if (!_userProfile.dob) return 'unknown';
+        const today = new Date();
+        const born  = new Date(_userProfile.dob + 'T00:00:00');
+        let a = today.getFullYear() - born.getFullYear();
+        if (today < new Date(today.getFullYear(), born.getMonth(), born.getDate())) a--;
+        if (a < 15)  return 'child';
+        if (a <= 30) return 'youth';
+        if (a <= 59) return 'adult';
+        return 'senior';
+      })();
+
       tx.update(pollRef, {
-        [`options.${optionId}.voteCount`]: increment(1),
-        totalVotes:                        increment(1),
-        updatedAt:                         serverTimestamp(),
+        [`options.${optionId}.voteCount`]:                 increment(1),
+        totalVotes:                                        increment(1),
+        [`demographics.${_userProfile.role}.${optionId}`]: increment(1),
+        [`demographics.${_ageGroup}.${optionId}`]:         increment(1),
+        updatedAt:                                         serverTimestamp(),
       });
     });
 
@@ -677,6 +854,20 @@ onAuthStateChanged(auth, async user => {
     const snap = await getDoc(userIndexDoc(user.uid));
     if (!snap.exists()) return;
     const { barangay, role } = snap.data();
+
+    /* Fetch full user doc for dob */
+    try {
+      const { userDoc } = await import('../../core/db-paths.js');
+      const fullSnap = await getDoc(userDoc(barangay, user.uid));
+      if (fullSnap.exists()) {
+        const d = fullSnap.data();
+        _userProfile = {
+          role: role ?? 'resident',
+          dob:  d.dob ?? null,
+        };
+      }
+    } catch { /* non-fatal — defaults remain */ }
+
     initCommunityPolls(
       toBid(barangay),
       user.uid,

@@ -81,6 +81,23 @@ let _uid   = null;
 let _role  = null; // 'officer' | 'admin'
 let _polls = [];   // latest snapshot array
 let _editId = null; // pollId being edited; null = create mode
+let _adminTab      = 'active';   // 'active' | 'archived'
+let _adminFilter   = 'all';      // 'all' | 'draft' | 'active' | 'closed' | 'scheduled'
+let _archivedPolls = [];
+
+const _ROLE_OPTS = [
+  { value: 'all',       label: 'Everyone'        },
+  { value: 'residents', label: 'Residents only'  },
+  { value: 'officials', label: 'Officials only'  },
+];
+
+const _GROUP_OPTS = [
+  { value: 'all',        label: 'All ages / groups' },
+  { value: 'youth',      label: 'Youth (15–30)'     },
+  { value: 'adult',      label: 'Adults (31–59)'    },
+  { value: 'senior',     label: 'Seniors (60+)'     },
+  { value: 'custom_age', label: 'Custom age range'  },
+];
 
 const _CAT_COLORS = {
   announcements:  { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' },
@@ -142,6 +159,11 @@ function _listenPolls() {
     _polls = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     _renderList();
   });
+
+  onSnapshot(
+    query(pollsCol(_bid), where('isDeleted', '==', true), orderBy('createdAt', 'desc')),
+    snap => { _archivedPolls = snap.docs.map(d => ({ id: d.id, ...d.data() })); _renderList(); },
+  );
 }
 
 
@@ -169,6 +191,35 @@ function _renderShell() {
         <i data-lucide="plus"></i> Create Poll
       </button>
     </div>
+
+    <div class="admin-subtab-row" style="margin-bottom:.75rem;">
+      <button class="admin-subtab-btn active" onclick="window._pollAdminTab('active',this)">
+        <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Active &amp; Closed
+      </button>
+      <button class="admin-subtab-btn" onclick="window._pollAdminTab('archived',this)">
+        <i data-lucide="archive" style="width:14px;height:14px;"></i> Archived
+        <span id="pollArchivedCount" style="display:none;background:rgba(0,0,0,.08);
+          border-radius:999px;padding:0 6px;font-size:.68rem;font-weight:700;"></span>
+      </button>
+    </div>
+
+    <div id="pollFilterRow" style="display:inline-flex;background:var(--alpha-ink-07);
+      border-radius:var(--radius-full);padding:3px;gap:2px;margin-bottom:1.25rem;">
+      <button class="bulletin-view-btn admin-subtab-btn is-active" onclick="window._pollAdminFilter('all',this)">All</button>
+      <button class="bulletin-view-btn admin-subtab-btn" onclick="window._pollAdminFilter('active',this)">
+        <i data-lucide="circle-dot" style="width:11px;height:11px;"></i> Active
+      </button>
+      <button class="bulletin-view-btn admin-subtab-btn" onclick="window._pollAdminFilter('draft',this)">
+        <i data-lucide="file" style="width:11px;height:11px;"></i> Draft
+      </button>
+      <button class="bulletin-view-btn admin-subtab-btn" onclick="window._pollAdminFilter('closed',this)">
+        <i data-lucide="square" style="width:11px;height:11px;"></i> Closed
+      </button>
+      <button class="bulletin-view-btn admin-subtab-btn" onclick="window._pollAdminFilter('scheduled',this)">
+        <i data-lucide="calendar-clock" style="width:11px;height:11px;"></i> Scheduled
+      </button>
+    </div>
+
     <div id="pollFormWrap" style="margin-bottom:1.5rem;"></div>
     <div id="pollAdminList" style="display:flex;flex-direction:column;gap:1rem;"></div>`;
 
@@ -184,17 +235,34 @@ function _renderList() {
   const el = document.getElementById('pollAdminList');
   if (!el) return;
 
-  if (!_polls.length) {
+  /* Update archived badge */
+  const archBadge = document.getElementById('pollArchivedCount');
+  if (archBadge) {
+    archBadge.textContent  = _archivedPolls.length;
+    archBadge.style.display = _archivedPolls.length ? 'inline' : 'none';
+  }
+
+  /* Hide filter row on archived tab */
+  const filterRow = document.getElementById('pollFilterRow');
+  if (filterRow) filterRow.style.display = _adminTab === 'archived' ? 'none' : 'inline-flex';
+
+  const source = _adminTab === 'archived' ? _archivedPolls : _polls;
+  const shown  = (_adminFilter === 'all' || _adminTab === 'archived')
+    ? source
+    : source.filter(p => p.status === _adminFilter);
+
+  if (!shown.length) {
     el.innerHTML = `
       <div style="background:#fff;border-radius:12px;padding:3rem;text-align:center;
         color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,.07);">
-        <i data-lucide="bar-chart-2" style="width:32px;height:32px;color:#d1d5db;display:block;margin:0 auto .75rem;"></i>
-        <p style="margin:0;font-size:.9rem;">No polls yet. Create one above.</p>
+        <i data-lucide="archive" style="width:32px;height:32px;color:#d1d5db;display:block;margin:0 auto .75rem;"></i>
+        <p style="margin:0;font-size:.9rem;">${_adminTab === 'archived' ? 'No archived polls.' : 'No polls match this filter.'}</p>
       </div>`;
+    lucide.createIcons({ el });
     return;
   }
 
-  el.innerHTML = _polls.map(p => _buildPollRow(p)).join('');
+  el.innerHTML = shown.map(p => _buildPollRow(p, _adminTab === 'archived')).join('');
   lucide.createIcons({ el });
 }
 
@@ -203,52 +271,69 @@ function _renderList() {
 // BUILD — Poll Row
 // ================================================
 
-function _buildPollRow(p) {
+function _buildPollRow(p, isArchived = false) {
   const total    = p.totalVotes ?? 0;
   const hasVotes = total > 0;
   const isAdmin  = _role === 'admin';
 
-  const statusColor = { draft: '#f59e0b', active: '#16a34a', closed: '#6b7280' }[p.status] ?? '#6b7280';
+  const displayStatus = isArchived ? 'closed' : p.status;
+  const statusColor = { draft: '#f59e0b', active: '#16a34a', closed: '#6b7280', scheduled: '#6366f1' }[displayStatus] ?? '#6b7280';
+
+  const scheduledFor = p.status === 'scheduled' && p.startDate
+    ? p.startDate.toDate?.()?.toLocaleDateString('en-PH', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      }) ?? '—'
+    : null;
 
   const deadline = p.endDate?.toDate?.()?.toLocaleDateString('en-PH', {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   }) ?? '—';
 
-  const canEdit = p.status === 'draft' || (p.status === 'active' && !hasVotes);
+  const canEdit = !isArchived && (p.status === 'draft' || (p.status === 'active' && !hasVotes));
 
-  const editBtn = canEdit
-    ? _btn('pencil', 'Edit', `window.editPoll('${esc(p.id)}')`, '')
-    : '';
+  /* Archived polls are read-only — only analytics is shown */
+  const editBtn     = (!isArchived && canEdit) ? _btn('pencil', 'Edit', `window.editPoll('${esc(p.id)}')`, '') : '';
+  const publishBtn  = (!isArchived && (p.status === 'draft' || p.status === 'scheduled')) ? _btn('send', 'Publish Now', `window.publishPoll('${esc(p.id)}')`, 'green') : '';
+  const extendBtn   = (!isArchived && p.status === 'active' && hasVotes) ? _btn('calendar-plus', 'Extend', `window.extendDeadline('${esc(p.id)}')`, '') : '';
+  const pinBtn      = (!isArchived && isAdmin) ? _btn(p.isPinned ? 'pin-off' : 'pin', p.isPinned ? 'Unpin' : 'Pin', `window.togglePinPoll('${esc(p.id)}',${!!p.isPinned})`, p.isPinned ? 'amber' : '') : '';
+  const closeBtn    = (!isArchived && isAdmin && p.status === 'active') ? _btn('square', 'Close', `window.closePoll('${esc(p.id)}')`, 'red') : '';
+  const analyticsBtn = hasVotes ? _btn('bar-chart-2', 'Analytics', `window.viewPollAnalytics('${esc(p.id)}')`, 'blue') : '';
+  const deleteBtn   = (!isArchived && isAdmin) ? _btn('trash-2', hasVotes ? 'Archive' : 'Delete', `window.deletePoll('${esc(p.id)}',${hasVotes})`, 'red') : '';
 
-  const publishBtn = p.status === 'draft'
-    ? _btn('send', 'Publish', `window.publishPoll('${esc(p.id)}')`, 'green')
-    : '';
+  const audienceLabel = {
+    all: null, residents: 'Residents', officials: 'Officials',
+    youth: 'Youth', seniors: 'Seniors',
+    household_heads: 'Household Heads', registered_voters: 'Reg. Voters',
+    custom_age: p.minAge != null || p.maxAge != null
+      ? `Age ${p.minAge ?? 0}–${p.maxAge ?? '∞'}` : 'Custom Age',
+  }[p.targetAudience ?? 'all'];
 
-  const extendBtn = p.status === 'active' && hasVotes
-    ? _btn('calendar-plus', 'Extend', `window.extendDeadline('${esc(p.id)}')`, '')
-    : '';
+  const roleLabel = { all: null, residents: 'Residents', officials: 'Officials' }[p.targetRoles ?? 'all'];
+  const groupLabel = {
+    all: null, youth: 'Youth', adult: 'Adults', senior: 'Seniors',
+    custom_age: p.minAge != null || p.maxAge != null
+      ? `Age ${p.minAge ?? 0}–${p.maxAge ?? '∞'}` : 'Custom Age',
+  }[p.targetGroups ?? 'all'];
 
-  const pinBtn = isAdmin
-    ? _btn(
-        p.isPinned ? 'pin-off' : 'pin',
-        p.isPinned ? 'Unpin' : 'Pin',
-        `window.togglePinPoll('${esc(p.id)}',${!!p.isPinned})`,
-        p.isPinned ? 'amber' : '',
-      )
-    : '';
-
-  const closeBtn = isAdmin && p.status === 'active'
-    ? _btn('square', 'Close', `window.closePoll('${esc(p.id)}')`, 'red')
-    : '';
-
-  const analyticsBtn = hasVotes || p.status === 'closed'
-    ? _btn('bar-chart-2', 'Analytics', `window.viewPollAnalytics('${esc(p.id)}')`, 'blue')
-    : '';
-
-  const deleteBtn = isAdmin
-    ? _btn('trash-2', 'Delete', `window.deletePoll('${esc(p.id)}',${hasVotes})`, 'red')
-    : '';
+  const _rolePill = roleLabel ? (() => {
+    const s = p.targetRoles === 'residents'
+      ? 'background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;'
+      : 'background:#fff8ed;color:#92400e;border:1px solid #fed7aa;';
+    return `<span class="admin-badge" style="${s}"><i data-lucide="users" style="width:10px;height:10px;"></i>${roleLabel}</span>`;
+  })() : '';
+  const _grpStylesA = {
+    youth:      'background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;',
+    adult:      'background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;',
+    senior:     'background:#fef3c7;color:#854d0e;border:1px solid #fed7aa;',
+    custom_age: 'background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;',
+  };
+  const _groupPill = groupLabel ? (() => {
+    const s = _grpStylesA[p.targetGroups] || 'background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;';
+    return `<span class="admin-badge" style="${s}"><i data-lucide="users" style="width:10px;height:10px;"></i>${groupLabel}</span>`;
+  })() : '';
+  const audienceBadge = _rolePill + _groupPill;
 
   const optPreview = Object.values(p.options ?? {})
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
@@ -262,8 +347,11 @@ function _buildPollRow(p) {
       <div style="margin-bottom:.75rem;">
         <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.25rem;">
           <span style="font-weight:700;font-size:.95rem;">${esc(p.title)}</span>
-          <span class="admin-badge admin-badge--${p.status}">${p.status.toUpperCase()}</span>
-          ${p.isPinned ? `<span class="admin-badge admin-badge--pinned"><i data-lucide="pin"></i> Pinned</span>` : ''}
+          <span class="admin-badge admin-badge--${displayStatus}">${displayStatus.toUpperCase()}</span>
+          ${scheduledFor ? `<span class="admin-badge" style="background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;">
+            <i data-lucide="calendar-clock" style="width:10px;height:10px;"></i> Goes live ${scheduledFor}
+          </span>` : ''}
+          ${audienceBadge}${p.isPinned ? `<span class="admin-badge admin-badge--pinned"><i data-lucide="pin"></i> Pinned</span>` : ''}
           ${p.category ? (() => { const c = _CAT_COLORS[p.category] ?? _CAT_COLORS.general;
             return `<span style="background:${c.bg};color:${c.color};border:1px solid ${c.border};padding:2px
             8px;border-radius:999px;font-size:.68rem;font-weight:600;">${p.category.charAt(0).toUpperCase()+p.category.slice(1)}</span>`; })() : ''}
@@ -413,6 +501,55 @@ window.openPollForm = function (prefill = null) {
           </div>` : ''}
         </div>
 
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <label style="display:block;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.3rem;">
+              Target Role
+            </label>
+            <select id="pf_targetRoles"
+              style="width:100%;padding:.55rem .8rem;border:1.5px solid #e5e7eb;
+                border-radius:8px;font-size:.875rem;outline:none;background:#fff;">
+              ${_ROLE_OPTS.map(o =>
+                `<option value="${o.value}" ${(prefill?.targetRoles ?? 'all') === o.value ? 'selected' : ''}>${o.label}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.3rem;">
+              Target Group
+            </label>
+            <select id="pf_targetGroups" onchange="window._onGroupChange()"
+              style="width:100%;padding:.55rem .8rem;border:1.5px solid #e5e7eb;
+                border-radius:8px;font-size:.875rem;outline:none;background:#fff;">
+              ${_GROUP_OPTS.map(o =>
+                `<option value="${o.value}" ${(prefill?.targetGroups ?? 'all') === o.value ? 'selected' : ''}>${o.label}</option>`
+              ).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div id="pf_ageRangeRow" style="display:${(prefill?.targetGroups === 'custom_age') ? 'grid' : 'none'};
+          grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <label style="display:block;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.3rem;">
+              Min Age
+            </label>
+            <input id="pf_minAge" type="number" min="0" max="120"
+              value="${prefill?.minAge ?? ''}" placeholder="e.g. 18"
+              style="width:100%;padding:.55rem .8rem;border:1.5px solid #e5e7eb;
+                border-radius:8px;font-size:.875rem;outline:none;box-sizing:border-box;" />
+          </div>
+          <div>
+            <label style="display:block;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.3rem;">
+              Max Age
+            </label>
+            <input id="pf_maxAge" type="number" min="0" max="120"
+              value="${prefill?.maxAge ?? ''}" placeholder="e.g. 45"
+              style="width:100%;padding:.55rem .8rem;border:1.5px solid #e5e7eb;
+                border-radius:8px;font-size:.875rem;outline:none;box-sizing:border-box;" />
+          </div>
+        </div>
+
         <div>
           <label style="display:block;font-size:.78rem;font-weight:600;color:#374151;margin-bottom:.3rem;">
             Options * <span style="font-weight:400;color:#9ca3af;">(minimum 2)</span>
@@ -507,6 +644,18 @@ function _buildOptionField(idx, value = '', disabled = false) {
     </div>`;
 }
 
+window._onAudienceChange = function () {
+  const val = document.getElementById('pf_audience')?.value;
+  const row = document.getElementById('pf_ageRangeRow');
+  if (row) row.style.display = val === 'custom_age' ? 'grid' : 'none';
+};
+
+window._onGroupChange = function () {
+  const val = document.getElementById('pf_targetGroups')?.value;
+  const row = document.getElementById('pf_ageRangeRow');
+  if (row) row.style.display = val === 'custom_age' ? 'grid' : 'none';
+};
+
 window._addPollOption = function () {
   const container = document.getElementById('pf_options');
   if (!container) return;
@@ -554,15 +703,22 @@ window.savePoll = async function (status) {
       order:      i,
     };
   });
-
+  const targetGroups = document.getElementById('pf_targetGroups')?.value || 'all';
+  const _startForCheck = startDate && !isNaN(startDate) ? startDate : null;
+  const _effectiveStatus = (status === 'active' && _startForCheck && _startForCheck > new Date())
+    ? 'scheduled' : status;
   const payload = {
     description:      document.getElementById('pf_desc')?.value.trim() || null,
     category:         document.getElementById('pf_category')?.value || 'general',
     priority:         document.getElementById('pf_priority')?.value || 'normal',
     allowLiveResults: document.getElementById('pf_live')?.checked ?? false,
+    targetRoles:      document.getElementById('pf_targetRoles')?.value || 'all',
+    targetGroups,
+    minAge: targetGroups === 'custom_age' ? (v => Number.isFinite(v) ? v : null)(parseInt(document.getElementById('pf_minAge')?.value)) : null,
+    maxAge: targetGroups === 'custom_age' ? (v => Number.isFinite(v) ? v : null)(parseInt(document.getElementById('pf_maxAge')?.value)) : null,
     startDate: (!editingWithVotes && startDate) ? startDate : (existingPoll?.startDate ?? null),
     endDate:   !editingWithVotes ? endDate : (existingPoll?.endDate ?? null),
-    status,
+    status: _effectiveStatus,
     updatedAt:        serverTimestamp(),
   };
 
@@ -596,7 +752,7 @@ window.savePoll = async function (status) {
       await _logAction(ref.id, status === 'active' ? 'publish' : 'create_draft', null);
       showToast(status === 'active' ? 'Poll published.' : 'Draft saved.', 'success');
       if (status === 'active') {
-        notifyAllInBarangay(_bid, { type: 'poll_created', actorId: _uid, postId: ref.id, postTitle: payload.title, description: payload.description ?? null });
+        notifyAllInBarangay(_bid, { type: 'poll_created', actorId: _uid, postId: ref.id, postTitle: payload.title, description: payload.description ?? null }, { targetRoles: payload.targetRoles });
       }
     }
     window.closePollForm();
@@ -623,9 +779,10 @@ window.publishPoll = async function (pollId) {
     await updateDoc(pollDoc(_bid, pollId), { status: 'active', updatedAt: serverTimestamp() });
     await _logAction(pollId, 'publish', null);
     showToast('Poll published.', 'success');
+    const _publishedPoll = _polls.find(p=>p.id===pollId);
     notifyAllInBarangay(_bid, { type: 'poll_created', actorId: _uid, postId: pollId,
-    postTitle: _polls.find(p=>p.id===pollId)?.title ?? 'New Poll',
-    description: _polls.find(p=>p.id===pollId)?.description ?? null });
+    postTitle: _publishedPoll?.title ?? 'New Poll',
+    description: _publishedPoll?.description ?? null }, { targetRoles: _publishedPoll?.targetRoles });
   } catch { showToast('Failed to publish.', 'error'); }
 };
 
@@ -719,29 +876,49 @@ window.closePoll = async function (pollId) {
     await updateDoc(pollDoc(_bid, pollId), { status: 'closed', updatedAt: serverTimestamp() });
     await _logAction(pollId, 'close_early', null);
     showToast('Poll closed.', 'success');
-    notifyAllInBarangay(_bid, { type: 'poll_closed', actorId: _uid,
-        postId: pollId, postTitle: _polls.find(p=>p.id===pollId)?.title ?? 'Poll',
-        description: _polls.find(p=>p.id===pollId)?.description ?? null });
+    const _closedPoll = _polls.find(p=>p.id===pollId);
+        notifyAllInBarangay(_bid, { type: 'poll_closed', actorId: _uid,
+        postId: pollId, postTitle: _closedPoll?.title ?? 'Poll',
+        description: _closedPoll?.description ?? null }, { targetRoles: _closedPoll?.targetRoles });
   } catch { showToast('Failed to close poll.', 'error'); }
 };
 
 /*
-   Polls with votes are soft-deleted (isDeleted: true) to preserve
-   the audit trail. Zero-vote polls are hard-deleted.
+   Deletion policy:
+     · Zero votes AND still a draft (or no one has voted yet) → hard delete permanently.
+       Officers sometimes create polls by mistake — this gives them a clean escape.
+     · Has votes OR was active/closed → soft delete (isDeleted: true) + force status
+       to 'closed' so it can never accept votes from the archived state.
+       Kept for transparency — residents and admins can still view final results.
 */
-window.deletePoll = async function (pollId) {
-  if (!confirm('Archive this poll instead of deleting it permanently?')) return;
+window.deletePoll = async function (pollId, hasVotes) {
+  const poll      = _polls.find(p => p.id === pollId);
+  const canHardDelete = !hasVotes; // zero votes = safe to permanently delete, regardless of status
+
+  const confirmed = canHardDelete
+    ? confirm('This poll has no votes and is still a draft. Delete it permanently? This cannot be undone.')
+    : confirm('Archive this poll? It will be closed and moved to the archive for transparency. Residents who voted can still see the results.');
+
+  if (!confirmed) return;
 
   try {
-    await updateDoc(pollDoc(_bid, pollId), {
-      isDeleted: true,
-      updatedAt: serverTimestamp(),
-    });
-
-    await _logAction(pollId, 'soft_delete', null);
-    showToast('Poll archived.', 'success');
+    if (canHardDelete) {
+      /* Hard delete — no votes, no record needed */
+      await deleteDoc(pollDoc(_bid, pollId));
+      await _logAction(pollId, 'hard_delete', 'Poll had no votes and was deleted permanently.');
+      showToast('Poll permanently deleted.', 'success');
+    } else {
+      /* Soft delete — force closed so it can never accept votes while archived */
+      await updateDoc(pollDoc(_bid, pollId), {
+        isDeleted: true,
+        status:    'closed',
+        updatedAt: serverTimestamp(),
+      });
+      await _logAction(pollId, 'soft_delete', 'Poll archived and closed.');
+      showToast('Poll archived.', 'success');
+    }
   } catch {
-    showToast('Failed to archive poll.', 'error');
+    showToast('Failed to delete/archive poll.', 'error');
   }
 };
 
@@ -768,7 +945,7 @@ window.viewPollAnalytics = function (pollId) {
 
   if (el.style.display !== 'none') { el.style.display = 'none'; return; }
 
-  const poll  = _polls.find(p => p.id === pollId);
+  const poll  = _polls.find(p => p.id === pollId) ?? _archivedPolls.find(p => p.id === pollId);
   if (!poll)  return;
 
   const total   = poll.totalVotes ?? 0;
@@ -792,6 +969,31 @@ window.viewPollAnalytics = function (pollId) {
       </div>`;
   }).join('');
 
+  const demo = poll.demographics ?? {};
+  const demoGroups = [
+    { key: 'resident', label: 'Residents' },
+    { key: 'officer',  label: 'Officers'  },
+    { key: 'admin',    label: 'Admins'    },
+    { key: 'child',    label: 'Children'  },
+    { key: 'youth',    label: 'Youth'     },
+    { key: 'adult',    label: 'Adults'    },
+    { key: 'senior',   label: 'Seniors'   },
+  ].filter(g => demo[g.key] !== undefined);
+
+  const demoHtml = demoGroups.length ? `
+    <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;
+      color:#9ca3af;letter-spacing:.06em;margin:.85rem 0 .5rem;">
+      By Demographic
+    </p>
+    ${demoGroups.map(g => {
+      const groupTotal = Object.values(demo[g.key] ?? {}).reduce((s, n) => s + n, 0);
+      return `<div style="display:flex;justify-content:space-between;font-size:.8rem;
+        color:#374151;padding:.2rem 0;">
+        <span>${g.label}</span>
+        <span style="font-weight:600;">${groupTotal.toLocaleString()} vote${groupTotal !== 1 ? 's' : ''}</span>
+      </div>`;
+    }).join('')}` : '';
+
   el.innerHTML = `
     <div style="background:#f9fafb;border-radius:8px;padding:1rem;border:1px solid #e5e7eb;">
       <p style="font-size:.72rem;font-weight:700;text-transform:uppercase;
@@ -799,6 +1001,7 @@ window.viewPollAnalytics = function (pollId) {
         Analytics · ${total.toLocaleString()} total vote${total !== 1 ? 's' : ''}
       </p>
       ${bars || '<p style="font-size:.82rem;color:#aaa;margin:0;">No votes yet.</p>'}
+      ${demoHtml}
     </div>`;
   el.style.display = 'block';
 };
@@ -820,6 +1023,26 @@ async function _logAction(pollId, actionType, reason) {
   } catch { /* non-fatal */ }
 }
 
+window._pollAdminTab = function (tab, btn) {
+  _adminTab    = tab;
+  _adminFilter = 'all';
+  document.querySelectorAll('.admin-subtab-btn[onclick*="_pollAdminTab"]')
+    .forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.bulletin-view-btn[onclick*="_pollAdminFilter"]')
+    .forEach(b => b.classList.remove('is-active'));
+  document.querySelector('.bulletin-view-btn[onclick*="_pollAdminFilter"]')
+    ?.classList.add('is-active');
+  _renderList();
+};
+
+window._pollAdminFilter = function (filter, btn) {
+  _adminFilter = filter;
+  document.querySelectorAll('.bulletin-view-btn[onclick*="_pollAdminFilter"]')
+    .forEach(b => b.classList.remove('is-active'));
+  btn.classList.add('is-active');
+  _renderList();
+};
 
 // ================================================
 // UTILITIES

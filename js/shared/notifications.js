@@ -246,14 +246,35 @@ function renderDropdown(notifs, barangayId, uid) {
    except the actor. Used by polls-admin.js and community-polls.js.
    data shape: { type, actorId, postId, postTitle, description? }
 */
-export async function notifyAllInBarangay(barangayId, data) {
+export async function notifyAllInBarangay(barangayId, data, audience = {}) {
+  /*
+     audience shape: { targetRoles?: string, targetGroups?: string }
+     Role filtering is done here (cheap — userIndex has role).
+     Age filtering is skipped server-side — too expensive without
+     reading every full user doc. Age-gated polls will over-notify
+     but the poll card itself will block ineligible users from voting.
+  */
   try {
     const { getDocs: _get, collection: _col } =
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+
     const snap = await _get(_col(db, 'barangays', barangayId, 'users'));
+
     await Promise.all(
       snap.docs
-        .filter(d => d.id !== data.actorId)
+        .filter(d => {
+          if (d.id === data.actorId) return false;
+
+          /* Role filter — skip if targetRoles is set and user doesn't match */
+          if (audience.targetRoles && audience.targetRoles !== 'all') {
+            const userRole = d.data().role ?? 'resident';
+            const isOfficial = userRole === 'admin' || userRole === 'officer';
+            if (audience.targetRoles === 'officials' && !isOfficial) return false;
+            if (audience.targetRoles === 'residents' &&  isOfficial) return false;
+          }
+
+          return true;
+        })
         .map(d => sendNotification(barangayId, d.id, { ...data, actorName: 'BarangayConnect' }))
     );
   } catch (e) { console.error('[notif] notifyAllInBarangay:', e); }
