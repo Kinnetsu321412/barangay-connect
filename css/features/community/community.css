@@ -1643,3 +1643,38 @@
     align-self: flex-start;
   }
 }
+
+/* ================================================
+   PANEL HEADING 
+   ================================================ */
+
+.community-panel-heading-wrap {
+  padding: var(--space-lg) var(--space-xl) 0;
+  max-width: var(--content-max, 1200px);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.community-panel-divider {
+  border: none;
+  border-top: 2px solid var(--gray-100);
+  margin: 0 0 var(--space-sm);
+}
+
+.community-panel-heading {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-extrabold);
+  color: var(--text-dark);
+  margin: var(--space-sm) 0 var(--space-lg);
+}
+
+/* ── Image viewer accent bar — allow wrapping for gallery info block ── */
+#imgViewerOverlay .img-viewer__accent {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
+@media (max-width: 600px) {
+  .bulletin-viewer-info { max-width: 100% !important; }
+}

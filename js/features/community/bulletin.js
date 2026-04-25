@@ -137,6 +137,170 @@ const CATEGORY_MAP = {
 const categoryMeta = cat => CATEGORY_MAP[cat] ?? CATEGORY_MAP.general;
 
 /* Expose openImageViewer globally for inline onclick handlers */
+/* Bulletin-aware viewer — injects live reaction UI into the accent bar */
+window.bulletinOpenViewer = function(images, index, title, postId) {
+  _openViewer(images, index, title);
+  requestAnimationFrame(() => {
+    const accent = document.querySelector('#imgViewerOverlay .img-viewer__accent');
+    if (!accent || !postId) return;
+    /* Clear previously injected elements */
+    accent.querySelectorAll(
+      '.bulletin-viewer-react, .bulletin-viewer-meta, .bulletin-viewer-info'
+    ).forEach(el => el.remove());
+
+    const post    = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
+    const state   = _reactState.get(postId);
+    const summary = post ? buildReactionSummary(post.reactions, post.likeCount) : { total: 0, html: '' };
+
+    /* ── Info block: title, author, date, description ── */
+    if (post) {
+      const _meta = CATEGORY_MAP[post.category] ?? CATEGORY_MAP.general;
+      const _date = post.createdAt?.toDate
+        ? post.createdAt.toDate().toLocaleDateString('en-PH',
+            { month: 'short', day: 'numeric', year: 'numeric' })
+        : '';
+      const info = document.createElement('div');
+      info.className = 'bulletin-viewer-info';
+      info.style.cssText = `display:flex;flex-direction:column;gap:3px;max-width:420px;
+        background:var(--overlay-white-12);border:1px solid var(--overlay-white-18);
+        border-radius:var(--radius-md);padding:8px 14px;`;
+      info.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span class="tag ${_meta.tagClass}"
+            style="font-size:var(--text-2xs);pointer-events:none;padding:1px 7px;">
+            ${esc(_meta.label)}
+          </span>
+          ${_date ? `<span style="font-size:var(--text-2xs);color:var(--overlay-white-55);
+            font-family:var(--font-display);">${_date}</span>` : ''}
+        </div>
+        <p style="margin:0;font-size:var(--text-xs);font-weight:var(--fw-bold);
+          color:var(--white);font-family:var(--font-display);line-height:var(--lh-snug);">
+          ${esc(post.title ?? '')}
+        </p>
+        ${post.body ? `<p style="margin:0;font-size:var(--text-2xs);
+          color:var(--overlay-white-75);line-height:var(--lh-snug);
+          display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
+          ${esc(post.body.slice(0, 120))}${post.body.length > 120 ? '…' : ''}
+        </p>` : ''}
+        <div style="display:flex;align-items:center;gap:5px;margin-top:1px;">
+          <i data-lucide="user" style="width:10px;height:10px;color:var(--overlay-white-55);flex-shrink:0;"></i>
+          <span style="font-size:var(--text-2xs);color:var(--overlay-white-55);
+            font-family:var(--font-display);">
+            ${esc(post.authorName ?? 'BarangayConnect')}
+          </span>
+        </div>`;
+      accent.appendChild(info);
+      lucide.createIcons({ el: info });
+    }
+
+    /* ── React widget ── */
+    const EMOJI_MAP = { heart:'❤️', laugh:'😂', wow:'😮', sad:'😢', like:'👍' };
+    const _entries  = Object.entries(post?.reactions ?? {}).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a);
+    let _ordered = [..._entries];
+    if (state && _ordered.length) {
+      _ordered = [
+        ..._ordered.filter(([t])=>t===state.type),
+        ..._ordered.filter(([t])=>t!==state.type),
+      ];
+    }
+    const _topTypes = _ordered.slice(0,3).map(([t])=>t);
+    const _bubbles  = _topTypes.map((type,i)=>
+      `<span style="font-size:.9rem;z-index:${3-i};margin-left:${i===0?0:-4}px;
+        display:inline-block;">${EMOJI_MAP[type]}</span>`
+    ).join('');
+    const _countInner = summary.total > 0
+      ? `<span style="display:inline-flex;align-items:center;gap:2px;">${_bubbles}
+          <span style="font-size:var(--text-xs);font-weight:600;margin-left:3px;">${summary.total}</span>
+         </span>`
+      : `<span style="font-size:var(--text-xs);font-weight:600;">Like</span>`;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'bulletin-viewer-react';
+    wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;position:relative;';
+    wrap.innerHTML = `
+      <button id="_vreact-btn-${postId}"
+        style="display:inline-flex;align-items:center;gap:5px;
+          background:${state?'rgba(220,38,38,.18)':'var(--overlay-white-12)'};
+          color:${state?'#fca5a5':'var(--overlay-white-75)'};font-size:var(--text-xs);
+          font-weight:600;font-family:var(--font-display);padding:5px 12px;border-radius:999px;
+          border:1px solid ${state?'rgba(220,38,38,.3)':'var(--overlay-white-18)'};cursor:pointer;"
+        onmouseenter="document.getElementById('_vreact-picker-${postId}').style.display='flex'"
+        onclick="handleReactionToggle('${postId}');window._refreshViewerReact('${postId}')">
+        <span id="_vreact-icon-${postId}"
+          style="display:${state?'none':'inline-flex'};align-items:center;">
+          <i data-lucide="heart" style="width:13px;height:13px;stroke-width:2;
+            color:var(--overlay-white-75);pointer-events:none;"></i>
+        </span>
+        <span id="_vreact-count-${postId}">${_countInner}</span>
+      </button>
+      <div id="_vreact-picker-${postId}" style="display:none;position:absolute;
+        bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+        background:var(--white);border:1px solid var(--gray-100);border-radius:999px;
+        padding:5px 8px;box-shadow:var(--shadow-lg);flex-direction:row;gap:2px;
+        z-index:10000;white-space:nowrap;">
+        ${Object.entries(EMOJI_MAP).map(([type,em])=>
+          `<button style="background:none;border:none;cursor:pointer;font-size:1.3rem;
+            padding:3px 4px;border-radius:var(--radius-sm);"
+            onmouseenter="this.style.transform='scale(1.35) translateY(-2px)'"
+            onmouseleave="this.style.transform=''"
+            onclick="handleReaction('${postId}','${type}');window._refreshViewerReact('${postId}');
+              document.getElementById('_vreact-picker-${postId}').style.display='none'">${em}</button>`
+        ).join('')}
+      </div>`;
+
+    let _bvTimer;
+    const _bvPicker = wrap.querySelector(`#_vreact-picker-${postId}`);
+    wrap.querySelector(`#_vreact-btn-${postId}`)
+      ?.addEventListener('mouseleave', () => {
+        _bvTimer = setTimeout(() => { if (_bvPicker) _bvPicker.style.display = 'none'; }, 300);
+      });
+    _bvPicker?.addEventListener('mouseenter', () => clearTimeout(_bvTimer));
+    _bvPicker?.addEventListener('mouseleave', () => {
+      _bvTimer = setTimeout(() => { if (_bvPicker) _bvPicker.style.display = 'none'; }, 200);
+    });
+    accent.appendChild(wrap);
+    lucide.createIcons({ el: wrap });
+  });
+};
+
+window._refreshViewerReact = function(postId) {
+  setTimeout(() => {
+    const state   = _reactState.get(postId);
+    const post    = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
+    const summary = post ? buildReactionSummary(post.reactions, post.likeCount) : { total: 0, html: '' };
+    const btn     = document.getElementById(`_vreact-btn-${postId}`);
+    if (!btn) return;
+    btn.style.background  = state ? 'rgba(220,38,38,.18)' : 'var(--overlay-white-12)';
+    btn.style.color       = state ? '#fca5a5' : 'var(--overlay-white-75)';
+    btn.style.borderColor = state ? 'rgba(220,38,38,.3)' : 'var(--overlay-white-18)';
+
+    const iconWrap = document.getElementById(`_vreact-icon-${postId}`);
+    const count    = document.getElementById(`_vreact-count-${postId}`);
+
+    /* Show lucide heart icon only when unreacted */
+    if (iconWrap) {
+      iconWrap.style.display = state ? 'none' : 'inline-flex';
+    }
+
+    if (count) {
+      if (state && summary.total > 0) {
+        /* Reacted + others exist — show bubbles with user's react first */
+        count.innerHTML = summary.html;
+      } else if (state) {
+        /* Reacted but no summary yet (optimistic) */
+        count.innerHTML = `<span style="font-size:var(--text-xs);font-weight:600;
+          color:#fca5a5;">${EMOJI[state.type] ?? '❤️'} 1</span>`;
+      } else if (summary.total > 0) {
+        /* Not reacted, but others have */
+        count.innerHTML = summary.html;
+      } else {
+        /* No reactions at all */
+        count.innerHTML = `<span style="font-size:var(--text-xs);font-weight:600;">Like</span>`;
+      }
+    }
+  }, 400);
+};
+
 window.openImageViewer = _openViewer;
 
 
@@ -297,9 +461,9 @@ export async function initBulletin() {
   });
 
   /* Source segmented control (All / Official / Community) */
-  document.querySelectorAll('.bulletin-source-seg__btn').forEach(btn => {
+  document.querySelectorAll('#tab-bulletin .bulletin-source-seg__btn:not(.bulletin-sort-seg__btn)').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.bulletin-source-seg__btn')
+      document.querySelectorAll('#tab-bulletin .bulletin-source-seg__btn:not(.bulletin-sort-seg__btn)')
         .forEach(b => b.classList.remove('is-active'));
       btn.classList.add('is-active');
       _sourceFilter = btn.dataset.source ?? 'all';
@@ -310,12 +474,12 @@ export async function initBulletin() {
   });
 
   /* Sort sub-filter */
-  document.querySelectorAll('.bulletin-sort-seg__btn').forEach(btn => {
+  document.querySelectorAll('#tab-bulletin .bulletin-sort-seg__btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.bulletin-sort-seg__btn')
+      document.querySelectorAll('#tab-bulletin .bulletin-sort-seg__btn')
         .forEach(b => b.classList.remove('is-active'));
       btn.classList.add('is-active');
-      _sortMode    = btn.dataset.sort ?? 'newest';
+      _sortMode = btn.dataset.sort ?? 'newest';
       _currentPage = 0;
       _clearHashPage();
       renderBulletin(listEl);
@@ -636,7 +800,7 @@ function buildPostRow(post) {
       <div class="post-carousel__track" id="carousel-track-${pid}">
         ${images.map((url, i) => `
           <div class="post-carousel__slide"
-            onclick="openImageViewer(JSON.parse(decodeURIComponent('${imagesEncoded}')), ${i}, '${ptitle}')">
+            onclick="bulletinOpenViewer(JSON.parse(decodeURIComponent('${imagesEncoded}')), ${i}, '${ptitle}','${pid}')">
             <img src="${esc(url)}" alt="Post image ${i + 1}" loading="lazy" />
           </div>`).join('')}
       </div>

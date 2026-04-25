@@ -204,7 +204,6 @@
   ══════════════════════════════════════════════════════════════════ -->
   <main class="community-main">
 
-
     <!-- ─────────────────────────────────────────────────────────────
          TAB PANEL: BULLETIN
          ─────────────────────────────────────────────────────────────
@@ -249,9 +248,9 @@
           </div>
         </div>
 
-        <div style="display:flex;align-items:center;gap:.4rem;">
-          <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
-            color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Sort</span>
+        <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0;">
+              <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
+                color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Sort</span>
           <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
             <button class="btn btn--filter bulletin-source-seg__btn bulletin-sort-seg__btn is-active" data-sort="newest">Newest</button>
             <button class="btn btn--filter bulletin-source-seg__btn bulletin-sort-seg__btn" data-sort="oldest">Oldest</button>
@@ -421,32 +420,42 @@
 
         <div style="display:flex;flex-direction:column;gap:.4rem;margin-bottom:.25rem;">
 
-          <!-- Row 1: category pills + view toggle -->
+          <!-- Row 1: category pills + view controls -->
           <div class="gallery-controls-row">
             <div class="gallery-category-filters" id="galleryCategoryFilters">
               <button class="btn btn--filter is-active" data-gallery-filter="all">All</button>
             </div>
-            <div class="gallery-view-toggle" id="galleryViewToggle">
-              <button class="gallery-view-btn is-active" data-view="masonry" title="Masonry view">
-                <i data-lucide="layout-dashboard"></i>
-              </button>
-              <button class="gallery-view-btn" data-view="grid" title="Grid view">
-                <i data-lucide="grid-2x2"></i>
-              </button>
-              <button class="gallery-view-btn" data-view="albums" title="Albums">
-                <i data-lucide="folder"></i>
-              </button>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <div class="gallery-content-seg">
+                <button class="gallery-content-seg__btn is-active" data-content="photos">
+                  <i data-lucide="images"></i> Photos
+                </button>
+                <button class="gallery-content-seg__btn" data-content="albums">
+                  <i data-lucide="folder"></i> Albums
+                  <span class="gallery-albums-badge" style="display:none;"></span>
+                </button>
+              </div>
+              <div class="gallery-view-toggle" id="galleryViewToggle">
+                <button class="gallery-view-btn is-active" data-view="masonry" title="Masonry view">
+                  <i data-lucide="layout-dashboard"></i>
+                </button>
+                <button class="gallery-view-btn" data-view="grid" title="Grid view">
+                  <i data-lucide="grid-2x2"></i>
+                </button>
+              </div>
             </div>
           </div>
 
           <!-- Row 2: Source + Sort side by side -->
-          <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
+          <div id="gallerySubFiltersRow" style="display:flex;align-items:center;gap:.75rem;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;">
 
-            <div style="display:flex;align-items:center;gap:.4rem;">
+            <div style="display:flex;align-items:center;gap:.4rem;flex-shrink:0;">
               <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
                 color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Source</span>
               <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
-                <button class="btn btn--filter bulletin-source-seg__btn gallery-source-seg__btn is-active" data-source="all">All</button>
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-source-seg__btn is-active" data-source="all">
+                  <i data-lucide="layers" style="width:11px;height:11px;"></i> All
+                </button>
                 <button class="btn btn--filter bulletin-source-seg__btn gallery-source-seg__btn" data-source="official">
                   <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
                 </button>
@@ -456,12 +465,19 @@
               </div>
             </div>
 
-            <div style="display:flex;align-items:center;gap:.4rem;">
+            <div style="display:flex;align-items:center;gap:.4rem;overflow-x:auto;">
               <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;
                 color:#9ca3af;letter-spacing:.06em;flex-shrink:0;">Sort</span>
-              <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
-                <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn is-active" data-sort="newest">Newest</button>
-                <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn" data-sort="oldest">Oldest</button>
+              <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;flex-shrink:0;">
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn is-active" data-sort="custom">
+                  <i data-lucide="grip" style="width:11px;height:11px;"></i> Custom
+                </button>
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn" data-sort="newest">
+                  <i data-lucide="clock" style="width:11px;height:11px;"></i> Newest
+                </button>
+                <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn" data-sort="oldest">
+                  <i data-lucide="history" style="width:11px;height:11px;"></i> Oldest
+                </button>
                 <button class="btn btn--filter bulletin-source-seg__btn gallery-sort-seg__btn" data-sort="popular">
                   <i data-lucide="heart" style="width:11px;height:11px;"></i> Most Liked
                 </button>
@@ -1176,7 +1192,13 @@
           btn.classList.add('is-active');
           btn.setAttribute('aria-selected', 'true');
           document.getElementById('tab-' + target)?.classList.add('is-active');
-          
+
+          /* Update panel heading to match active tab */
+          const _tabLabels = {
+            bulletin: 'Bulletin', polls: 'Polls', calendar: 'Calendar',
+            gallery: 'Gallery', youth: 'Youth Zone', pets: 'Pet Board',
+          };
+
           /* ── Gallery lazy init — start subscriptions when tab is opened ── */
           if (target === 'gallery' && window.initGallery) {
             window.initGallery();

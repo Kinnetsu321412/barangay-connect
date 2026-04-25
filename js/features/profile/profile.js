@@ -503,7 +503,7 @@ function showDemoBanner() {
     'z-index:9999', 'box-shadow:0 4px 20px rgba(0,0,0,.3)',
     'opacity:.88', 'pointer-events:none', 'white-space:nowrap',
   ].join(';');
-  banner.textContent = '👀 Demo mode — open via a server to connect to Firebase';
+  banner.textContent = 'Demo mode — open via a server to connect to Firebase';
   document.body.appendChild(banner);
 }
 

@@ -309,6 +309,9 @@
           <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('polls',this)">
             <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Polls
           </button>
+          <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('gallery',this)">
+            <i data-lucide="images" style="width:14px;height:14px;"></i> Gallery
+          </button>
       </div>
 
       <!-- ── Bulletin Posts sub-panel ────────────────────────── -->
@@ -451,6 +454,14 @@
 
       <!-- Polls sub-panel — shell rendered by polls-admin.js on auth -->
       <div id="community-sub-polls" hidden></div>
+
+      <!-- Gallery sub-panel — shell rendered by gallery-admin.js on auth -->
+      <div id="community-sub-gallery" hidden>
+        <h1 class="panel-heading">Gallery Management</h1>
+        <div id="galleryAdminContainer">
+          <p style="color:#aaa;">Loading gallery…</p>
+        </div>
+      </div>
 
     </div><!-- /panel-community -->
 
@@ -1069,6 +1080,7 @@
   <script type="module" src="js/features/admin/comment-manager-admin.js"></script>
   <script type="module" src="js/features/admin/settings-admin.js"></script>
   <script type="module" src="js/features/admin/polls-admin.js"></script>
+  <script type="module" src="js/features/admin/gallery-admin.js"></script>
 
   <!-- Tab state persistence — saves/restores across reloads -->
   <script>

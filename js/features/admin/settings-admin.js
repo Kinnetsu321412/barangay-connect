@@ -579,6 +579,18 @@ window.savePollArchiveDays = async function () {
   }
 };
 
+/* Saves which roles can see the gallery tab */
+window.saveGalleryVisibility = async function () {
+  if (!_settingsRef) return;
+  const checked = [...document.querySelectorAll('input[type="checkbox"][value]')]
+    .filter(cb => ['resident','officer','admin'].includes(cb.value) && cb.checked)
+    .map(cb => cb.value);
+  try {
+    await setDoc(_settingsRef, { galleryVisibleTo: checked }, { merge: true });
+    showSettingsToast('Saved ✓', 'success');
+  } catch { showSettingsToast('Failed to save. Try again.', 'error'); }
+};
+
 
 /* ================================================
    TOAST

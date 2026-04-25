@@ -80,10 +80,10 @@ const SEVERITY_FALLBACK = {
 
 /* Human-readable labels rendered in the publish confirm summary */
 const SEVERITY_LABELS = {
-  green:  '🟢 Green',
-  blue:   '🔵 Blue',
-  orange: '🟠 Orange',
-  red:    '🔴 Red',
+  green:  'Green',
+  blue:   'Blue',
+  orange: 'Orange',
+  red:    'Red',
 };
 
 
@@ -241,6 +241,7 @@ function injectConfirmModal() {
 
   document.body.appendChild(el);
   lucide.createIcons({ el });
+  if (_currentUserRole === 'admin' || _currentUserRole === 'officer') _wireDragReorderFeatured(el, all);
 }
 
 
@@ -404,10 +405,10 @@ function renderAlertForm(col) {
           <div>
             <label style="display:block;font-size:0.75rem;font-weight:600;text-transform:uppercase;color:#888;margin-bottom:4px">Severity</label>
             <select id="alertSeverity" style="width:100%;padding:0.55rem 0.75rem;border:1.5px solid #e0e0e0;border-radius:8px;font-size:0.875rem;outline:none;">
-              <option value="blue">🔵 Blue</option>
-              <option value="green">🟢 Green</option>  
-              <option value="orange">🟠 Orange</option>
-              <option value="red">🔴 Red</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>  
+              <option value="orange">Orange</option>
+              <option value="red">Red</option>
             </select>
           </div>
           <div>
@@ -618,10 +619,10 @@ function renderAlertList(barangay, docs) {
       <div style="display:inline-flex;background:var(--alpha-ink-07);
         border-radius:var(--radius-full);padding:3px;gap:2px;">
         <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='all'?'is-active':''}" onclick="setAlertSeverityFilter('all',this)">All</button>
-        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='blue'?'is-active':''}" onclick="setAlertSeverityFilter('blue',this)">🔵 Blue</button>
-        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='green'?'is-active':''}" onclick="setAlertSeverityFilter('green',this)">🟢 Green</button>
-        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='orange'?'is-active':''}" onclick="setAlertSeverityFilter('orange',this)">🟠 Orange</button>
-        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='red'?'is-active':''}" onclick="setAlertSeverityFilter('red',this)">🔴 Red</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='blue'?'is-active':''}" onclick="setAlertSeverityFilter('blue',this)">Blue</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='green'?'is-active':''}" onclick="setAlertSeverityFilter('green',this)">Green</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='orange'?'is-active':''}" onclick="setAlertSeverityFilter('orange',this)">Orange</button>
+        <button class="bulletin-view-btn admin-subtab-btn alert-severity-btn ${_alertSeverityFilter==='red'?'is-active':''}" onclick="setAlertSeverityFilter('red',this)">Red</button>
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">

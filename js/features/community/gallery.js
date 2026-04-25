@@ -58,7 +58,7 @@ import { openImageViewer as _openViewer, _injectImageViewer } from '../../shared
 import { showConfirm }                                 from '/js/shared/confirm-modal.js';
 
 import {
-  collection, query, where, orderBy, onSnapshot,
+  collection, query, where, orderBy, onSnapshot, doc,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 
@@ -73,14 +73,18 @@ let _currentUserRole = 'resident';
 let _allFeatured     = [];   // merged + sorted featured posts
 let _activeCategory  = 'all';
 let _sourceFilter    = 'all';   // 'all' | 'official' | 'community'
-let _sortMode        = 'newest'; // 'newest' | 'oldest' | 'popular' | 'commented'
-let _viewMode        = 'masonry'; // 'masonry' | 'grid' | 'albums'
+let _sortMode        = 'custom'; // 'custom' | 'newest' | 'oldest' | 'popular' | 'commented'
+let _viewMode        = 'masonry'; // 'masonry' | 'grid'
+let _contentMode     = 'photos';  // 'photos' | 'albums'
 let _initialized     = false;
 let _allAlbums       = [];   // live album list
 let _activeAlbumId   = null; // currently open album detail
 let _bulkSelectMode  = false;  // whether bulk selection is active
 let _bulkSelected    = new Set(); // postIds currently selected
-let _bulkLongPress   = null;   // long-press timer handle
+let _dragOccurred    = false;  // suppress ghost click fired after dragend
+let _photoOrder         = [];   // admin-set custom photo order (postIds)
+let _albumOrder         = [];   // admin-set custom album order (albumIds)
+let _albumDragOccurred  = false; // suppress ghost click after album drag
 
 
 // ================================================
@@ -149,9 +153,26 @@ function getImages(post) {
 export async function initGallery() {
   /* Only initialize once per page load */
   if (_initialized) {
-    _renderGallery();
-    return;
-  }
+  const _subFiltersRow = document.getElementById('gallerySubFiltersRow');
+  /* Scope all syncs to the gallery panel to avoid grabbing stray duplicates */
+  const _galleryPanel  = heroSlot?.closest('.tab-panel') ?? document;
+
+  _galleryPanel.querySelectorAll('.gallery-content-seg__btn').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.content === _contentMode);
+  });
+  _galleryPanel.querySelectorAll('.gallery-view-btn').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.view === _viewMode);
+  });
+  _galleryPanel.querySelectorAll('.gallery-sort-seg__btn').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.sort === _sortMode);
+  });
+  _galleryPanel.querySelectorAll('.gallery-source-seg__btn').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.source === _sourceFilter);
+  });
+  if (_contentMode === 'albums') _renderAlbumsView();
+  else _renderGallery();
+  return;
+}
 
   const heroSlot = document.getElementById('galleryHeroSlot');
   const gridEl   = document.getElementById('galleryGrid');
@@ -213,8 +234,6 @@ export async function initGallery() {
 
     /* Sort spotlight first, then apply _sortMode */
     _allFeatured = merged.sort((a, b) => {
-      if (a.isHeroFeatured && !b.isHeroFeatured) return -1;
-      if (!a.isHeroFeatured && b.isHeroFeatured) return  1;
 
       if (_sortMode === 'oldest') {
         const ta = a.featuredAt?.toDate?.() ?? new Date(0);
@@ -234,8 +253,41 @@ export async function initGallery() {
       return tb - ta;
     });
 
-    if (_viewMode === 'albums') {
-      /* Featured posts changed — album covers may need updating */
+    /* Apply admin-set custom order when sort mode is 'custom' */
+    if (_sortMode === 'custom' && _photoOrder.length) {
+    const orderMap = new Map(_photoOrder.map((id, i) => [id, i]));
+    _allFeatured.sort((a, b) => {
+      /* Hero always first regardless of saved order */
+      if (a.isHeroFeatured && !b.isHeroFeatured) return -1;
+      if (!a.isHeroFeatured && b.isHeroFeatured) return  1;
+      const ai = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+      const bi = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+      if (ai === Infinity && bi === Infinity) return 0;
+      return ai - bi;
+    });
+  } else {
+    /* Non-custom sorts: hero first, then apply sort mode */
+    _allFeatured.sort((a, b) => {
+      if (a.isHeroFeatured && !b.isHeroFeatured) return -1;
+      if (!a.isHeroFeatured && b.isHeroFeatured) return  1;
+      if (_sortMode === 'oldest') {
+        const ta = a.featuredAt?.toDate?.() ?? new Date(0);
+        const tb = b.featuredAt?.toDate?.() ?? new Date(0);
+        return ta - tb;
+      }
+      if (_sortMode === 'popular') {
+        const ra = Object.values(a.reactions ?? {}).reduce((s, v) => s + v, 0) + (a.likeCount ?? 0);
+        const rb = Object.values(b.reactions ?? {}).reduce((s, v) => s + v, 0) + (b.likeCount ?? 0);
+        return rb - ra;
+      }
+      if (_sortMode === 'commented') return (b.commentCount ?? 0) - (a.commentCount ?? 0);
+      const ta = a.featuredAt?.toDate?.() ?? new Date(0);
+      const tb = b.featuredAt?.toDate?.() ?? new Date(0);
+      return tb - ta;
+    });
+  }
+
+    if (_contentMode === 'albums') {
       if (_activeAlbumId) {
         _renderAlbumDetail(_activeAlbumId, document.getElementById('galleryGrid'));
       } else {
@@ -245,27 +297,46 @@ export async function initGallery() {
       _renderGallery();
     }
     _buildCategoryFilters();
+    _updatePhotosBadge();
   }
 
   onSnapshot(announcementsQ, snap => {
-    _announcementsFeatured = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    _mergeAndRender();
-  });
+  _announcementsFeatured = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  _mergeAndRender();
+});
 
-  onSnapshot(communityQ, snap => {
-    _communityFeatured = snap.docs.map(d => ({ id: d.id, _type: 'post', ...d.data() }));
-    _mergeAndRender();
-  });
+onSnapshot(communityQ, snap => {
+  _communityFeatured = snap.docs.map(d => ({ id: d.id, _type: 'post', ...d.data() }));
+  _mergeAndRender();
+});
 
-  /* Wire view-toggle buttons */
+  /* Wire view-toggle buttons (masonry / grid) */
   document.querySelectorAll('.gallery-view-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.gallery-view-btn')
         .forEach(b => b.classList.remove('is-active'));
       btn.classList.add('is-active');
       _viewMode = btn.dataset.view ?? 'masonry';
+      if (_contentMode === 'albums') {
+        _renderAlbumsView();
+      } else {
+        _renderGallery();
+      }
+    });
+  });
+
+  /* Wire content seg (Photos / Albums) */
+  document.querySelectorAll('.gallery-content-seg__btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.gallery-content-seg__btn')
+        .forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      _contentMode   = btn.dataset.content ?? 'photos';
       _activeAlbumId = null;
-      if (_viewMode === 'albums') {
+      if (_bulkSelectMode) _exitBulkSelect();
+      const _subRow = document.getElementById('gallerySubFiltersRow');
+      if (_subRow) _subRow.style.display = _contentMode === 'albums' ? 'none' : 'flex';
+      if (_contentMode === 'albums') {
         _renderAlbumsView();
       } else {
         _renderGallery();
@@ -276,10 +347,12 @@ export async function initGallery() {
   /* Wire source sub-filter */
   document.querySelectorAll('.gallery-source-seg__btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.gallery-source-seg__btn')
+      btn.closest('div')?.querySelectorAll('.gallery-source-seg__btn')
         .forEach(b => b.classList.remove('is-active'));
       btn.classList.add('is-active');
       _sourceFilter = btn.dataset.source ?? 'all';
+      if (_bulkSelectMode) _exitBulkSelect();
+      if (_contentMode === 'albums') return;
       _renderGallery();
     });
   });
@@ -287,10 +360,12 @@ export async function initGallery() {
   /* Wire sort sub-filter */
   document.querySelectorAll('.gallery-sort-seg__btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.gallery-sort-seg__btn')
+      btn.closest('div')?.querySelectorAll('.gallery-sort-seg__btn')
         .forEach(b => b.classList.remove('is-active'));
       btn.classList.add('is-active');
       _sortMode = btn.dataset.sort ?? 'newest';
+      if (_bulkSelectMode) _exitBulkSelect();
+      if (_contentMode === 'albums') return;
       _mergeAndRender();
     });
   });
@@ -342,7 +417,7 @@ export async function initGallery() {
     _allAlbums = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     _updateAlbumsBadge();
 
-    if (_viewMode !== 'albums') return;
+    if (_contentMode !== 'albums') return;
 
     if (_activeAlbumId) {
       /* Detail view — check if only postIds order changed, patch DOM if so */
@@ -375,6 +450,19 @@ export async function initGallery() {
     }
   });
 
+  /* ── Subscribe: custom photo order (written by admin drag-reorder) ── */
+  onSnapshot(doc(db, 'barangays', BARANGAY_ID, 'meta', 'gallery'), snap => {
+    const data          = snap.exists() ? snap.data() : {};
+    const newOrder      = data.photoOrder  ?? [];
+    const newAlbumOrder = data.albumOrder  ?? [];
+    const changed       = newOrder.join(',')      !== _photoOrder.join(',');
+    const albumChanged  = newAlbumOrder.join(',')  !== _albumOrder.join(',');
+    _photoOrder  = newOrder;
+    _albumOrder  = newAlbumOrder;
+    if (changed      && _contentMode === 'photos')                   _renderGallery();
+    if (albumChanged && _contentMode === 'albums' && !_activeAlbumId) _renderAlbumsView();
+  });
+
   /* Handle deep link ?id=post_id on first load */
   _handleDeepLink();
 
@@ -394,6 +482,25 @@ function _renderGallery() {
   const heroSlot = document.getElementById('galleryHeroSlot');
   const gridEl   = document.getElementById('galleryGrid');
   if (!heroSlot || !gridEl) return;
+  const _subRow = document.getElementById('gallerySubFiltersRow');
+  if (_subRow) _subRow.style.display = 'flex';
+  const _catRow = document.getElementById('galleryCategoryFilters');
+  if (_catRow) _catRow.style.visibility = '';
+  const _controlsRow = _catRow?.closest('.gallery-controls-row');
+  if (_controlsRow) _controlsRow.style.justifyContent = '';
+
+  /* Re-apply custom order every render so Photos tab always reflects saved order */
+  if (_sortMode === 'custom' && _photoOrder.length) {
+    const orderMap = new Map(_photoOrder.map((id, i) => [id, i]));
+    _allFeatured.sort((a, b) => {
+      if (a.isHeroFeatured && !b.isHeroFeatured) return -1;
+      if (!a.isHeroFeatured && b.isHeroFeatured) return  1;
+      const ai = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+      const bi = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+      if (ai === Infinity && bi === Infinity) return 0;
+      return ai - bi;
+    });
+  }
 
   /* Apply source filter */
   const sourceFiltered = _allFeatured.filter(p => {
@@ -447,6 +554,10 @@ function _renderGallery() {
   gridEl.className = _viewMode === 'grid' ? 'gallery-grid-standard' : 'gallery-masonry';
   gridEl.innerHTML = gridPosts.map(post => _buildGalleryCard(post)).join('');
   lucide.createIcons({ el: gridEl });
+
+  if ((_currentUserRole === 'admin' || _currentUserRole === 'officer') && _sortMode === 'custom') {
+    _wireDragReorderPhotos(gridEl);
+  }
 }
 
 
@@ -494,6 +605,9 @@ function _buildHeroCard(post) {
           ${esc(meta.label)}
         </span>
         <h2 class="gallery-hero__title">${ptitle}</h2>
+        ${post.createdAt?.toDate ? `<span class="gallery-hero__date">
+          Posted ${post.createdAt.toDate().toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}
+        </span>` : ''}
         <a class="btn btn--outline-hero btn--sm gallery-hero__view-link"
           href="${viewPostHref}"
           onclick="event.stopPropagation()"
@@ -511,16 +625,21 @@ function _buildHeroCard(post) {
 
 /* Returns the HTML for a single masonry or grid card */
 function _buildGalleryCard(post) {
-  const coverUrl = getCoverUrl(post);
-  const meta     = categoryMeta(post.category);
-  const pid      = esc(post.id);
-  const ptitle   = esc(post.title ?? '');
+  const coverUrl  = getCoverUrl(post);
+  const meta      = categoryMeta(post.category);
+  const pid       = esc(post.id);
+  const ptitle    = esc(post.title ?? '');
+  const canManage = _currentUserRole === 'admin' || _currentUserRole === 'officer';
+  const canDrag   = canManage && _sortMode === 'custom';
+  const canBulk   = canManage; /* bulk available in all sort modes */
 
   /* Placeholder for image-less posts — show a tinted color block */
   if (!coverUrl) {
     return `
-      <div class="gallery-card"
-        onclick="_galleryOpenViewer('${pid}')"
+      <div class="gallery-card${canBulk ? ' gallery-card--reorderable' : ''}"
+        ${canBulk ? `data-post-id="${pid}"` : ''}
+        ${canDrag ? `draggable="true"` : ''}
+        onclick="_handlePhotoCardClick(event,'${pid}')">
         style="min-height:120px;display:flex;align-items:center;justify-content:center;
           background:var(--muted-bg);">
         <span class="tag ${meta.tagClass}" style="pointer-events:none;">
@@ -539,11 +658,20 @@ function _buildGalleryCard(post) {
             <i data-lucide="crown"></i>
           </button>
         </div>` : ''}
+          ${canBulk ? `
+        <div class="gallery-bulk-checkbox" data-pid="${pid}"
+          onclick="_toggleBulkCheckbox(event,'${pid}')">
+          <i data-lucide="check" style="width:10px;height:10px;"></i>
+        </div>` : ''}
       </div>`;
-  }
+  
+    }
 
   return `
-    <div class="gallery-card" onclick="_galleryOpenViewer('${pid}')">
+    <div class="gallery-card${canBulk ? ' gallery-card--reorderable' : ''}"
+      ${canBulk ? `data-post-id="${pid}"` : ''}
+      ${canDrag ? `draggable="true"` : ''}
+      onclick="_handlePhotoCardClick(event,'${pid}')">
       <div class="gallery-card__img-wrap">
         <img
           src="${esc(coverUrl)}"
@@ -558,6 +686,7 @@ function _buildGalleryCard(post) {
             </span>
             <p class="gallery-card__title">${ptitle}</p>
             <p class="gallery-card__byline">
+            <span class="gallery-card__byline-row">
               <span class="gallery-card__byline-author">
                 <i data-lucide="user" style="width:9px;height:9px;"></i>
                 ${esc(post.authorName ?? 'BarangayConnect')}
@@ -567,7 +696,11 @@ function _buildGalleryCard(post) {
                 <i data-lucide="star" style="width:9px;height:9px;fill:var(--orange);color:var(--orange);"></i>
                 ${esc(post.featuredByName)}
               </span>` : ''}
-            </p>
+            </span>
+            ${post.createdAt?.toDate ? `<span class="gallery-card__byline-date">
+              ${post.createdAt.toDate().toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}
+            </span>` : ''}
+          </p>
           </div>
         </div>
         ${(_currentUserRole === 'admin' || _currentUserRole === 'officer') ? `
@@ -586,65 +719,6 @@ function _buildGalleryCard(post) {
       </div>
     </div>`;
 }
-
-
-// ================================================
-// OPEN VIEWER
-// ================================================
-
-/*
-   Opens the shared image-viewer modal for a gallery post.
-   Appends a "View Post" button to the viewer's accent bar.
-*/
-window._galleryOpenViewer = function (postId) {
-  const post = _allFeatured.find(p => p.id === postId);
-  if (!post) return;
-
-  const images   = getImages(post);
-  const coverIdx = typeof post.featuredCoverIndex === 'number'
-    ? Math.min(post.featuredCoverIndex, images.length - 1)
-    : 0;
-
-  /* Open at cover index; fall back to 0 if no images */
-  _openViewer(images.length ? images : [''], coverIdx, post.title ?? '');
-
-  /* Inject "View Post" link into the viewer accent bar */
-  requestAnimationFrame(() => {
-    const accent = document.querySelector('#imgViewerOverlay .img-viewer__accent');
-    if (!accent) return;
-
-    /* Remove any previously injected gallery elements */
-    accent.querySelectorAll('.gallery-viewer-link, .gallery-viewer-meta').forEach(el => el.remove());
-
-    /* Author + featured-by chip */
-    const meta = document.createElement('span');
-    meta.className = 'gallery-viewer-meta';
-    meta.innerHTML = `
-      <i data-lucide="user" style="width:11px;height:11px;"></i>
-      ${esc(post.authorName ?? 'BarangayConnect')}
-      ${post.featuredByName
-        ? `<span style="opacity:.5;margin:0 3px;">·</span>
-           <i data-lucide="star" style="width:10px;height:10px;fill:var(--orange);color:var(--orange);"></i>
-           ${esc(post.featuredByName)}`
-        : ''}`;
-    accent.appendChild(meta);
-    lucide.createIcons({ el: meta });
-
-    const href = `community.html?scrollTo=${encodeURIComponent(postId)}&tab=bulletin`;
-    const link = document.createElement('a');
-    link.className = 'gallery-viewer-link';
-    link.href      = href;
-    link.innerHTML = `<i data-lucide="arrow-up-right"></i> View Post`;
-    accent.appendChild(link);
-    lucide.createIcons({ el: link });
-
-    /* Also update the deep-link URL so this item is shareable */
-    const url = new URL(window.location.href);
-    url.searchParams.set('id', postId);
-    history.replaceState(null, '', url.toString());
-  });
-};
-
 
 // ================================================
 // DEEP LINK — ?id=post_id
@@ -679,7 +753,7 @@ function _handleDeepLink() {
     document.querySelectorAll('.gallery-view-btn').forEach(b => {
       b.classList.toggle('is-active', b.dataset.view === 'albums');
     });
-    _viewMode      = 'albums';
+    _contentMode   = 'albums';
     _activeAlbumId = null;
 
     let attempts = 0;
@@ -952,9 +1026,24 @@ function _renderSkeleton(heroSlot, gridEl) {
 // ALBUMS — View
 // ================================================
 
+/* Updates the Photos toggle badge with total image count across all featured posts */
+function _updatePhotosBadge() {
+  const btn = document.querySelector('.gallery-content-seg__btn[data-content="photos"]');
+  if (!btn) return;
+  const totalPhotos = _allFeatured.reduce((sum, p) => sum + getImages(p).length, 0);
+  let badge = btn.querySelector('.gallery-photos-badge');
+  if (!badge) {
+    badge           = document.createElement('span');
+    badge.className = 'gallery-albums-badge gallery-photos-badge';
+    btn.appendChild(badge);
+  }
+  badge.textContent   = totalPhotos ? `${totalPhotos}` : '';
+  badge.style.display = totalPhotos ? '' : 'none';
+}
+
 /* Updates the Albums toggle badge without a full re-render */
 function _updateAlbumsBadge() {
-  const btn = document.querySelector('.gallery-view-btn[data-view="albums"]');
+  const btn = document.querySelector('.gallery-content-seg__btn[data-content="albums"]');
   if (!btn) return;
   const totalAlbums = _allAlbums.length;
   const totalPosts  = _allAlbums.reduce((sum, a) => sum + (a.postIds?.length ?? 0), 0);
@@ -1020,11 +1109,24 @@ window._exitBulkSelect = function () {
   _refreshBulkCardStates();
 }
 
+/* Routes clicks in photos mode — opens viewer normally, toggles in bulk */
+window._handlePhotoCardClick = function(e, postId) {
+  if (e.target.closest('.gallery-card__admin-strip') ||
+      e.target.closest('.gallery-bulk-checkbox')) return;
+  if (_dragOccurred) { _dragOccurred = false; return; }
+  if (_bulkSelectMode) { e.stopPropagation(); _toggleBulkCard(postId); return; }
+  window._galleryOpenViewer(postId);
+};
+
 /* Routes card click — opens viewer normally, toggles selection in bulk mode */
 window._handleAlbumCardClick = function (e, postId, albumId) {
-  /* Ignore clicks that originated from admin strip buttons */
+  /* Ignore clicks from admin strip, reorder buttons, or the bulk checkbox itself */
   if (e.target.closest('.gallery-card__admin-strip') ||
-      e.target.closest('.gallery-card__reorder-btns')) return;
+      e.target.closest('.gallery-card__reorder-btns') ||
+      e.target.closest('.gallery-bulk-checkbox')) return;
+
+  /* Swallow the ghost click that fires immediately after dragend */
+  if (_dragOccurred) { _dragOccurred = false; return; }
 
   if (_bulkSelectMode) {
     e.stopPropagation();
@@ -1032,26 +1134,6 @@ window._handleAlbumCardClick = function (e, postId, albumId) {
     return;
   }
   _galleryOpenViewer(postId, albumId);
-};
-
-/* Starts a 600ms long-press timer to enter bulk selection mode */
-window._startLongPress = function (e, postId) {
-  if (!(_currentUserRole === 'admin' || _currentUserRole === 'officer')) return;
-  if (_bulkSelectMode) return;
-  _bulkLongPress = setTimeout(() => {
-    _bulkLongPress = null;
-    /* Provide haptic feedback on mobile if available */
-    if (navigator.vibrate) navigator.vibrate(40);
-    _enterBulkSelect(postId);
-  }, 600);
-};
-
-/* Cancels the long-press timer */
-window._cancelLongPress = function () {
-  if (_bulkLongPress) {
-    clearTimeout(_bulkLongPress);
-    _bulkLongPress = null;
-  }
 };
 
 /* Toggles a single card's selected state */
@@ -1064,6 +1146,13 @@ function _toggleBulkCard(postId) {
   _refreshBulkCardStates();
   _renderBulkToolbar();
 }
+
+/* Checkbox button on each album card — enters bulk mode on first press, toggles on subsequent */
+window._toggleBulkCheckbox = function (e, postId) {
+  e.stopPropagation();
+  if (!_bulkSelectMode) _enterBulkSelect(postId);
+  else _toggleBulkCard(postId);
+};
 
 /* Syncs .is-bulk-selected class and checkbox state on all cards */
 function _refreshBulkCardStates() {
@@ -1081,7 +1170,8 @@ function _refreshBulkCardStates() {
 
 /* Renders or updates the floating bulk toolbar */
 function _renderBulkToolbar() {
-  const count = _bulkSelected.size;
+  const count       = _bulkSelected.size;
+  const inPhotos    = _contentMode === 'photos';
 
   let toolbar = document.getElementById('_galleryBulkToolbar');
   if (!toolbar) {
@@ -1092,22 +1182,35 @@ function _renderBulkToolbar() {
   }
 
   toolbar.innerHTML = `
-    <button class="gallery-bulk-toolbar__cancel"
-      onclick="window._exitBulkSelect()">
+    <button class="gallery-bulk-toolbar__cancel" onclick="window._exitBulkSelect()">
       <i data-lucide="x"></i>
     </button>
     <span class="gallery-bulk-toolbar__count">
       ${count} post${count !== 1 ? 's' : ''} selected
     </span>
-    <button class="gallery-bulk-toolbar__select-all"
-      onclick="window._bulkSelectAll()">
+    <button class="gallery-bulk-toolbar__select-all" onclick="window._bulkSelectAll()">
       Select All
     </button>
     <button class="btn btn--green btn--sm gallery-bulk-toolbar__add"
       ${count === 0 ? 'disabled' : ''}
       onclick="window._bulkAddToAlbum()">
       <i data-lucide="folder-plus"></i> Add to Album
-    </button>`;
+    </button>
+    ${inPhotos ? `
+    <button class="btn btn--sm" style="background:rgba(220,38,38,.85);color:#fff;border:none;
+      display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .9rem;border-radius:8px;
+      font-size:.8rem;font-weight:600;cursor:pointer;"
+      ${count === 0 ? 'disabled' : ''}
+      onclick="window._bulkUnfeature()">
+      <i data-lucide="star-off"></i> Remove from Gallery
+    </button>` : `
+    <button class="btn btn--sm" style="background:rgba(220,38,38,.85);color:#fff;border:none;
+      display:inline-flex;align-items:center;gap:.35rem;padding:.45rem .9rem;border-radius:8px;
+      font-size:.8rem;font-weight:600;cursor:pointer;"
+      ${count === 0 ? 'disabled' : ''}
+      onclick="window._bulkRemoveFromAlbum()">
+      <i data-lucide="folder-minus"></i> Remove from Album
+    </button>`}`;
 
   lucide.createIcons({ el: toolbar });
 }
@@ -1170,7 +1273,7 @@ window._bulkAddToAlbum = async function () {
         </button>
       </div>
       <div class="modal__body" style="display:flex;flex-direction:column;gap:4px;padding:var(--space-md);">
-        ${_allAlbums.map(album => `
+        ${_allAlbums.filter(a => a.id !== _activeAlbumId).map(album => `
           <button class="gallery-album-picker__item"
             onclick="window._bulkConfirmAdd('${esc(album.id)}')">
             <i data-lucide="folder"></i>
@@ -1197,13 +1300,81 @@ window._bulkConfirmAdd = async function (albumId) {
   try {
     const { doc: _d, updateDoc, arrayUnion } =
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-    await updateDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', albumId), {
-      postIds: arrayUnion(...ids),
-    });
-    _showGalleryToast(`${ids.length} post${ids.length !== 1 ? 's' : ''} added to "${album?.title ?? 'album'}"`);
+    const alreadyIn = ids.filter(id => (album?.postIds ?? []).includes(id));
+    const toAdd     = ids.filter(id => !alreadyIn.includes(id));
+    if (toAdd.length) {
+      await updateDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', albumId), {
+        postIds: arrayUnion(...toAdd),
+      });
+    }
+    const msg = toAdd.length
+      ? `${toAdd.length} added to "${album?.title ?? 'album'}"${alreadyIn.length ? ` · ${alreadyIn.length} already in album, skipped` : ''}`
+      : `All selected already in "${album?.title ?? 'album'}" — nothing added`;
+    _showGalleryToast(msg, toAdd.length ? 'success' : 'error');
     _exitBulkSelect();
   } catch (err) {
     console.error('[bulkAdd]', err);
+    _showGalleryToast('Something went wrong. Please try again.', 'error');
+  }
+};
+
+/* Bulk-removes isFeatured from all selected posts */
+window._bulkUnfeature = async function () {
+  if (!_bulkSelected.size) return;
+  const ok = await showConfirm({
+    title:   `Remove ${_bulkSelected.size} post${_bulkSelected.size !== 1 ? 's' : ''} from Gallery?`,
+    body:    'These posts will no longer appear in the Featured Gallery.',
+    confirm: 'Remove',
+    cancel:  'Go Back',
+    variant: 'warning',
+  });
+  if (!ok) return;
+  try {
+    const { doc: _d, updateDoc, deleteField } =
+      await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const ids = [..._bulkSelected];
+    await Promise.all(ids.map(postId => {
+      const post = _allFeatured.find(p => p.id === postId);
+      if (!post) return Promise.resolve();
+      return updateDoc(_d(db, 'barangays', BARANGAY_ID, post._col, postId), {
+        isFeatured:      false,
+        featuredAt:      deleteField(),
+        isHeroFeatured:  deleteField(),
+        featuredBy:      deleteField(),
+        featuredByName:  deleteField(),
+      });
+    }));
+    _showGalleryToast(`${ids.length} post${ids.length !== 1 ? 's' : ''} removed from gallery.`);
+    _exitBulkSelect();
+  } catch (err) {
+    console.error('[bulkUnfeature]', err);
+    _showGalleryToast('Something went wrong. Please try again.', 'error');
+  }
+};
+
+/* Bulk-removes selected posts from the current album */
+window._bulkRemoveFromAlbum = async function () {
+  if (!_bulkSelected.size || !_activeAlbumId) return;
+  const album = _allAlbums.find(a => a.id === _activeAlbumId);
+  const ok = await showConfirm({
+    title:   `Remove ${_bulkSelected.size} post${_bulkSelected.size !== 1 ? 's' : ''} from Album?`,
+    body:    `These posts will be removed from "${album?.title ?? 'this album'}". They stay in the gallery.`,
+    confirm: 'Remove',
+    cancel:  'Go Back',
+    variant: 'warning',
+  });
+  if (!ok) return;
+  try {
+    const { doc: _d, updateDoc, arrayRemove } =
+      await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const ids = [..._bulkSelected];
+    await updateDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', _activeAlbumId), {
+      postIds: arrayRemove(...ids),
+    });
+    _showGalleryToast(`${ids.length} post${ids.length !== 1 ? 's' : ''} removed from album.`);
+    _exitBulkSelect();
+  } catch (err) {
+    console.error('[bulkRemoveFromAlbum]', err);
     _showGalleryToast('Something went wrong. Please try again.', 'error');
   }
 };
@@ -1222,7 +1393,17 @@ function _renderAlbumsView() {
   const gridEl   = document.getElementById('galleryGrid');
   if (!heroSlot || !gridEl) return;
 
-  heroSlot.innerHTML = '';
+  const _subRow = document.getElementById('gallerySubFiltersRow');
+  if (_subRow) _subRow.style.display = 'none';
+  const _catRow = document.getElementById('galleryCategoryFilters');
+  if (_catRow) _catRow.style.visibility = 'hidden';
+  const _controlsRow = _catRow?.closest('.gallery-controls-row');
+  if (_controlsRow) _controlsRow.style.justifyContent = 'flex-end';
+
+  heroSlot.innerHTML = `<div class="gallery-section-label">
+    <i data-lucide="folder"></i> Albums
+  </div>`;
+  lucide.createIcons({ el: heroSlot });
 
   /* If an album is open, render its detail view */
   if (_activeAlbumId) {
@@ -1235,7 +1416,7 @@ function _renderAlbumsView() {
 
   _updateAlbumsBadge();
 
-  gridEl.className = 'gallery-albums-list';
+  gridEl.className = _viewMode === 'grid' ? 'gallery-albums-list gallery-albums-list--grid' : 'gallery-albums-list';
 
   if (!_allAlbums.length) {
     /* Empty state — render outside the grid to avoid column weirdness */
@@ -1254,26 +1435,39 @@ function _renderAlbumsView() {
         <p class="gallery-empty__sub">Check back soon for curated albums.</p>
       </div>`;
   } else {
+    const orderedAlbums = _albumOrder.length
+      ? [..._allAlbums].sort((a, b) => {
+          const ai = _albumOrder.indexOf(a.id);
+          const bi = _albumOrder.indexOf(b.id);
+          return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
+        })
+      : _allAlbums;
     gridEl.innerHTML = `
+      ${orderedAlbums.map(album => _buildAlbumCard(album)).join('')}
       ${canManage ? `
       <button class="gallery-album-create-btn" onclick="window._openCreateAlbum()">
         <i data-lucide="plus"></i> New Album
-      </button>` : ''}
-      ${_allAlbums.map(album => _buildAlbumCard(album)).join('')}`;
+      </button>` : ''}`;
   }
 
   lucide.createIcons({ el: gridEl });
+  if (canManage && _allAlbums.length && !_activeAlbumId) _wireDragReorderAlbums(gridEl);
 }
 
 /* Returns HTML for a single album card in the list */
 function _buildAlbumCard(album) {
   const pid        = esc(album.id);
-  const coverPost = _allFeatured.find(p => p.id === album.coverPostId)
-    ?? (album.postIds ?? []).map(id => _allFeatured.find(p => p.id === id)).find(p => p && getCoverUrl(p))
-    ?? null;
+  /* Manual cover: use the pinned coverPostId (don't fall back if missing — show empty). */
+  /* Auto cover:   walk postIds and use the first one that has an image. */
+  const coverPost = album.coverMode === 'manual'
+    ? (_allFeatured.find(p => p.id === album.coverPostId && getCoverUrl(p)) ?? null)
+    : ((album.postIds ?? []).map(id => _allFeatured.find(p => p.id === id)).find(p => p && getCoverUrl(p)) ?? null);
   const coverUrl  = coverPost ? getCoverUrl(coverPost) : null;
   const postCount  = album.postIds?.length ?? 0;
   const canManage  = _currentUserRole === 'admin' || _currentUserRole === 'officer';
+  const dateLabel  = album.createdAt?.toDate
+    ? album.createdAt.toDate().toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '';
 
   return `
     <div class="gallery-album-card"
@@ -1305,7 +1499,10 @@ function _buildAlbumCard(album) {
         </div>` : ''}
       </div>
       <div class="gallery-album-card__body">
-        <p class="gallery-album-card__title">${esc(album.title)}</p>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:4px;">
+          <p class="gallery-album-card__title" style="margin:0;">${esc(album.title)}</p>
+          ${dateLabel ? `<span class="gallery-album-card__date">${dateLabel}</span>` : ''}
+        </div>
         ${album.description
           ? `<p class="gallery-album-card__desc">${esc(album.description)}</p>`
           : ''}
@@ -1368,7 +1565,7 @@ function _renderAlbumDetail(albumId, gridEl) {
     .map(id => _allFeatured.find(p => p.id === id))
     .filter(Boolean);
 
-  gridEl.className = 'gallery-masonry';
+  gridEl.className = _viewMode === 'grid' ? 'gallery-grid-standard' : 'gallery-masonry';
   gridEl.innerHTML = posts.map((post, i) => _buildAlbumPostCard(post, album, i, posts.length)).join('');
   lucide.createIcons({ el: gridEl });
   _wireDragReorder(gridEl, album.id);
@@ -1390,13 +1587,7 @@ function _buildAlbumPostCard(post, album, index, total) {
       draggable="${canManage ? 'true' : 'false'}"
       data-post-id="${pid}"
       data-album-id="${aid}"
-      onclick="_handleAlbumCardClick(event,'${pid}','${aid}')"
-      onmousedown="_startLongPress(event,'${pid}')"
-      onmouseup="_cancelLongPress()"
-      onmouseleave="_cancelLongPress()"
-      ontouchstart="_startLongPress(event,'${pid}')"
-      ontouchend="_cancelLongPress()"
-      ontouchmove="_cancelLongPress()">
+      onclick="_handleAlbumCardClick(event,'${pid}','${aid}')">
       <div class="gallery-card__img-wrap">
         <img src="${esc(coverUrl)}" alt="${ptitle}"
           class="gallery-card__img" loading="lazy" />
@@ -1407,20 +1598,24 @@ function _buildAlbumPostCard(post, album, index, total) {
               ${esc(meta.label)}
             </span>
             <p class="gallery-card__title">${ptitle}</p>
+            <p class="gallery-card__byline">
+              <span class="gallery-card__byline-author">
+                <i data-lucide="user" style="width:9px;height:9px;"></i>
+                ${esc(post.authorName ?? 'BarangayConnect')}
+              </span>
+              ${post.createdAt?.toDate ? `<span class="gallery-card__byline-sep">·</span>
+              <span class="gallery-card__byline-date">
+                ${post.createdAt.toDate().toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'})}
+              </span>` : ''}
+            </p>
           </div>
         </div>
         ${canManage ? `
-        <div class="gallery-bulk-checkbox" data-pid="${pid}">
+        <div class="gallery-bulk-checkbox" data-pid="${pid}"
+          onclick="_toggleBulkCheckbox(event,'${pid}')">
           <i data-lucide="check" style="width:10px;height:10px;"></i>
         </div>
         <div class="gallery-card__admin-strip">
-          <button class="gallery-card__admin-btn"
-            onclick="event.stopPropagation();window._removePostFromAlbum('${pid}','${aid}')"
-            title="Remove from album">
-            <i data-lucide="folder-minus"></i>
-          </button>
-        </div>
-        <div class="gallery-card__reorder-btns">
           <button class="gallery-card__reorder-btn"
             onclick="event.stopPropagation();window._reorderAlbumPost('${aid}','${pid}',-1)"
             title="Move left" ${index === 0 ? 'disabled' : ''}>
@@ -1431,6 +1626,11 @@ function _buildAlbumPostCard(post, album, index, total) {
             title="Move right" ${index === total - 1 ? 'disabled' : ''}>
             <i data-lucide="chevron-right"></i>
           </button>
+          <button class="gallery-card__admin-btn"
+            onclick="event.stopPropagation();window._removePostFromAlbum('${pid}','${aid}')"
+            title="Remove from album">
+            <i data-lucide="folder-minus"></i>
+          </button>
         </div>` : ''}
       </div>
     </div>`;
@@ -1438,6 +1638,8 @@ function _buildAlbumPostCard(post, album, index, total) {
 
 /* Opens album detail — called by clicking an album card */
 window._openAlbumDetail = function (albumId) {
+  if (_albumDragOccurred) { _albumDragOccurred = false; return; }
+  if (_bulkSelectMode) _exitBulkSelect();
   _activeAlbumId = albumId;
   const url = new URL(window.location.href);
   url.searchParams.set('album', albumId);
@@ -1449,6 +1651,7 @@ window._openAlbumDetail = function (albumId) {
 
 /* Returns to the albums list */
 window._closeAlbumDetail = function () {
+  if (_bulkSelectMode) _exitBulkSelect();
   _activeAlbumId = null;
   const url = new URL(window.location.href);
   url.searchParams.delete('album');
@@ -1465,25 +1668,51 @@ window._closeAlbumDetail = function () {
    Override _galleryOpenViewer to accept an optional albumId.
    When provided, the accent bar shows the album name as context.
 */
-const _originalGalleryOpenViewer = window._galleryOpenViewer;
 
 window._galleryOpenViewer = function (postId, albumId) {
   const post = _allFeatured.find(p => p.id === postId);
   if (!post) return;
 
-  const images   = getImages(post);
-  const coverIdx = typeof post.featuredCoverIndex === 'number'
-    ? Math.min(post.featuredCoverIndex, images.length - 1)
-    : 0;
+  /* When opened from an album, stitch all album posts into one flat image reel */
+  let images, startIdx, viewerTitle;
+  if (albumId) {
+    const album = _allAlbums.find(a => a.id === albumId);
+    if (album?.postIds?.length) {
+      const flatImages = [];
+      let offset = 0;
+      startIdx = 0;
+      album.postIds.forEach(id => {
+        const p = _allFeatured.find(fp => fp.id === id);
+        if (!p) return;
+        const imgs = getImages(p);
+        if (id === postId) {
+          startIdx = offset + (typeof post.featuredCoverIndex === 'number'
+            ? Math.min(post.featuredCoverIndex, imgs.length - 1) : 0);
+        }
+        flatImages.push(...imgs);
+        offset += imgs.length;
+      });
+      images      = flatImages;
+      viewerTitle = album.title ?? post.title ?? '';
+    }
+  }
 
-  _openViewer(images.length ? images : [''], coverIdx, post.title ?? '');
+  if (!images) {
+    images      = getImages(post);
+    startIdx    = typeof post.featuredCoverIndex === 'number'
+      ? Math.min(post.featuredCoverIndex, images.length - 1) : 0;
+    viewerTitle = post.title ?? '';
+  }
+
+  _openViewer(images.length ? images : [''], startIdx, viewerTitle);
 
   requestAnimationFrame(() => {
     const accent = document.querySelector('#imgViewerOverlay .img-viewer__accent');
     if (!accent) return;
 
+    /* Clear ALL previously injected accent children to prevent duplicates */
     accent.querySelectorAll(
-      '.gallery-viewer-link, .gallery-viewer-meta, .gallery-viewer-album, .gallery-viewer-add-album'
+      '.gallery-viewer-link, .gallery-viewer-meta, .gallery-viewer-album, .gallery-viewer-add-album, .bulletin-viewer-react'
     ).forEach(el => el.remove());
 
     /* Album context chip — shown when opened from an album detail */
@@ -1520,17 +1749,82 @@ window._galleryOpenViewer = function (postId, albumId) {
     accent.appendChild(link);
     lucide.createIcons({ el: link });
 
-    /* Add to Album button — admin/officer only */
-    if (_currentUserRole === 'admin' || _currentUserRole === 'officer') {
-      const addBtn = document.createElement('button');
-      addBtn.className = 'gallery-viewer-add-album';
-      addBtn.innerHTML = `<i data-lucide="folder-plus"></i> Add to Album`;
-      addBtn.onclick = () => {
-        const post = _allFeatured.find(p => p.id === postId);
-        if (post) window._addPostToAlbum(postId, post._col ?? 'communityPosts', addBtn);
-      };
-      accent.appendChild(addBtn);
-      lucide.createIcons({ el: addBtn });
+    /* Reaction button — reuses bulletin.js globals */
+    if (typeof window.handleReaction === 'function') {
+      const _EMOJI    = { heart:'❤️', laugh:'😂', wow:'😮', sad:'😢', like:'👍' };
+      const _post     = _allFeatured.find(p => p.id === postId);
+      const _state    = window._reactState?.get(postId);
+      const _reactions = _post?.reactions ?? {};
+      const _entries   = Object.entries(_reactions).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a);
+      const _total     = _entries.reduce((s,[,v])=>s+v,0) || (_post?.likeCount ?? 0);
+
+      /* Build bubbles — user's react type goes first if reacted */
+      let _orderedEntries = [..._entries];
+      if (_state && _orderedEntries.length) {
+        _orderedEntries = [
+          ..._orderedEntries.filter(([t])=>t===_state.type),
+          ..._orderedEntries.filter(([t])=>t!==_state.type),
+        ];
+      }
+      const _topTypes = _orderedEntries.slice(0,3).map(([t])=>t);
+      const _bubbles  = _topTypes.map((type,i)=>
+        `<span style="font-size:.9rem;z-index:${3-i};margin-left:${i===0?0:-4}px;
+          display:inline-block;">${_EMOJI[type]}</span>`
+      ).join('');
+
+      const _countInner = _total > 0
+        ? `<span style="display:inline-flex;align-items:center;gap:2px;">${_bubbles}
+            <span style="font-size:var(--text-xs);font-weight:600;margin-left:3px;">${_total}</span>
+           </span>`
+        : `<span style="font-size:var(--text-xs);font-weight:600;">Like</span>`;
+
+      const reactWrap = document.createElement('div');
+      reactWrap.className = 'bulletin-viewer-react';
+      reactWrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;position:relative;';
+      reactWrap.innerHTML = `
+        <button id="_vreact-btn-${postId}"
+          style="display:inline-flex;align-items:center;gap:5px;
+            background:${_state?'rgba(220,38,38,.18)':'var(--overlay-white-12)'};
+            color:${_state?'#fca5a5':'var(--overlay-white-75)'};font-size:var(--text-xs);
+            font-weight:600;font-family:var(--font-display);padding:5px 12px;border-radius:999px;
+            border:1px solid ${_state?'rgba(220,38,38,.3)':'var(--overlay-white-18)'};cursor:pointer;"
+          onmouseenter="document.getElementById('_vreact-picker-${postId}').style.display='flex'"
+          onclick="handleReactionToggle('${postId}');window._refreshViewerReact('${postId}')">
+          <span id="_vreact-icon-${postId}"
+            style="display:${_state?'none':'inline-flex'};align-items:center;">
+            <i data-lucide="heart" style="width:13px;height:13px;stroke-width:2;
+              color:var(--overlay-white-75);pointer-events:none;"></i>
+          </span>
+          <span id="_vreact-count-${postId}">${_countInner}</span>
+        </button>
+        <div id="_vreact-picker-${postId}" style="display:none;position:absolute;
+          bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+          background:var(--white);border:1px solid var(--gray-100);border-radius:999px;
+          padding:5px 8px;box-shadow:var(--shadow-lg);flex-direction:row;gap:2px;
+          z-index:10000;white-space:nowrap;">
+          ${Object.entries(_EMOJI).map(([type,em])=>
+            `<button style="background:none;border:none;cursor:pointer;font-size:1.3rem;
+              padding:3px 4px;border-radius:var(--radius-sm);"
+              onmouseenter="this.style.transform='scale(1.35) translateY(-2px)'"
+              onmouseleave="this.style.transform=''"
+              onclick="handleReaction('${postId}','${type}');window._refreshViewerReact('${postId}');
+                document.getElementById('_vreact-picker-${postId}').style.display='none'">${em}</button>`
+          ).join('')}
+        </div>`;
+
+      const picker = reactWrap.querySelector(`#_vreact-picker-${postId}`);
+      let _pickerTimer;
+      reactWrap.querySelector(`#_vreact-btn-${postId}`)
+        ?.addEventListener('mouseleave', () => {
+          _pickerTimer = setTimeout(() => { if (picker) picker.style.display = 'none'; }, 300);
+        });
+      picker?.addEventListener('mouseenter', () => clearTimeout(_pickerTimer));
+      picker?.addEventListener('mouseleave', () => {
+        _pickerTimer = setTimeout(() => { if (picker) picker.style.display = 'none'; }, 200);
+      });
+
+      accent.appendChild(reactWrap);
+      lucide.createIcons({ el: reactWrap });
     }
 
     const url = new URL(window.location.href);
@@ -1545,8 +1839,8 @@ window._galleryOpenViewer = function (postId, albumId) {
 // ================================================
 
 /* Opens the create album modal */
-window._openCreateAlbum = function () {
-  _openAlbumModal(null);
+window._openCreateAlbum = function (pendingPostId = null) {
+  _openAlbumModal(null, pendingPostId);
 };
 
 /* Opens the edit album modal pre-filled */
@@ -1558,7 +1852,7 @@ window._openEditAlbum = function (albumId) {
    Builds and opens the album create/edit modal.
    albumId === null → create mode; string → edit mode.
 */
-function _openAlbumModal(albumId) {
+function _openAlbumModal(albumId, pendingPostId = null) {
   const isEdit = albumId !== null;
   const album  = isEdit ? _allAlbums.find(a => a.id === albumId) : null;
 
@@ -1570,9 +1864,12 @@ function _openAlbumModal(albumId) {
     document.body.appendChild(overlay);
   }
 
-  /* Build cover post options from _allFeatured */
-  const coverOptions = _allFeatured
-    .filter(p => getCoverUrl(p))
+  /* Edit mode: only list posts already inside this album.
+     Create mode: no posts exist yet — cover field is hidden. */
+  const albumPostIds = isEdit ? (album?.postIds ?? []) : [];
+  const coverOptions = albumPostIds
+    .map(id => _allFeatured.find(p => p.id === id))
+    .filter(p => p && getCoverUrl(p))
     .map(p => `<option value="${esc(p.id)}"
       ${album?.coverPostId === p.id ? 'selected' : ''}>
       ${esc(p.title ?? p.id)}
@@ -1582,21 +1879,11 @@ function _openAlbumModal(albumId) {
   overlay.innerHTML = `
     <div class="modal modal--confirm" onclick="event.stopPropagation()"
       style="max-width:480px;">
-      <div class="modal__header modal__header--green"
-        style="border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
-        <div class="modal__header-icon">
-          <i data-lucide="folder-plus"></i>
-        </div>
-        <div class="modal__header-content">
-          <p class="modal__header-label">Gallery</p>
-          <h2 class="modal__header-title">${isEdit ? 'Edit Album' : 'New Album'}</h2>
-        </div>
-        <button class="btn btn--close btn--sm modal__close"
-          onclick="document.getElementById('_galleryAlbumModal').classList.remove('is-open')">
-          <i data-lucide="x"></i>
-        </button>
+      <div class="modal-confirm__icon" style="background:#f0fdf4;border-color:#bbf7d0;">
+        <i data-lucide="folder-plus" style="width:28px;height:28px;stroke-width:2;color:#15803d;pointer-events:none;"></i>
       </div>
-      <div class="modal__body" style="display:flex;flex-direction:column;gap:var(--space-md);">
+      <h2 class="modal-confirm__title">${isEdit ? 'Edit Album' : 'New Album'}</h2>
+      <div style="display:flex;flex-direction:column;gap:var(--space-md);padding:0 var(--space-lg) var(--space-md);">
         <div class="form-group">
           <label class="form-label">Album Title</label>
           <input id="_albumTitleInput" class="form-input"
@@ -1612,18 +1899,22 @@ function _openAlbumModal(albumId) {
             placeholder="A short description…"
             maxlength="200">${esc(album?.description ?? '')}</textarea>
         </div>
+        ${isEdit ? `
         <div class="form-group">
           <label class="form-label">
-            Cover Post
+            Cover Photo
             <span style="color:var(--gray-400);font-weight:400;font-size:var(--text-xs);">(optional)</span>
           </label>
           <select id="_albumCoverInput" class="form-select">
-            <option value="">— None —</option>
+            <option value="">— Auto (first photo in album)</option>
             ${coverOptions}
           </select>
-        </div>
+          <p style="font-size:var(--text-xs);color:var(--gray-400);margin-top:4px;">
+            Picking a cover here pins it — reordering won't change it.
+          </p>
+        </div>` : `<input id="_albumCoverInput" type="hidden" value="" />`}
       </div>
-      <div class="modal__footer">
+      <div class="modal-confirm__footer">
         <button class="btn btn--outline"
           onclick="document.getElementById('_galleryAlbumModal').classList.remove('is-open')">
           Cancel
@@ -1636,6 +1927,7 @@ function _openAlbumModal(albumId) {
       </div>
     </div>`;
 
+  overlay.dataset.pendingPostId = pendingPostId ?? '';
   overlay.classList.add('is-open');
   overlay.onclick = e => { if (e.target === overlay) overlay.classList.remove('is-open'); };
   lucide.createIcons({ el: overlay });
@@ -1664,23 +1956,28 @@ window._saveAlbum = async function (albumId) {
     } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
     if (albumId) {
-      /* Edit */
+      /* Edit — coverMode 'manual' pins the cover; 'auto' uses first album post */
       await updateDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', albumId), {
         title,
         description: desc,
         coverPostId: coverId || null,
+        coverMode:   coverId ? 'manual' : 'auto',
         updatedAt:   _ts(),
       });
+      _showGalleryToast(`"${title}" updated.`);
     } else {
-      /* Create */
+      /* Create — seed postIds with cover if one was chosen */
+      const pendingId = overlay.dataset.pendingPostId || null;
+      const seedIds   = new Set([coverId, pendingId].filter(Boolean));
       await addDoc(_col(db, 'barangays', BARANGAY_ID, 'albums'), {
         title,
         description: desc,
         coverPostId: coverId || null,
-        postIds:     [],
+        postIds:     [...seedIds],
         createdBy:   _currentUid,
         createdAt:   _ts(),
       });
+      _showGalleryToast(`"${title}" created${pendingId ? ' — photo added to album' : ''}`);
     }
 
     overlay?.classList.remove('is-open');
@@ -1708,6 +2005,7 @@ window._deleteAlbum = async function (albumId) {
     const { doc: _d, deleteDoc } =
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await deleteDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', albumId));
+    _showGalleryToast('Album deleted.');
     return true;
   } catch (err) {
     console.error('[deleteAlbum]', err);
@@ -1740,7 +2038,7 @@ window._addPostToAlbum = async function (postId, col, anchorEl) {
       cancel:  'Go Back',
       variant: 'confirm',
     });
-    if (ok) window._openCreateAlbum();
+    if (ok) window._openCreateAlbum(postId);
     return;
   }
 
@@ -1753,25 +2051,38 @@ window._addPostToAlbum = async function (postId, col, anchorEl) {
     document.body.appendChild(picker);
   }
 
-  /* Position below anchor */
+  /* Position below anchor — account for fixed viewer overlay */
   if (anchorEl) {
-    const rect      = anchorEl.getBoundingClientRect();
-    picker.style.top  = `${rect.bottom + window.scrollY + 6}px`;
-    picker.style.left = `${rect.left   + window.scrollX}px`;
+    const rect         = anchorEl.getBoundingClientRect();
+    picker.style.top   = `${rect.bottom + 6}px`;
+    picker.style.left  = `${rect.left}px`;
+    picker.style.zIndex = '10001'; /* above image viewer z-index:9999 */
   }
+
+  /* Sort: albums containing this post first, then rest */
+  const _sortedAlbums = [..._allAlbums].sort((a, b) => {
+    const aIn = (a.postIds ?? []).includes(postId) ? 0 : 1;
+    const bIn = (b.postIds ?? []).includes(postId) ? 0 : 1;
+    return aIn - bIn;
+  });
 
   picker.innerHTML = `
     <p class="gallery-album-picker__label">Add to album</p>
-    ${_allAlbums.map(album => {
+    ${_sortedAlbums.map(album => {
       const alreadyIn = (album.postIds ?? []).includes(postId);
       return `
-        <button class="gallery-album-picker__item${alreadyIn ? ' is-in-album' : ''}"
+        <button class="gallery-album-picker__item${alreadyIn ? ' is-in-album-active' : ''}"
           onclick="window._confirmAddToAlbum('${esc(postId)}','${esc(album.id)}',${alreadyIn})"
-          ${alreadyIn ? 'title="Already in this album"' : ''}>
-          <i data-lucide="${alreadyIn ? 'check' : 'folder-plus'}"></i>
+          title="${alreadyIn ? 'Remove from this album' : ''}">
+          <i data-lucide="${alreadyIn ? 'folder-minus' : 'folder-plus'}"></i>
           ${esc(album.title)}
+          ${alreadyIn ? `<span class="gallery-album-picker__in-label">Remove</span>` : ''}
         </button>`;
-    }).join('')}`;
+    }).join('')}
+    <button class="gallery-album-picker__item gallery-album-picker__create"
+      onclick="window._openCreateAlbum('${esc(postId)}');document.getElementById('_albumPickerDropdown')?.classList.remove('is-open')">
+      <i data-lucide="plus"></i> New Album
+    </button>`;
 
   picker.classList.add('is-open');
   lucide.createIcons({ el: picker });
@@ -1790,7 +2101,20 @@ window._addPostToAlbum = async function (postId, col, anchorEl) {
 /* Writes the postId into the album's postIds array */
 window._confirmAddToAlbum = async function (postId, albumId, alreadyIn) {
   document.getElementById('_albumPickerDropdown')?.classList.remove('is-open');
-  if (alreadyIn) return;
+
+  if (alreadyIn) {
+    /* Remove from album instead */
+    try {
+      const { doc: _d, updateDoc, arrayRemove } =
+        await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      await updateDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', albumId), {
+        postIds: arrayRemove(postId),
+      });
+      const album = _allAlbums.find(a => a.id === albumId);
+      _showGalleryToast(`Removed from "${album?.title ?? 'album'}"`);
+    } catch (err) { console.error('[removeFromAlbum via picker]', err); }
+    return;
+  }
 
   try {
     const { doc: _d, updateDoc, arrayUnion } =
@@ -1824,6 +2148,7 @@ window._removePostFromAlbum = async function (postId, albumId) {
     await updateDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', albumId), {
       postIds: arrayRemove(postId),
     });
+    _showGalleryToast('Post removed from album.');
     /* Re-render detail with updated data */
     if (_activeAlbumId === albumId) {
       const gridEl = document.getElementById('galleryGrid');
@@ -1876,6 +2201,76 @@ window._reorderAlbumPost = async function (albumId, postId, direction) {
 };
 
 /*
+   Wires HTML5 drag-and-drop reordering on the main photos grid.
+   Persists the reordered postId array to barangays/{bid}/meta/gallery → photoOrder.
+   Admin/officer only — hard-returns for residents.
+*/
+function _wireDragReorderPhotos(gridEl) {
+  if (_currentUserRole !== 'admin' && _currentUserRole !== 'officer') return;
+
+  let _dragSrc = null;
+
+  gridEl.querySelectorAll('.gallery-card--reorderable').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      _dragSrc = card;
+      card.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.postId);
+      _dragOccurred = false;
+    });
+
+    card.addEventListener('dragend', () => {
+      card.classList.remove('is-dragging');
+      gridEl.querySelectorAll('.gallery-card--reorderable')
+        .forEach(c => c.classList.remove('drag-over'));
+      _dragSrc = null;
+      _dragOccurred = true;
+    });
+
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (card !== _dragSrc) {
+        gridEl.querySelectorAll('.gallery-card--reorderable')
+          .forEach(c => c.classList.remove('drag-over'));
+        card.classList.add('drag-over');
+      }
+    });
+
+    card.addEventListener('drop', async e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!_dragSrc || _dragSrc === card) return;
+
+      card.classList.remove('drag-over');
+
+      const cards   = [...gridEl.querySelectorAll('.gallery-card--reorderable')];
+      /* Prepend hero id so photoOrder reflects full list including hero */
+      const heroPost = _allFeatured.find(p => p.isHeroFeatured);
+      const ids     = [
+        ...(heroPost ? [heroPost.id] : []),
+        ...cards.map(c => c.dataset.postId),
+      ];
+      const fromIdx = ids.indexOf(_dragSrc.dataset.postId);
+      const toIdx   = ids.indexOf(card.dataset.postId);
+      if (fromIdx === -1 || toIdx === -1) return;
+
+      ids.splice(toIdx, 0, ids.splice(fromIdx, 1)[0]);
+
+      /* Patch DOM immediately — subscription will confirm */
+      card.parentNode.insertBefore(_dragSrc, toIdx > fromIdx ? card.nextSibling : card);
+
+      try {
+        const { doc: _d, setDoc: _set } =
+          await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        await _set(_d(db, 'barangays', BARANGAY_ID, 'meta', 'gallery'),
+          { photoOrder: ids }, { merge: true });
+      } catch (err) { console.error('[dragReorderPhotos]', err); }
+    });
+  });
+}
+
+/*
    Wires HTML5 drag-and-drop reordering on the album detail grid.
    Works alongside the arrow buttons — both write to the same postIds array.
 */
@@ -1890,6 +2285,7 @@ function _wireDragReorder(gridEl, albumId) {
       card.classList.add('is-dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', card.dataset.postId);
+      _dragOccurred = false;
     });
 
     card.addEventListener('dragend', () => {
@@ -1897,6 +2293,7 @@ function _wireDragReorder(gridEl, albumId) {
       gridEl.querySelectorAll('.gallery-card--reorderable')
         .forEach(c => c.classList.remove('drag-over'));
       _dragSrc = null;
+      _dragOccurred = true;
     });
 
     card.addEventListener('dragover', e => {
@@ -1932,6 +2329,67 @@ function _wireDragReorder(gridEl, albumId) {
           await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
         await updateDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', albumId), { postIds: ids });
       } catch (err) { console.error('[dragReorder]', err); }
+    });
+  });
+}
+
+/*
+   Drag-and-drop reorder for the albums list.
+   Saves new order to barangays/{bid}/meta/gallery → albumOrder.
+*/
+function _wireDragReorderAlbums(gridEl) {
+  if (_currentUserRole !== 'admin' && _currentUserRole !== 'officer') return;
+  let _dragSrc = null;
+
+  gridEl.querySelectorAll('.gallery-album-card').forEach(card => {
+    card.setAttribute('draggable', 'true');
+    card.style.cursor = 'grab';
+
+    card.addEventListener('dragstart', e => {
+      _dragSrc = card;
+      card.style.opacity = '.4';
+      e.dataTransfer.effectAllowed = 'move';
+      _albumDragOccurred = false;
+    });
+
+    card.addEventListener('dragend', () => {
+      card.style.opacity = '';
+      gridEl.querySelectorAll('.gallery-album-card')
+        .forEach(c => c.style.outline = '');
+      _dragSrc = null;
+      _albumDragOccurred = true;
+      setTimeout(() => { _albumDragOccurred = false; }, 300);
+    });
+
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (card !== _dragSrc) {
+        gridEl.querySelectorAll('.gallery-album-card')
+          .forEach(c => c.style.outline = '');
+        card.style.outline = '2px solid var(--green-dark)';
+        card.style.outlineOffset = '2px';
+      }
+    });
+
+    card.addEventListener('drop', async e => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!_dragSrc || _dragSrc === card) return;
+      card.style.outline = '';
+      const cards   = [...gridEl.querySelectorAll('.gallery-album-card')];
+      const ids     = cards.map(c => c.dataset.albumId);
+      const fromIdx = ids.indexOf(_dragSrc.dataset.albumId);
+      const toIdx   = ids.indexOf(card.dataset.albumId);
+      if (fromIdx === -1 || toIdx === -1) return;
+      ids.splice(toIdx, 0, ids.splice(fromIdx, 1)[0]);
+      card.parentNode.insertBefore(_dragSrc, toIdx > fromIdx ? card.nextSibling : card);
+      try {
+        const { doc: _d, setDoc: _set } =
+          await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        await _set(_d(db, 'barangays', BARANGAY_ID, 'meta', 'gallery'),
+          { albumOrder: ids }, { merge: true });
+      } catch (err) { console.error('[dragReorderAlbums]', err); }
     });
   });
 }

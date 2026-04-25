@@ -35,7 +35,9 @@
 let _viewerImages    = [];
 let _viewerIndex     = 0;
 let _viewerTitle     = '';
-let _viewerWheelLock = false;
+let _viewerWheelLock  = false;
+let _stripScrolling   = false;
+let _stripScrollTimer = null;
 
 
 /* ================================================
@@ -106,6 +108,30 @@ function _injectImageViewer() {
     _viewerNav(e.deltaY > 0 ? 1 : -1);
     setTimeout(() => { _viewerWheelLock = false; }, 600);
   }, { passive: false });
+
+  /* Close when clicking the dark slide area outside the actual image */
+  document.getElementById('imgViewerStrip').addEventListener('click', e => {
+    if (!e.target.closest('img')) _closeViewer();
+  });
+
+  /* Swipe/scroll → sync counter + dots */
+  document.getElementById('imgViewerStrip').addEventListener('scroll', () => {
+    if (_stripScrolling) return;
+    clearTimeout(_stripScrollTimer);
+    _stripScrollTimer = setTimeout(() => {
+      const strip = document.getElementById('imgViewerStrip');
+      const w     = strip?.offsetWidth;
+      if (!w) return;
+      const idx = Math.round(strip.scrollLeft / w);
+      if (idx === _viewerIndex || idx < 0 || idx >= _viewerImages.length) return;
+      _viewerIndex = idx;
+      const counter = document.getElementById('imgViewerCounter');
+      const dots    = document.getElementById('imgViewerDots');
+      if (counter) counter.textContent = _viewerImages.length > 1 ? `${idx + 1} / ${_viewerImages.length}` : '';
+      dots?.querySelectorAll('.img-viewer__dot')
+        .forEach((d, i) => d.classList.toggle('is-active', i === idx));
+    }, 80);
+  });
 }
 
 
@@ -126,6 +152,10 @@ function _openViewer(images, index, title) {
 function _closeViewer() {
   document.getElementById('imgViewerOverlay')?.classList.remove('is-open');
   document.body.style.overflow = '';
+  /* Clear gallery-injected accent elements so they don't bleed to other viewers */
+  document.querySelector('#imgViewerOverlay .img-viewer__accent')
+    ?.querySelectorAll('.gallery-viewer-link,.gallery-viewer-meta,.gallery-viewer-album,.gallery-viewer-add-album')
+    .forEach(el => el.remove());
 }
 
 
@@ -145,7 +175,11 @@ function _goToSlide(index) {
   const counter = document.getElementById('imgViewerCounter');
   const dots    = document.getElementById('imgViewerDots');
 
-  if (strip)   strip.scrollLeft = strip.offsetWidth * index;
+  if (strip) {
+    _stripScrolling = true;
+    strip.scrollLeft = strip.offsetWidth * index;
+    setTimeout(() => { _stripScrolling = false; }, 400);
+  }
   if (counter) counter.textContent = _viewerImages.length > 1 ? `${index + 1} / ${_viewerImages.length}` : '';
 
   dots?.querySelectorAll('.img-viewer__dot')
