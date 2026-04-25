@@ -158,11 +158,6 @@ window.bulletinOpenViewer = function(images, index, title, postId) {
   requestAnimationFrame(() => {
     const accent = document.querySelector('#imgViewerOverlay .img-viewer__accent');
     if (!accent || !postId) return;
-    /* Clear previously injected elements */
-    /* Clear all previously injected elements */
-    accent.querySelectorAll(
-      '.bulletin-viewer-react, .bulletin-viewer-meta, .bulletin-viewer-info, .bv-layout'
-    ).forEach(el => el.remove());
 
     const post    = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
     const state   = _reactState.get(postId);
@@ -234,12 +229,11 @@ window.bulletinOpenViewer = function(images, index, title, postId) {
             </span>
             <span id="_vreact-count-${postId}">${_countInner}</span>
           </button>
-          <div id="_vreact-picker-${postId}" class="bv-picker">
+          <div id="_vreact-picker-${postId}" class="bv-picker" style="display:none;">
             ${Object.entries(EMOJI_MAP).map(([type,em])=>
-              `<button style="background:none;border:none;cursor:pointer;font-size:1.3rem;
-                padding:3px 4px;border-radius:var(--radius-sm);"
-                onmouseenter="this.style.transform='scale(1.35) translateY(-2px)'"
-                onmouseleave="this.style.transform=''"
+              `<button data-type="${type}" data-mytype="${state?.type??''}" style="background:transparent;background-color:transparent;border:none;box-shadow:none;cursor:pointer;font-size:1.3rem;padding:3px 4px;border-radius:0;"
+                onmouseenter="this.style.transform=(this.dataset.mytype===this.dataset.type?'scale(1.6) translateY(-3px)':'scale(1.2) translateY(-2px)')"
+                onmouseleave="this.style.transform=(this.dataset.mytype===this.dataset.type?'scale(1.2)':'')"
                 onclick="handleReaction('${postId}','${type}');document.getElementById('_vreact-picker-${postId}').style.display='none'">${em}</button>`
             ).join('')}
           </div>
@@ -303,9 +297,9 @@ window._refreshViewerReact = function(postId) {
     /* No user reaction: top 3 by count desc, or plain "Like" */
     if (_total > 0) {
       const _bubs = _ents.slice(0, 3).map(([t], i) =>
-        `<span class="reaction-bubble" style="z-index:${3-i};margin-left:${i===0?0:-6}px">${_EMOJI[t]}</span>`
+        `<span style="font-size:.9rem;z-index:${3-i};margin-left:${i===0?0:-4}px;display:inline-block;">${_EMOJI[t]}</span>`
       ).join('');
-      count.innerHTML = `<span class="reaction-summary-wrap">${_bubs}<span class="reaction-summary-count">${_total}</span></span>`;
+      count.innerHTML = `<span style="display:inline-flex;align-items:center;gap:2px;">${_bubs}<span style="font-size:var(--text-xs);font-weight:600;margin-left:3px;">${_total}</span></span>`;
     } else {
       count.innerHTML = `<span style="font-size:var(--text-xs);font-weight:600;color:rgba(255,255,255,0.75);">Like</span>`;
     }
@@ -317,9 +311,9 @@ window._refreshViewerReact = function(postId) {
     const _others = _ents.filter(([t]) => t !== myType).map(([t]) => t);
     const _ord    = [myType, ..._others].slice(0, 3);
     const _bubs   = _ord.map((t, i) =>
-      `<span class="reaction-bubble" style="z-index:${3-i};margin-left:${i===0?0:-6}px">${_EMOJI[t]}</span>`
+      `<span style="font-size:.9rem;z-index:${3-i};margin-left:${i===0?0:-4}px;display:inline-block;">${_EMOJI[t]}</span>`
     ).join('');
-    count.innerHTML = `<span class="reaction-summary-wrap">${_bubs}<span class="reaction-summary-count">${_total}</span></span>`;
+    count.innerHTML = `<span style="display:inline-flex;align-items:center;gap:2px;">${_bubs}<span style="font-size:var(--text-xs);font-weight:600;color:#fca5a5;margin-left:3px;">${_total}</span></span>`;
   } else {
     /* Optimistic — Firestore count not yet reflected */
     count.innerHTML = `<span style="font-size:var(--text-xs);font-weight:600;color:#fca5a5;">${_EMOJI[myType]??'❤️'} 1</span>`;
@@ -789,7 +783,7 @@ function buildReactionSummary(reactions, fallbackCount, myType = null) {
     ? [myType, ...entries.filter(([t]) => t !== myType).map(([t]) => t)].slice(0, 3)
     : entries.slice(0, 3).map(([t]) => t);
   const bubbles  = topTypes.map((type, i) =>
-    `<span class="reaction-bubble" style="z-index:${3 - i};margin-left:${i === 0 ? 0 : -6}px">${EMOJI[type]}</span>`,
+    `<span style="z-index:${3 - i};margin-left:${i === 0 ? 0 : -4}px;display:inline-block;font-size:.9rem;">${EMOJI[type]}</span>`,
   ).join('');
 
   return {

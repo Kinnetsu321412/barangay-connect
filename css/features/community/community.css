@@ -1896,17 +1896,18 @@
 .bv-layout {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 12px;
   width: 100%;
   max-width: 860px;
   padding: 8px 4px 2px;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
 }
 
 .bv-info {
-  flex: 1;
-  min-width: 0;
+  flex: 0 1 auto;
+  min-width: 140px;
+  max-width: 380px;
   background: var(--overlay-white-12);
   border: 1px solid var(--overlay-white-18);
   border-radius: var(--radius-md);
@@ -1983,13 +1984,15 @@
   display: none;
   position: absolute;
   bottom: calc(100% + 8px);
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   background: var(--white);
   border: 1px solid var(--gray-100);
   border-radius: 999px;
   padding: 5px 8px;
   box-shadow: var(--shadow-lg);
   flex-direction: row;
+  align-items: center;
   gap: 2px;
   z-index: 10000;
   white-space: nowrap;

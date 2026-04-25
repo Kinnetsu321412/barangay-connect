@@ -148,6 +148,9 @@ function _openViewer(images, index, title) {
   _viewerIndex  = index ?? 0;
   _viewerTitle  = title ?? '';
   _renderViewer();
+  /* Clear accent so every caller starts fresh — prevents stale elements across posts */
+  const _acc = document.querySelector('#imgViewerOverlay .img-viewer__accent');
+  if (_acc) _acc.innerHTML = '';
   document.getElementById('imgViewerOverlay').classList.add('is-open');
   document.body.style.overflow = 'hidden';
 }

@@ -889,7 +889,7 @@
 #imgViewerOverlay .img-viewer__accent {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   flex-wrap: wrap;
   gap: 8px;
   padding: var(--space-xs) var(--space-md);
@@ -1622,4 +1622,119 @@
 #galleryPendingSlot:empty,
 #galleryHeroSlot:empty {
   display: none;
+}
+
+/* ================================================
+   IMAGE VIEWER — shared bv-layout (mirrors bulletin.css)
+   Used by both bulletin and gallery viewer accent bars.
+   ================================================ */
+
+.bv-layout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  width: 100%;
+  min-width: 0;
+}
+
+.bv-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.bv-info__title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-bold);
+  color: rgba(255,255,255,0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  line-height: var(--lh-snug);
+}
+
+.bv-info__body {
+  font-size: var(--text-xs);
+  color: rgba(255,255,255,0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.bv-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.bv-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--overlay-white-12);
+  color: var(--overlay-white-75);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-display);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--overlay-white-18);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.bv-view-btn:hover {
+  background: var(--overlay-white-20);
+  color: var(--white);
+}
+
+.bv-view-btn [data-lucide] {
+  width: 11px;
+  height: 11px;
+}
+
+.bv-react-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-display);
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bv-picker {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--white);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-full);
+  padding: 5px 8px;
+  box-shadow: var(--shadow-lg);
+  flex-direction: row;
+  gap: 2px;
+  z-index: 10000;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .bv-layout { flex-wrap: wrap; gap: var(--space-xs); }
+  .bv-info__title { font-size: var(--text-xs); }
+  .bv-view-btn,
+  .bv-react-btn { font-size: var(--text-2xs); padding: 4px 8px; }
 }

@@ -469,6 +469,11 @@ onSnapshot(communityQ, snap => {
   /* Handle deep link ?id=post_id on first load */
   _handleDeepLink();
 
+  /* Clear bulk select when navigating away from gallery tab */
+  document.querySelectorAll('[data-tab]:not([data-tab="gallery"])').forEach(btn => {
+    btn.addEventListener('click', () => { if (_bulkSelectMode) window._exitBulkSelect(); });
+  });
+
   _initialized = true;
 }
 
@@ -834,6 +839,7 @@ function _buildCategoryFilters() {
         .forEach(b => b.classList.remove('is-active'));
       btn.classList.add('is-active');
       _activeCategory = btn.dataset.galleryFilter ?? 'all';
+      if (_bulkSelectMode) _exitBulkSelect();
       _renderGallery();
     });
   });
@@ -1263,7 +1269,7 @@ window._bulkAddToAlbum = async function () {
   }
 
   overlay.innerHTML = `
-    <div class="modal modal--confirm" onclick="event.stopPropagation()">
+    <div class="modal modal--confirm" onclick="event.stopPropagation()" style="max-width:440px;width:100%;">
       <div class="modal__header modal__header--green"
         style="border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
         <div class="modal__header-icon"><i data-lucide="folder-plus"></i></div>
@@ -1713,81 +1719,86 @@ window._galleryOpenViewer = function (postId, albumId) {
 
   _openViewer(images.length ? images : [''], startIdx, viewerTitle);
 
+  /* Always clear stale album scroll handler so Photos mode isn't affected */
+const _existingStrip = document.getElementById('imgViewerStrip');
+if (_existingStrip?._gallerySlideHandler) {
+  _existingStrip.removeEventListener('scroll', _existingStrip._gallerySlideHandler);
+  _existingStrip._gallerySlideHandler = null;
+}
+
   requestAnimationFrame(() => {
     const accent = document.querySelector('#imgViewerOverlay .img-viewer__accent');
     if (!accent) return;
 
-    /* Clear ALL previously injected accent children to prevent duplicates */
-    accent.querySelectorAll(
-      '.gallery-viewer-link, .gallery-viewer-meta, .gallery-viewer-album, .gallery-viewer-add-album, .bulletin-viewer-react'
-    ).forEach(el => el.remove());
+    const _initMeta = categoryMeta(post?.category);
+    const _date     = post?.createdAt?.toDate
+      ? post.createdAt.toDate().toLocaleDateString('en-PH',{ month:'short', day:'numeric', year:'numeric' })
+      : '';
 
-    /* Album context chip — shown when opened from an album detail */
-    if (albumId) {
-      const album = _allAlbums.find(a => a.id === albumId);
-      if (album) {
-        const chip = document.createElement('span');
-        chip.className = 'gallery-viewer-album';
-        chip.innerHTML = `<i data-lucide="folder"></i> ${esc(album.title)}`;
-        accent.appendChild(chip);
-        lucide.createIcons({ el: chip });
-      }
-    }
+    /* Layout — mirrors bulletin viewer */
+    const layout = document.createElement('div');
+    layout.className = 'bv-layout';
+    layout.innerHTML = `
+      <div class="bv-info">
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
+          <span id="_vcat" class="tag ${_initMeta.tagClass}"
+            style="font-size:var(--text-2xs);padding:1px 7px;pointer-events:none;">
+            ${esc(_initMeta.label)}
+          </span>
+          ${_date ? `<span style="font-size:var(--text-2xs);color:rgba(255,255,255,0.5);
+            font-family:var(--font-display);">${_date}</span>` : ''}
+        </div>
+        <p id="_vtitle" class="bv-info__title">${esc(post?.title ?? '')}</p>
+${albumId && _allAlbums.find(a=>a.id===albumId) ? `<div style="display:flex;align-items:center;
+  gap:4px;margin-top:1px;"><i data-lucide="folder" style="width:10px;height:10px;color:rgba(255,255,255,0.4);
+  flex-shrink:0;"></i><span style="font-size:var(--text-2xs);color:rgba(255,255,255,0.4);
+  font-family:var(--font-display);">${esc(_allAlbums.find(a=>a.id===albumId)?.title??'')}</span></div>` : ''}
+        ${post?.body ? `<p id="_vbody" style="font-size:var(--text-2xs);color:rgba(255,255,255,0.55);
+          font-family:var(--font-display);margin:2px 0 0;line-height:1.4;">${esc((post.body).slice(0,130))}${(post.body?.length??0)>130?'…':''}</p>` : ''}
+<div id="_vmeta" style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+          <i data-lucide="user" style="width:10px;height:10px;color:rgba(255,255,255,0.45);flex-shrink:0;"></i>
+          <span style="font-size:var(--text-2xs);color:rgba(255,255,255,0.45);
+            font-family:var(--font-display);">
+            ${esc(post?.authorName ?? 'BarangayConnect')}
+          </span>
+        </div>
+      </div>
+      <div class="bv-actions">
+        <a id="_vlink" class="bv-view-btn"
+          href="community.html?scrollTo=${encodeURIComponent(postId)}&tab=bulletin"
+          onclick="event.stopPropagation()" title="View original post">
+          <i data-lucide="arrow-up-right"></i> View Post
+        </a>
+      </div>`;
 
-    /* Author chip — original poster only */
-    const meta = document.createElement('span');
-    meta.className = 'gallery-viewer-meta';
-    meta.innerHTML = `<i data-lucide="user" style="width:11px;height:11px;"></i>
-      ${esc(post.authorName ?? 'BarangayConnect')}`;
-    accent.appendChild(meta);
-    lucide.createIcons({ el: meta });
+    accent.appendChild(layout);
+    lucide.createIcons({ el: layout });
 
-    const href = `community.html?scrollTo=${encodeURIComponent(postId)}&tab=bulletin`;
-    const link = document.createElement('a');
-    link.className = 'gallery-viewer-link';
-    link.href      = href;
-    link.innerHTML = `<i data-lucide="arrow-up-right"></i> View Post`;
-    accent.appendChild(link);
-    lucide.createIcons({ el: link });
-
-    /* Reaction button — reuses bulletin.js globals */
+    /* Reaction button — injected into .bv-actions */
     if (typeof window.handleReaction === 'function') {
+      const actionsEl = layout.querySelector('.bv-actions');
       const _EMOJI    = { heart:'❤️', laugh:'😂', wow:'😮', sad:'😢', like:'👍' };
       const _post     = _allFeatured.find(p => p.id === postId);
       const _state    = window._reactState?.get(postId) ?? null;
-      /* If state not loaded yet, _refreshViewerReact will correct it after 400ms */
       if (_state === undefined && typeof window.loadReactionState === 'function') {
         window.loadReactionState([postId]);
       }
-      const _reactions = _post?.reactions ?? {};
-      const _entries   = Object.entries(_reactions).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a);
-      const _total     = _entries.reduce((s,[,v])=>s+v,0) || (_post?.likeCount ?? 0);
-
-      /* Build bubbles — user's react type goes first if reacted */
-      let _orderedEntries = [..._entries];
-      if (_state && _orderedEntries.length) {
-        _orderedEntries = [
-          ..._orderedEntries.filter(([t])=>t===_state.type),
-          ..._orderedEntries.filter(([t])=>t!==_state.type),
-        ];
-      }
-      const _topTypes = _orderedEntries.slice(0,3).map(([t])=>t);
-      const _bubbles  = _topTypes.map((type,i)=>
-        `<span style="font-size:.9rem;z-index:${3-i};margin-left:${i===0?0:-4}px;
-          display:inline-block;">${_EMOJI[type]}</span>`
+      const _entries  = Object.entries(_post?.reactions ?? {}).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a);
+      const _total    = _entries.reduce((s,[,v])=>s+v,0) || (_post?.likeCount ?? 0);
+      const _ord      = _state
+        ? [..._entries.filter(([t])=>t===_state.type), ..._entries.filter(([t])=>t!==_state.type)]
+        : _entries;
+      const _bubbles  = _ord.slice(0,3).map(([t],i)=>
+        `<span style="font-size:.9rem;z-index:${3-i};margin-left:${i===0?0:-4}px;display:inline-block;">${_EMOJI[t]}</span>`
       ).join('');
-
       const _countInner = _total > 0
-        ? `<span style="display:inline-flex;align-items:center;gap:2px;">${_bubbles}
-            <span style="font-size:var(--text-xs);font-weight:600;margin-left:3px;">${_total}</span>
-           </span>`
+        ? `<span style="display:inline-flex;align-items:center;gap:2px;">${_bubbles}<span style="font-size:var(--text-xs);font-weight:600;margin-left:3px;">${_total}</span></span>`
         : _state
-        ? `<span style="font-size:var(--text-xs);font-weight:600;color:#fca5a5;">${_EMOJI[_state.type] ?? '❤️'} 1</span>`
+        ? `<span style="font-size:var(--text-xs);font-weight:600;color:#fca5a5;">${_EMOJI[_state.type]??'❤️'} 1</span>`
         : `<span style="font-size:var(--text-xs);font-weight:600;">Like</span>`;
 
       const reactWrap = document.createElement('div');
-      reactWrap.className = 'bulletin-viewer-react';
-      reactWrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;position:relative;';
+      reactWrap.style.cssText = 'position:relative;display:inline-flex;';
       reactWrap.innerHTML = `
         <button id="_vreact-btn-${postId}"
           style="display:inline-flex;align-items:center;gap:5px;
@@ -1796,7 +1807,7 @@ window._galleryOpenViewer = function (postId, albumId) {
             font-weight:600;font-family:var(--font-display);padding:5px 12px;border-radius:999px;
             border:1px solid ${_state?'rgba(220,38,38,.3)':'var(--overlay-white-18)'};cursor:pointer;"
           onmouseenter="document.getElementById('_vreact-picker-${postId}').style.display='flex'"
-          onclick="handleReactionToggle('${postId}');setTimeout(()=>window._refreshViewerReact('${postId}'),1500)">
+          onclick="handleReactionToggle('${postId}');setTimeout(()=>window._refreshViewerReact?.('${postId}'),1500)">
           <span id="_vreact-icon-${postId}"
             style="display:${_state?'none':'inline-flex'};align-items:center;">
             <i data-lucide="heart" style="width:13px;height:13px;stroke-width:2;
@@ -1804,55 +1815,86 @@ window._galleryOpenViewer = function (postId, albumId) {
           </span>
           <span id="_vreact-count-${postId}">${_countInner}</span>
         </button>
-        <div id="_vreact-picker-${postId}" style="display:none;position:absolute;
-          bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
-          background:var(--white);border:1px solid var(--gray-100);border-radius:999px;
-          padding:5px 8px;box-shadow:var(--shadow-lg);flex-direction:row;gap:2px;
-          z-index:10000;white-space:nowrap;">
+        <div id="_vreact-picker-${postId}" class="bv-picker" style="display:none;">
           ${Object.entries(_EMOJI).map(([type,em])=>
-            `<button style="background:none;border:none;cursor:pointer;font-size:1.3rem;
-              padding:3px 4px;border-radius:var(--radius-sm);"
-              onmouseenter="this.style.transform='scale(1.35) translateY(-2px)'"
-              onmouseleave="this.style.transform=''"
-              onclick="handleReaction('${postId}','${type}');setTimeout(()=>window._refreshViewerReact('${postId}'),1500);
-                document.getElementById('_vreact-picker-${postId}').style.display='none'">${em}</button>`
+            `<button data-type="${type}" data-mytype="${_state?.type??''}" style="background:transparent;background-color:transparent;border:none;box-shadow:none;cursor:pointer;font-size:1.3rem;padding:3px 4px;border-radius:0;"
+              onmouseenter="this.style.transform=(this.dataset.mytype===this.dataset.type?'scale(1.6) translateY(-3px)':'scale(1.2) translateY(-2px)')"
+              onmouseleave="this.style.transform=(this.dataset.mytype===this.dataset.type?'scale(1.2)':'')"
+              onclick="handleReaction('${postId}','${type}');document.getElementById('_vreact-picker-${postId}').style.display='none'">${em}</button>`
           ).join('')}
         </div>`;
 
       const picker = reactWrap.querySelector(`#_vreact-picker-${postId}`);
       let _pickerTimer;
       reactWrap.querySelector(`#_vreact-btn-${postId}`)
-        ?.addEventListener('mouseleave', () => {
-          _pickerTimer = setTimeout(() => { if (picker) picker.style.display = 'none'; }, 300);
-        });
+        ?.addEventListener('mouseleave', () => { _pickerTimer = setTimeout(()=>{ if(picker) picker.style.display='none'; }, 300); });
       picker?.addEventListener('mouseenter', () => clearTimeout(_pickerTimer));
-      picker?.addEventListener('mouseleave', () => {
-        _pickerTimer = setTimeout(() => { if (picker) picker.style.display = 'none'; }, 200);
-      });
+      picker?.addEventListener('mouseleave', () => { _pickerTimer = setTimeout(()=>{ if(picker) picker.style.display='none'; }, 200); });
 
-      accent.appendChild(reactWrap);
+      actionsEl.appendChild(reactWrap);
       lucide.createIcons({ el: reactWrap });
       setTimeout(() => window._refreshViewerReact?.(postId), 600);
-      /* Update accent on slide change for albums */
+
+      /* Update accent on album slide change */
       if (albumId) {
         const strip = document.getElementById('imgViewerStrip');
         let _slideTimer;
         const _onSlideChange = () => {
           clearTimeout(_slideTimer);
           _slideTimer = setTimeout(() => {
-            const w   = strip?.offsetWidth;
+            const w = strip?.offsetWidth;
             if (!w) return;
-            const idx = Math.round(strip.scrollLeft / w);
-            /* Find which post owns this image index */
-            let offset = 0;
+            const idx    = Math.round(strip.scrollLeft / w);
+            let   offset = 0;
             const album2 = _allAlbums.find(a => a.id === albumId);
             for (const id of (album2?.postIds ?? [])) {
               const p2   = _allFeatured.find(fp => fp.id === id);
               const imgs = p2 ? getImages(p2) : [];
               if (idx < offset + imgs.length) {
-                /* This post owns the current slide */
-                const metaEl = document.querySelector('#imgViewerOverlay .gallery-viewer-meta');
-                if (metaEl) metaEl.textContent = p2?.authorName ?? 'BarangayConnect';
+                const metaEl  = document.getElementById('_vmeta');
+                if (metaEl)   { metaEl.innerHTML = `<i data-lucide="user" style="width:10px;height:10px;color:rgba(255,255,255,0.45);flex-shrink:0;"></i><span style="font-size:var(--text-2xs);color:rgba(255,255,255,0.45);font-family:var(--font-display);"> ${esc(p2?.authorName ?? 'BarangayConnect')}</span>`; lucide.createIcons({ el: metaEl }); }
+                const catEl   = document.getElementById('_vcat');
+                const _m2     = categoryMeta(p2?.category);
+                if (catEl)    { catEl.className = `tag ${_m2.tagClass}`; catEl.style.cssText = 'font-size:var(--text-2xs);padding:1px 7px;pointer-events:none;'; catEl.textContent = _m2.label; }
+                const titleEl = document.getElementById('_vtitle');
+                if (titleEl)  titleEl.textContent = p2?.title ?? '';
+                const linkEl  = document.getElementById('_vlink');
+                if (linkEl)   linkEl.href = `community.html?scrollTo=${encodeURIComponent(id)}&tab=bulletin`;
+                /* Update body text */
+                const bodyEl  = document.getElementById('_vbody');
+                if (bodyEl)   bodyEl.textContent = p2?.body ? (p2.body.slice(0,130)+(p2.body.length>130?'…':'')) : '';
+                /* Rebuild actions (react + view post) for new post in album reel */
+                const _actEl = document.querySelector('#imgViewerOverlay .bv-actions');
+                if (_actEl && p2) {
+                  const _s2   = window._reactState?.get(id) ?? null;
+                  const _EM2  = { heart:'❤️', laugh:'😂', wow:'😮', sad:'😢', like:'👍' };
+                  const _e2   = Object.entries(p2.reactions??{}).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a);
+                  const _t2   = _e2.reduce((s,[,v])=>s+v,0)||(p2.likeCount??0);
+                  const _o2   = _s2?[_s2.type,..._e2.filter(([t])=>t!==_s2.type).map(([t])=>t)]:_e2.map(([t])=>t);
+                  const _b2   = _o2.slice(0,3).map((t,i)=>`<span style="font-size:.9rem;z-index:${3-i};margin-left:${i===0?0:-4}px;">${_EM2[t]}</span>`).join('');
+                  const _c2   = _t2>0?`<span style="display:inline-flex;align-items:center;gap:2px;">${_b2}<span style="font-size:var(--text-xs);font-weight:600;margin-left:3px;">${_t2}</span></span>`:_s2?`<span style="font-size:var(--text-xs);font-weight:600;color:#fca5a5;">${_EM2[_s2.type]??'❤️'} 1</span>`:`<span style="font-size:var(--text-xs);font-weight:600;">Like</span>`;
+                  _actEl.innerHTML = `
+                    <a id="_vlink" class="bv-view-btn"
+                      href="community.html?scrollTo=${encodeURIComponent(id)}&tab=bulletin"
+                      onclick="event.stopPropagation()" title="View original post">
+                      <i data-lucide="arrow-up-right"></i> View Post
+                    </a>
+                    <div style="position:relative;display:inline-flex;">
+                      <button id="_vreact-btn-${id}"
+                        style="display:inline-flex;align-items:center;gap:5px;background:${_s2?'rgba(220,38,38,.18)':'var(--overlay-white-12)'};color:${_s2?'#fca5a5':'var(--overlay-white-75)'};font-size:var(--text-xs);font-weight:600;font-family:var(--font-display);padding:5px 12px;border-radius:999px;border:1px solid ${_s2?'rgba(220,38,38,.3)':'var(--overlay-white-18)'};cursor:pointer;"
+                        onmouseenter="document.getElementById('_vreact-picker-${id}').style.display='flex'"
+                        onclick="handleReactionToggle('${id}');setTimeout(()=>window._refreshViewerReact?.('${id}'),1500)">
+                        <span id="_vreact-icon-${id}" style="display:${_s2?'none':'inline-flex'};align-items:center;">
+                          <i data-lucide="heart" style="width:13px;height:13px;stroke-width:2;color:var(--overlay-white-75);pointer-events:none;"></i>
+                        </span>
+                        <span id="_vreact-count-${id}">${_c2}</span>
+                      </button>
+                      <div id="_vreact-picker-${id}" style="display:none;" class="bv-picker">
+                        ${Object.entries(_EM2).map(([type,em])=>`<button data-type="${type}" data-mytype="${_s2?.type??''}" style="background:none;border:none;cursor:pointer;font-size:1.3rem;padding:3px 4px;border-radius:var(--radius-sm);" onmouseenter="this.style.transform=(this.dataset.mytype===this.dataset.type?'scale(1.6) translateY(-3px)':'scale(1.2) translateY(-2px)')" onmouseleave="this.style.transform=(this.dataset.mytype===this.dataset.type?'scale(1.2)':'')" onclick="handleReaction('${id}','${type}');document.getElementById('_vreact-picker-${id}').style.display='none'">${em}</button>`).join('')}
+                      </div>
+                    </div>`;
+                  lucide.createIcons({ el: _actEl });
+                }
                 break;
               }
               offset += imgs.length;
