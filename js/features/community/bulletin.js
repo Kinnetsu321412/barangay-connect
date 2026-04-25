@@ -109,8 +109,9 @@ let _scrollHandled     = false;
 // REACTION STATE
 // ================================================
 
-const _reactState = new Map(); // postId → { type } | null
 const _reactLock  = new Set(); // postId — prevents concurrent writes
+const _reactPrev  = new Map(); // postId → prevType before in-flight write (viewer delta)
+const _reactState = new Map(); // postId → { type } | null  ← ADD THIS LINE
 
 
 // ================================================
@@ -144,161 +145,177 @@ window.bulletinOpenViewer = function(images, index, title, postId) {
     const accent = document.querySelector('#imgViewerOverlay .img-viewer__accent');
     if (!accent || !postId) return;
     /* Clear previously injected elements */
+    /* Clear all previously injected elements */
     accent.querySelectorAll(
-      '.bulletin-viewer-react, .bulletin-viewer-meta, .bulletin-viewer-info'
+      '.bulletin-viewer-react, .bulletin-viewer-meta, .bulletin-viewer-info, .bv-layout'
     ).forEach(el => el.remove());
 
     const post    = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
     const state   = _reactState.get(postId);
     const summary = post ? buildReactionSummary(post.reactions, post.likeCount) : { total: 0, html: '' };
 
-    /* ── Info block: title, author, date, description ── */
-    if (post) {
-      const _meta = CATEGORY_MAP[post.category] ?? CATEGORY_MAP.general;
-      const _date = post.createdAt?.toDate
-        ? post.createdAt.toDate().toLocaleDateString('en-PH',
-            { month: 'short', day: 'numeric', year: 'numeric' })
-        : '';
-      const info = document.createElement('div');
-      info.className = 'bulletin-viewer-info';
-      info.style.cssText = `display:flex;flex-direction:column;gap:3px;max-width:420px;
-        background:var(--overlay-white-12);border:1px solid var(--overlay-white-18);
-        border-radius:var(--radius-md);padding:8px 14px;`;
-      info.innerHTML = `
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <span class="tag ${_meta.tagClass}"
-            style="font-size:var(--text-2xs);pointer-events:none;padding:1px 7px;">
-            ${esc(_meta.label)}
-          </span>
-          ${_date ? `<span style="font-size:var(--text-2xs);color:var(--overlay-white-55);
-            font-family:var(--font-display);">${_date}</span>` : ''}
-        </div>
-        <p style="margin:0;font-size:var(--text-xs);font-weight:var(--fw-bold);
-          color:var(--white);font-family:var(--font-display);line-height:var(--lh-snug);">
-          ${esc(post.title ?? '')}
-        </p>
-        ${post.body ? `<p style="margin:0;font-size:var(--text-2xs);
-          color:var(--overlay-white-75);line-height:var(--lh-snug);
-          display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
-          ${esc(post.body.slice(0, 120))}${post.body.length > 120 ? '…' : ''}
-        </p>` : ''}
-        <div style="display:flex;align-items:center;gap:5px;margin-top:1px;">
-          <i data-lucide="user" style="width:10px;height:10px;color:var(--overlay-white-55);flex-shrink:0;"></i>
-          <span style="font-size:var(--text-2xs);color:var(--overlay-white-55);
-            font-family:var(--font-display);">
-            ${esc(post.authorName ?? 'BarangayConnect')}
-          </span>
-        </div>`;
-      accent.appendChild(info);
-      lucide.createIcons({ el: info });
-    }
-
-    /* ── React widget ── */
     const EMOJI_MAP = { heart:'❤️', laugh:'😂', wow:'😮', sad:'😢', like:'👍' };
-    const _entries  = Object.entries(post?.reactions ?? {}).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a);
-    let _ordered = [..._entries];
-    if (state && _ordered.length) {
-      _ordered = [
-        ..._ordered.filter(([t])=>t===state.type),
-        ..._ordered.filter(([t])=>t!==state.type),
-      ];
-    }
-    const _topTypes = _ordered.slice(0,3).map(([t])=>t);
-    const _bubbles  = _topTypes.map((type,i)=>
-      `<span style="font-size:.9rem;z-index:${3-i};margin-left:${i===0?0:-4}px;
-        display:inline-block;">${EMOJI_MAP[type]}</span>`
+
+    /* ── Build react bubble HTML with user's react first ── */
+    const _ents  = Object.entries(post?.reactions ?? {}).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a);
+    const _myType = state?.type ?? null;
+    const _ord    = _myType
+      ? [_myType, ..._ents.filter(([t])=>t!==_myType).map(([t])=>t)]
+      : _ents.map(([t])=>t);
+    const _top    = _ord.slice(0,3);
+    const _total = _ents.reduce((s,[,v])=>s+v,0) || (post?.likeCount ?? 0);
+    const _bubs  = _top.map((type,i)=>
+      `<span class="reaction-bubble" style="z-index:${3-i};margin-left:${i===0?0:-6}px;">${EMOJI_MAP[type]}</span>`
     ).join('');
-    const _countInner = summary.total > 0
-      ? `<span style="display:inline-flex;align-items:center;gap:2px;">${_bubbles}
-          <span style="font-size:var(--text-xs);font-weight:600;margin-left:3px;">${summary.total}</span>
-         </span>`
+    const _countInner = _total > 0
+      ? `<span style="display:inline-flex;align-items:center;gap:2px;">${_bubs}<span style="font-size:var(--text-xs);font-weight:600;margin-left:3px;">${_total}</span></span>`
+      : _myType
+      ? `<span style="font-size:var(--text-xs);font-weight:600;color:#fca5a5;">${EMOJI_MAP[_myType] ?? '❤️'} 1</span>`
       : `<span style="font-size:var(--text-xs);font-weight:600;">Like</span>`;
 
-    const wrap = document.createElement('div');
-    wrap.className = 'bulletin-viewer-react';
-    wrap.style.cssText = 'display:inline-flex;align-items:center;gap:6px;position:relative;';
-    wrap.innerHTML = `
-      <button id="_vreact-btn-${postId}"
-        style="display:inline-flex;align-items:center;gap:5px;
-          background:${state?'rgba(220,38,38,.18)':'var(--overlay-white-12)'};
-          color:${state?'#fca5a5':'var(--overlay-white-75)'};font-size:var(--text-xs);
-          font-weight:600;font-family:var(--font-display);padding:5px 12px;border-radius:999px;
-          border:1px solid ${state?'rgba(220,38,38,.3)':'var(--overlay-white-18)'};cursor:pointer;"
-        onmouseenter="document.getElementById('_vreact-picker-${postId}').style.display='flex'"
-        onclick="handleReactionToggle('${postId}');window._refreshViewerReact('${postId}')">
-        <span id="_vreact-icon-${postId}"
-          style="display:${state?'none':'inline-flex'};align-items:center;">
-          <i data-lucide="heart" style="width:13px;height:13px;stroke-width:2;
-            color:var(--overlay-white-75);pointer-events:none;"></i>
-        </span>
-        <span id="_vreact-count-${postId}">${_countInner}</span>
-      </button>
-      <div id="_vreact-picker-${postId}" style="display:none;position:absolute;
-        bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
-        background:var(--white);border:1px solid var(--gray-100);border-radius:999px;
-        padding:5px 8px;box-shadow:var(--shadow-lg);flex-direction:row;gap:2px;
-        z-index:10000;white-space:nowrap;">
-        ${Object.entries(EMOJI_MAP).map(([type,em])=>
-          `<button style="background:none;border:none;cursor:pointer;font-size:1.3rem;
-            padding:3px 4px;border-radius:var(--radius-sm);"
-            onmouseenter="this.style.transform='scale(1.35) translateY(-2px)'"
-            onmouseleave="this.style.transform=''"
-            onclick="handleReaction('${postId}','${type}');window._refreshViewerReact('${postId}');
-              document.getElementById('_vreact-picker-${postId}').style.display='none'">${em}</button>`
-        ).join('')}
+    /* ── Meta: category + date ── */
+    const _meta = CATEGORY_MAP[post?.category] ?? CATEGORY_MAP.general;
+    const _date = post?.createdAt?.toDate
+      ? post.createdAt.toDate().toLocaleDateString('en-PH',{ month:'short', day:'numeric', year:'numeric' })
+      : '';
+
+    /* ── Layout wrapper: left info | right actions ── */
+    const layout = document.createElement('div');
+    layout.className = 'bv-layout';
+    layout.innerHTML = `
+      <div class="bv-info">
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">
+          <span class="tag ${_meta.tagClass}"
+            style="font-size:var(--text-2xs);padding:1px 7px;pointer-events:none;">
+            ${esc(_meta.label)}
+          </span>
+          ${_date ? `<span style="font-size:var(--text-2xs);color:rgba(255,255,255,0.5);
+            font-family:var(--font-display);">${_date}</span>` : ''}
+        </div>
+        <p class="bv-info__title">${esc(post?.title ?? '')}</p>
+        ${post?.body ? `<p class="bv-info__body">${esc(post.body.slice(0,100))}${post.body.length>100?'…':''}</p>` : ''}
+        <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
+          <i data-lucide="user" style="width:10px;height:10px;color:rgba(255,255,255,0.45);flex-shrink:0;"></i>
+          <span style="font-size:var(--text-2xs);color:rgba(255,255,255,0.45);font-family:var(--font-display);">
+            ${esc(post?.authorName ?? 'BarangayConnect')}
+          </span>
+        </div>
+      </div>
+      <div class="bv-actions">
+        <a class="bv-view-btn"
+          href="community.html?scrollTo=${encodeURIComponent(postId)}&tab=bulletin"
+          onclick="event.stopPropagation()" title="View original post">
+          <i data-lucide="arrow-up-right"></i> View Post
+        </a>
+        <div style="position:relative;display:inline-flex;">
+          <button id="_vreact-btn-${postId}" class="bv-react-btn"
+            style="background:${state?'rgba(220,38,38,.18)':'var(--overlay-white-12)'};
+              color:${state?'#fca5a5':'rgba(255,255,255,0.75)'};
+              border-color:${state?'rgba(220,38,38,.3)':'rgba(255,255,255,0.18)'};"
+            onmouseenter="document.getElementById('_vreact-picker-${postId}').style.display='flex'"
+            onclick="handleReactionToggle('${postId}');setTimeout(()=>window._refreshViewerReact('${postId}'),1500)">
+            <span id="_vreact-icon-${postId}"
+              style="display:${state?'none':'inline-flex'};align-items:center;">
+              <i data-lucide="heart" style="width:13px;height:13px;stroke-width:2;pointer-events:none;"></i>
+            </span>
+            <span id="_vreact-count-${postId}">${_countInner}</span>
+          </button>
+          <div id="_vreact-picker-${postId}" class="bv-picker">
+            ${Object.entries(EMOJI_MAP).map(([type,em])=>
+              `<button style="background:none;border:none;cursor:pointer;font-size:1.3rem;
+                padding:3px 4px;border-radius:var(--radius-sm);"
+                onmouseenter="this.style.transform='scale(1.35) translateY(-2px)'"
+                onmouseleave="this.style.transform=''"
+                onclick="handleReaction('${postId}','${type}');document.getElementById('_vreact-picker-${postId}').style.display='none'">${em}</button>`
+            ).join('')}
+          </div>
+        </div>
       </div>`;
 
+    /* Hover timer for picker */
+    const _bvPicker = layout.querySelector(`#_vreact-picker-${postId}`);
+    const _bvBtn    = layout.querySelector(`#_vreact-btn-${postId}`);
     let _bvTimer;
-    const _bvPicker = wrap.querySelector(`#_vreact-picker-${postId}`);
-    wrap.querySelector(`#_vreact-btn-${postId}`)
-      ?.addEventListener('mouseleave', () => {
-        _bvTimer = setTimeout(() => { if (_bvPicker) _bvPicker.style.display = 'none'; }, 300);
-      });
+    _bvBtn?.addEventListener('mouseleave', () => {
+      _bvTimer = setTimeout(() => { if (_bvPicker) _bvPicker.style.display = 'none'; }, 300);
+    });
     _bvPicker?.addEventListener('mouseenter', () => clearTimeout(_bvTimer));
     _bvPicker?.addEventListener('mouseleave', () => {
       _bvTimer = setTimeout(() => { if (_bvPicker) _bvPicker.style.display = 'none'; }, 200);
     });
-    accent.appendChild(wrap);
-    lucide.createIcons({ el: wrap });
+
+    accent.appendChild(layout);
+    lucide.createIcons({ el: layout });
   });
 };
 
 window._refreshViewerReact = function(postId) {
-  setTimeout(() => {
-    const state   = _reactState.get(postId);
-    const post    = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
-    const summary = post ? buildReactionSummary(post.reactions, post.likeCount) : { total: 0, html: '' };
-    const btn     = document.getElementById(`_vreact-btn-${postId}`);
-    if (!btn) return;
-    btn.style.background  = state ? 'rgba(220,38,38,.18)' : 'var(--overlay-white-12)';
-    btn.style.color       = state ? '#fca5a5' : 'var(--overlay-white-75)';
-    btn.style.borderColor = state ? 'rgba(220,38,38,.3)' : 'var(--overlay-white-18)';
+  const state   = _reactState.get(postId);
+  const myType  = state?.type ?? null;
+  const isReact = !!state;
+  const post    = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
+  const btn     = document.getElementById(`_vreact-btn-${postId}`);
+  if (!btn) return;
 
-    const iconWrap = document.getElementById(`_vreact-icon-${postId}`);
-    const count    = document.getElementById(`_vreact-count-${postId}`);
+  const _EMOJI = { heart:'❤️', laugh:'😂', wow:'😮', sad:'😢', like:'👍' };
+  const _EORD  = ['heart','laugh','wow','sad','like'];
 
-    /* Show lucide heart icon only when unreacted */
-    if (iconWrap) {
-      iconWrap.style.display = state ? 'none' : 'inline-flex';
+  /* Apply optimistic delta when an in-flight write is pending */
+  const _raw  = { ...(post?.reactions ?? {}) };
+  if (_reactPrev.has(postId)) {
+    const _prev = _reactPrev.get(postId); // type user was on before this action
+    if (_prev && _prev !== myType) _raw[_prev] = Math.max(0, (_raw[_prev] ?? 0) - 1);
+    if (myType && myType !== _prev) _raw[myType] = (_raw[myType] ?? 0) + 1;
+  }
+
+  const _ents  = Object.entries(_raw).filter(([, v]) => v > 0)
+    .sort(([ka, a], [kb, b]) => b - a || _EORD.indexOf(ka) - _EORD.indexOf(kb));
+  const _total = _ents.reduce((s, [, v]) => s + v, 0) || (post?.likeCount ?? 0);
+
+  /* Button chrome */
+  btn.style.background  = isReact ? 'rgba(220,38,38,.18)' : 'var(--overlay-white-12)';
+  btn.style.color       = isReact ? '#fca5a5'              : 'rgba(255,255,255,0.75)';
+  btn.style.borderColor = isReact ? 'rgba(220,38,38,.3)'   : 'rgba(255,255,255,0.18)';
+
+  /* Icon — hidden when reacted */
+  const iconWrap = document.getElementById(`_vreact-icon-${postId}`);
+  if (iconWrap) {
+    iconWrap.style.display = isReact ? 'none' : 'inline-flex';
+    if (!isReact) {
+      iconWrap.innerHTML = '<i data-lucide="heart" style="width:13px;height:13px;stroke-width:2;color:rgba(255,255,255,0.75);pointer-events:none;"></i>';
+      lucide.createIcons({ el: iconWrap });
     }
+  }
 
-    if (count) {
-      if (state && summary.total > 0) {
-        /* Reacted + others exist — show bubbles with user's react first */
-        count.innerHTML = summary.html;
-      } else if (state) {
-        /* Reacted but no summary yet (optimistic) */
-        count.innerHTML = `<span style="font-size:var(--text-xs);font-weight:600;
-          color:#fca5a5;">${EMOJI[state.type] ?? '❤️'} 1</span>`;
-      } else if (summary.total > 0) {
-        /* Not reacted, but others have */
-        count.innerHTML = summary.html;
-      } else {
-        /* No reactions at all */
-        count.innerHTML = `<span style="font-size:var(--text-xs);font-weight:600;">Like</span>`;
-      }
+  /* Count — rebuild from scratch */
+  const count = document.getElementById(`_vreact-count-${postId}`);
+  if (!count) return;
+
+  if (!isReact) {
+    /* No user reaction: top 3 by count desc, or plain "Like" */
+    if (_total > 0) {
+      const _bubs = _ents.slice(0, 3).map(([t], i) =>
+        `<span class="reaction-bubble" style="z-index:${3-i};margin-left:${i===0?0:-6}px">${_EMOJI[t]}</span>`
+      ).join('');
+      count.innerHTML = `<span class="reaction-summary-wrap">${_bubs}<span class="reaction-summary-count">${_total}</span></span>`;
+    } else {
+      count.innerHTML = `<span style="font-size:var(--text-xs);font-weight:600;color:rgba(255,255,255,0.75);">Like</span>`;
     }
-  }, 400);
+    return;
+  }
+
+  /* User reacted: myType always first, then top remaining by count */
+  if (_total > 0) {
+    const _others = _ents.filter(([t]) => t !== myType).map(([t]) => t);
+    const _ord    = [myType, ..._others].slice(0, 3);
+    const _bubs   = _ord.map((t, i) =>
+      `<span class="reaction-bubble" style="z-index:${3-i};margin-left:${i===0?0:-6}px">${_EMOJI[t]}</span>`
+    ).join('');
+    count.innerHTML = `<span class="reaction-summary-wrap">${_bubs}<span class="reaction-summary-count">${_total}</span></span>`;
+  } else {
+    /* Optimistic — Firestore count not yet reflected */
+    count.innerHTML = `<span style="font-size:var(--text-xs);font-weight:600;color:#fca5a5;">${_EMOJI[myType]??'❤️'} 1</span>`;
+  }
 };
 
 window.openImageViewer = _openViewer;
@@ -605,7 +622,7 @@ function renderBulletin(listEl) {
       if (!_reactState.get(post.id)) {
         const countSpan = document.getElementById(`like-count-${post.id}`);
         if (countSpan) {
-          const summary = buildReactionSummary(post.reactions, post.likeCount);
+          const summary = buildReactionSummary(post.reactions, post.likeCount, _reactState.get(post.id)?.type ?? null);
           countSpan.innerHTML = summary.total > 0
             ? summary.html
             : `<span style="color:var(--gray-400);font-size:var(--text-xs);font-family:var(--font-display);font-weight:var(--fw-semibold);">Like</span>`;
@@ -751,16 +768,19 @@ function renderBulletin(listEl) {
 // ================================================
 
 /* Aggregates reaction counts into emoji bubble HTML and a total */
-function buildReactionSummary(reactions, fallbackCount) {
+function buildReactionSummary(reactions, fallbackCount, myType = null) {
+  const EMOJI_ORDER = ['heart','laugh','wow','sad','like'];
   const entries = Object.entries(reactions ?? {})
     .filter(([, v]) => v > 0)
-    .sort(([, a], [, b]) => b - a);
+    .sort(([ka, a], [kb, b]) => b - a || EMOJI_ORDER.indexOf(ka) - EMOJI_ORDER.indexOf(kb));
 
   const total = entries.reduce((s, [, v]) => s + v, 0) || (fallbackCount ?? 0);
   if (!total) return { html: '', total: 0, topEmoji: null };
 
   const tip      = entries.map(([t, c]) => `${EMOJI[t]} ${c}`).join('  ');
-  const topTypes = entries.slice(0, 3).map(([t]) => t);
+  const topTypes = myType
+    ? [myType, ...entries.filter(([t]) => t !== myType).map(([t]) => t)].slice(0, 3)
+    : entries.slice(0, 3).map(([t]) => t);
   const bubbles  = topTypes.map((type, i) =>
     `<span class="reaction-bubble" style="z-index:${3 - i};margin-left:${i === 0 ? 0 : -6}px">${EMOJI[type]}</span>`,
   ).join('');
@@ -832,7 +852,7 @@ function buildPostRow(post) {
 
   /* Reaction button state */
   const myState  = _reactState.get(post.id);
-  const summary  = buildReactionSummary(post.reactions, post.likeCount);
+  const summary  = buildReactionSummary(post.reactions, post.likeCount, _reactState.get(post.id)?.type ?? null);
   const btnEmoji = myState
     ? (EMOJI[myState.type] ?? '❤️')
     : (summary.topEmoji ? EMOJI[summary.topEmoji] : '🤍');
@@ -1008,23 +1028,43 @@ function _applyReactUI(postId) {
   const state = _reactState.get(postId);
   btn.classList.toggle('is-reacted', !!state);
 
-  const _post = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
-  const _s    = _post ? buildReactionSummary(_post.reactions, _post.likeCount) : { html: '', total: 0 };
+  const myType = state?.type ?? null;
+  const _post  = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
+  const _s     = _post ? buildReactionSummary(_post.reactions, _post.likeCount, myType) : { html: '', total: 0 };
 
   if (state) {
-    if (iconSpan)  iconSpan.style.display = 'none';
-    if (countSpan) countSpan.innerHTML    = _s.total > 0
+    if (iconSpan) iconSpan.style.display = 'none';
+    if (countSpan) countSpan.innerHTML = _s.total > 0
       ? _s.html
-      : `<span style="color:var(--red);font-size:var(--text-xs);font-family:var(--font-display);font-weight:var(--fw-semibold);">${EMOJI[state.type] ?? '❤️'} 1</span>`;
+      : `<span style="color:var(--red);font-size:var(--text-xs);font-family:var(--font-display);font-weight:var(--fw-semibold);">${EMOJI[myType] ?? '❤️'} 1</span>`;
   } else {
     if (iconSpan) {
       iconSpan.style.display = '';
-      iconSpan.innerHTML = '<i data-lucide="heart" style="width:15px;height:15px;stroke-width:2;color:var(--gray-400);pointer-events:none;"></i>';
-      lucide.createIcons({ el: iconSpan });
+      /* Re-inject SVG — lucide may have wiped innerHTML on a prior render */
+      if (!iconSpan.querySelector('svg')) {
+        iconSpan.innerHTML = '<i data-lucide="heart" style="width:15px;height:15px;stroke-width:2;color:var(--gray-400);pointer-events:none;"></i>';
+        lucide.createIcons({ el: iconSpan });
+      }
     }
     if (countSpan) countSpan.innerHTML = _s.total > 0
       ? _s.html
       : '<span style="color:var(--gray-400);font-size:var(--text-xs);font-family:var(--font-display);font-weight:var(--fw-semibold);">Like</span>';
+  }
+
+  /* Highlight already-picked emoji in the picker on hover */
+  const picker = document.getElementById(`reaction-picker-${postId}`);
+  if (picker) {
+    picker.querySelectorAll('.reaction-picker__btn').forEach(btn => {
+      const isActive = !!state && btn.getAttribute('title') === myType;
+      btn.style.transform    = isActive ? 'scale(1.35) translateY(-2px)' : '';
+      btn.style.background   = isActive ? 'rgba(220,38,38,0.12)' : '';
+      btn.style.borderRadius = isActive ? 'var(--radius-sm)' : '';
+    });
+  }
+
+  /* Sync viewer reaction bar if it's open for this post */
+  if (window._refreshViewerReact && document.getElementById(`_vreact-btn-${postId}`)) {
+    window._refreshViewerReact(postId);
   }
 }
 
@@ -1058,6 +1098,11 @@ window.handleReaction = async function (postId, type) {
   const prevState  = _reactState.get(postId) ?? null;
   const prevType   = prevState?.type ?? null;
   const isSameType = prevType === type;
+
+  _reactPrev.set(postId, prevType); // expose prev for viewer delta correction
+  /* Optimistic — update UI instantly before Firestore write */
+  _reactState.set(postId, isSameType ? null : { type });
+  _applyReactUI(postId);
 
   try {
     const {
@@ -1098,6 +1143,7 @@ window.handleReaction = async function (postId, type) {
     console.error('[reaction]', err);
     _reactState.set(postId, prevState); // roll back on error
   } finally {
+    _reactPrev.delete(postId); // clear so Firestore-confirmed data isn't delta'd again
     _applyReactUI(postId);
     _reactLock.delete(postId);
     const b = document.getElementById(`like-btn-${postId}`);

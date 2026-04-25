@@ -336,6 +336,9 @@ onSnapshot(communityQ, snap => {
       if (_bulkSelectMode) _exitBulkSelect();
       const _subRow = document.getElementById('gallerySubFiltersRow');
       if (_subRow) _subRow.style.display = _contentMode === 'albums' ? 'none' : 'flex';
+      /* Hide/show category row immediately so there's no visual delay */
+      const _catRowImm = document.getElementById('galleryCategoryFilters');
+      if (_catRowImm) _catRowImm.style.visibility = _contentMode === 'albums' ? 'hidden' : '';
       if (_contentMode === 'albums') {
         _renderAlbumsView();
       } else {
@@ -715,6 +718,11 @@ function _buildGalleryCard(post) {
             title="Set as Spotlight">
             <i data-lucide="crown"></i>
           </button>
+        </div>` : ''}
+        ${canBulk ? `
+        <div class="gallery-bulk-checkbox" data-pid="${pid}"
+          onclick="_toggleBulkCheckbox(event,'${pid}')">
+          <i data-lucide="check" style="width:10px;height:10px;"></i>
         </div>` : ''}
       </div>
     </div>`;
@@ -1255,8 +1263,7 @@ window._bulkAddToAlbum = async function () {
   }
 
   overlay.innerHTML = `
-    <div class="modal modal--confirm" onclick="event.stopPropagation()"
-      style="max-width:400px;">
+    <div class="modal modal--confirm" onclick="event.stopPropagation()">
       <div class="modal__header modal__header--green"
         style="border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
         <div class="modal__header-icon"><i data-lucide="folder-plus"></i></div>
@@ -1727,17 +1734,11 @@ window._galleryOpenViewer = function (postId, albumId) {
       }
     }
 
-    /* Author + featured-by chip */
+    /* Author chip — original poster only */
     const meta = document.createElement('span');
     meta.className = 'gallery-viewer-meta';
-    meta.innerHTML = `
-      <i data-lucide="user" style="width:11px;height:11px;"></i>
-      ${esc(post.authorName ?? 'BarangayConnect')}
-      ${post.featuredByName
-        ? `<span style="opacity:.5;margin:0 3px;">·</span>
-           <i data-lucide="star" style="width:10px;height:10px;fill:var(--orange);color:var(--orange);"></i>
-           ${esc(post.featuredByName)}`
-        : ''}`;
+    meta.innerHTML = `<i data-lucide="user" style="width:11px;height:11px;"></i>
+      ${esc(post.authorName ?? 'BarangayConnect')}`;
     accent.appendChild(meta);
     lucide.createIcons({ el: meta });
 
@@ -1753,7 +1754,11 @@ window._galleryOpenViewer = function (postId, albumId) {
     if (typeof window.handleReaction === 'function') {
       const _EMOJI    = { heart:'❤️', laugh:'😂', wow:'😮', sad:'😢', like:'👍' };
       const _post     = _allFeatured.find(p => p.id === postId);
-      const _state    = window._reactState?.get(postId);
+      const _state    = window._reactState?.get(postId) ?? null;
+      /* If state not loaded yet, _refreshViewerReact will correct it after 400ms */
+      if (_state === undefined && typeof window.loadReactionState === 'function') {
+        window.loadReactionState([postId]);
+      }
       const _reactions = _post?.reactions ?? {};
       const _entries   = Object.entries(_reactions).filter(([,v])=>v>0).sort(([,a],[,b])=>b-a);
       const _total     = _entries.reduce((s,[,v])=>s+v,0) || (_post?.likeCount ?? 0);
@@ -1776,6 +1781,8 @@ window._galleryOpenViewer = function (postId, albumId) {
         ? `<span style="display:inline-flex;align-items:center;gap:2px;">${_bubbles}
             <span style="font-size:var(--text-xs);font-weight:600;margin-left:3px;">${_total}</span>
            </span>`
+        : _state
+        ? `<span style="font-size:var(--text-xs);font-weight:600;color:#fca5a5;">${_EMOJI[_state.type] ?? '❤️'} 1</span>`
         : `<span style="font-size:var(--text-xs);font-weight:600;">Like</span>`;
 
       const reactWrap = document.createElement('div');
@@ -1789,7 +1796,7 @@ window._galleryOpenViewer = function (postId, albumId) {
             font-weight:600;font-family:var(--font-display);padding:5px 12px;border-radius:999px;
             border:1px solid ${_state?'rgba(220,38,38,.3)':'var(--overlay-white-18)'};cursor:pointer;"
           onmouseenter="document.getElementById('_vreact-picker-${postId}').style.display='flex'"
-          onclick="handleReactionToggle('${postId}');window._refreshViewerReact('${postId}')">
+          onclick="handleReactionToggle('${postId}');setTimeout(()=>window._refreshViewerReact('${postId}'),1500)">
           <span id="_vreact-icon-${postId}"
             style="display:${_state?'none':'inline-flex'};align-items:center;">
             <i data-lucide="heart" style="width:13px;height:13px;stroke-width:2;
@@ -1807,7 +1814,7 @@ window._galleryOpenViewer = function (postId, albumId) {
               padding:3px 4px;border-radius:var(--radius-sm);"
               onmouseenter="this.style.transform='scale(1.35) translateY(-2px)'"
               onmouseleave="this.style.transform=''"
-              onclick="handleReaction('${postId}','${type}');window._refreshViewerReact('${postId}');
+              onclick="handleReaction('${postId}','${type}');setTimeout(()=>window._refreshViewerReact('${postId}'),1500);
                 document.getElementById('_vreact-picker-${postId}').style.display='none'">${em}</button>`
           ).join('')}
         </div>`;
@@ -1825,6 +1832,37 @@ window._galleryOpenViewer = function (postId, albumId) {
 
       accent.appendChild(reactWrap);
       lucide.createIcons({ el: reactWrap });
+      setTimeout(() => window._refreshViewerReact?.(postId), 600);
+      /* Update accent on slide change for albums */
+      if (albumId) {
+        const strip = document.getElementById('imgViewerStrip');
+        let _slideTimer;
+        const _onSlideChange = () => {
+          clearTimeout(_slideTimer);
+          _slideTimer = setTimeout(() => {
+            const w   = strip?.offsetWidth;
+            if (!w) return;
+            const idx = Math.round(strip.scrollLeft / w);
+            /* Find which post owns this image index */
+            let offset = 0;
+            const album2 = _allAlbums.find(a => a.id === albumId);
+            for (const id of (album2?.postIds ?? [])) {
+              const p2   = _allFeatured.find(fp => fp.id === id);
+              const imgs = p2 ? getImages(p2) : [];
+              if (idx < offset + imgs.length) {
+                /* This post owns the current slide */
+                const metaEl = document.querySelector('#imgViewerOverlay .gallery-viewer-meta');
+                if (metaEl) metaEl.textContent = p2?.authorName ?? 'BarangayConnect';
+                break;
+              }
+              offset += imgs.length;
+            }
+          }, 80);
+        };
+        strip?.removeEventListener('scroll', strip._gallerySlideHandler);
+        strip._gallerySlideHandler = _onSlideChange;
+        strip?.addEventListener('scroll', _onSlideChange);
+      }
     }
 
     const url = new URL(window.location.href);
@@ -1879,10 +1917,18 @@ function _openAlbumModal(albumId, pendingPostId = null) {
   overlay.innerHTML = `
     <div class="modal modal--confirm" onclick="event.stopPropagation()"
       style="max-width:480px;">
-      <div class="modal-confirm__icon" style="background:#f0fdf4;border-color:#bbf7d0;">
-        <i data-lucide="folder-plus" style="width:28px;height:28px;stroke-width:2;color:#15803d;pointer-events:none;"></i>
+      <div class="modal__header modal__header--green"
+        style="border-radius:var(--radius-lg) var(--radius-lg) 0 0;">
+        <div class="modal__header-icon"><i data-lucide="folder-plus"></i></div>
+        <div class="modal__header-content">
+          <p class="modal__header-label">${isEdit ? 'EDIT ALBUM' : 'NEW ALBUM'}</p>
+          <h2 class="modal__header-title">${isEdit ? 'Edit Album' : 'New Album'}</h2>
+        </div>
+        <button class="btn btn--close btn--sm modal__close"
+          onclick="document.getElementById('_galleryAlbumModal').classList.remove('is-open')">
+          <i data-lucide="x"></i>
+        </button>
       </div>
-      <h2 class="modal-confirm__title">${isEdit ? 'Edit Album' : 'New Album'}</h2>
       <div style="display:flex;flex-direction:column;gap:var(--space-md);padding:0 var(--space-lg) var(--space-md);">
         <div class="form-group">
           <label class="form-label">Album Title</label>

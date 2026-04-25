@@ -1490,8 +1490,11 @@
 .gallery-bulk-toolbar {
   position: fixed;
   bottom: var(--space-xl);
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: fit-content;
+  transform: none;
   display: flex;
   align-items: center;
   gap: var(--space-sm);

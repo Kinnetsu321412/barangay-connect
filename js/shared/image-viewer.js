@@ -56,13 +56,14 @@ function _injectImageViewer() {
 
   el.innerHTML = `
     <div class="img-viewer" id="imgViewer">
-      <div class="img-viewer__topbar">
-        <span class="img-viewer__title"   id="imgViewerTitle"></span>
-        <span class="img-viewer__counter" id="imgViewerCounter"></span>
-        <button class="img-viewer__close" id="imgViewerClose" aria-label="Close">
-          <i data-lucide="x"></i>
-        </button>
-      </div>
+
+      <button class="img-viewer__close" id="imgViewerClose" aria-label="Close">
+        <i data-lucide="x"></i>
+      </button>
+      <span class="img-viewer__counter" id="imgViewerCounter"></span>
+      <!-- Hidden title kept for JS compat -->
+      <span class="img-viewer__title" id="imgViewerTitle" style="display:none;"></span>
+
       <div class="img-viewer__stage">
         <button class="img-viewer__arrow img-viewer__arrow--prev" id="imgViewerPrev" aria-label="Previous">
           <i data-lucide="chevron-left"></i>
@@ -72,10 +73,12 @@ function _injectImageViewer() {
           <i data-lucide="chevron-right"></i>
         </button>
       </div>
-      <div class="img-viewer__bottombar">
-        <div class="img-viewer__dots"   id="imgViewerDots"></div>
+
+      <div class="img-viewer__panel" id="imgViewerPanel">
+        <div class="img-viewer__dots" id="imgViewerDots"></div>
         <div class="img-viewer__accent"></div>
       </div>
+
     </div>`;
 
   document.body.appendChild(el);
