@@ -109,10 +109,24 @@ let _scrollHandled     = false;
 // REACTION STATE
 // ================================================
 
-const _reactLock  = new Set(); // postId — prevents concurrent writes
-const _reactPrev  = new Map(); // postId → prevType before in-flight write (viewer delta)
-const _reactState = new Map(); // postId → { type } | null  ← ADD THIS LINE
+const _reactLock     = new Set();
+const _reactPrev     = new Map();
+const _reactBaseline = new Map(); // postId → reactions counts captured before write
+const _reactState    = new Map();
 
+function _getOptimisticReactions(postId, post) {
+  const base = _reactBaseline.has(postId)
+    ? _reactBaseline.get(postId)
+    : (post?.reactions ?? {});
+  const reactions = { ...base };
+  if (_reactPrev.has(postId)) {
+    const prev = _reactPrev.get(postId);
+    const cur  = _reactState.get(postId)?.type ?? null;
+    if (prev)                reactions[prev] = Math.max(0, (reactions[prev] ?? 0) - 1);
+    if (cur && cur !== prev) reactions[cur]  = (reactions[cur]  ?? 0) + 1;
+  }
+  return reactions;
+}
 
 // ================================================
 // CONSTANTS — Emoji, Categories
@@ -260,13 +274,7 @@ window._refreshViewerReact = function(postId) {
   const _EMOJI = { heart:'❤️', laugh:'😂', wow:'😮', sad:'😢', like:'👍' };
   const _EORD  = ['heart','laugh','wow','sad','like'];
 
-  /* Apply optimistic delta when an in-flight write is pending */
-  const _raw  = { ...(post?.reactions ?? {}) };
-  if (_reactPrev.has(postId)) {
-    const _prev = _reactPrev.get(postId); // type user was on before this action
-    if (_prev && _prev !== myType) _raw[_prev] = Math.max(0, (_raw[_prev] ?? 0) - 1);
-    if (myType && myType !== _prev) _raw[myType] = (_raw[myType] ?? 0) + 1;
-  }
+  const _raw = _getOptimisticReactions(postId, post);
 
   const _ents  = Object.entries(_raw).filter(([, v]) => v > 0)
     .sort(([ka, a], [kb, b]) => b - a || _EORD.indexOf(ka) - _EORD.indexOf(kb));
@@ -619,14 +627,13 @@ function renderBulletin(listEl) {
       }
 
       /* Patch reaction summary (only when not in a reacted state) */
-      if (!_reactState.get(post.id)) {
-        const countSpan = document.getElementById(`like-count-${post.id}`);
-        if (countSpan) {
-          const summary = buildReactionSummary(post.reactions, post.likeCount, _reactState.get(post.id)?.type ?? null);
-          countSpan.innerHTML = summary.total > 0
-            ? summary.html
-            : `<span style="color:var(--gray-400);font-size:var(--text-xs);font-family:var(--font-display);font-weight:var(--fw-semibold);">Like</span>`;
-        }
+      const countSpan = document.getElementById(`like-count-${post.id}`);
+      if (countSpan) {
+        const myType  = _reactState.get(post.id)?.type ?? null;
+        const summary = buildReactionSummary(_getOptimisticReactions(post.id, post), post.likeCount, myType);
+        countSpan.innerHTML = summary.total > 0
+          ? summary.html
+          : `<span style="color:var(--gray-400);font-size:var(--text-xs);font-family:var(--font-display);font-weight:var(--fw-semibold);">Like</span>`;
       }
 
     /* Patch featured star button — including pending state */
@@ -852,7 +859,7 @@ function buildPostRow(post) {
 
   /* Reaction button state */
   const myState  = _reactState.get(post.id);
-  const summary  = buildReactionSummary(post.reactions, post.likeCount, _reactState.get(post.id)?.type ?? null);
+  const summary  = buildReactionSummary(_getOptimisticReactions(post.id, post), post.likeCount, _reactState.get(post.id)?.type ?? null);
   const btnEmoji = myState
     ? (EMOJI[myState.type] ?? '❤️')
     : (summary.topEmoji ? EMOJI[summary.topEmoji] : '🤍');
@@ -1030,7 +1037,9 @@ function _applyReactUI(postId) {
 
   const myType = state?.type ?? null;
   const _post  = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
-  const _s     = _post ? buildReactionSummary(_post.reactions, _post.likeCount, myType) : { html: '', total: 0 };
+
+  const _reactions = _getOptimisticReactions(postId, _post);
+  const _s = _post ? buildReactionSummary(_reactions, _post.likeCount, myType) : { html: '', total: 0 };
 
   if (state) {
     if (iconSpan) iconSpan.style.display = 'none';
@@ -1099,7 +1108,9 @@ window.handleReaction = async function (postId, type) {
   const prevType   = prevState?.type ?? null;
   const isSameType = prevType === type;
 
-  _reactPrev.set(postId, prevType); // expose prev for viewer delta correction
+  const _basePost = [..._allPosts, ..._allCommunityPosts].find(p => p.id === postId);
+  _reactBaseline.set(postId, { ...(_basePost?.reactions ?? {}) });
+  _reactPrev.set(postId, prevType);
   /* Optimistic — update UI instantly before Firestore write */
   _reactState.set(postId, isSameType ? null : { type });
   _applyReactUI(postId);
@@ -1143,7 +1154,8 @@ window.handleReaction = async function (postId, type) {
     console.error('[reaction]', err);
     _reactState.set(postId, prevState); // roll back on error
   } finally {
-    _reactPrev.delete(postId); // clear so Firestore-confirmed data isn't delta'd again
+    _reactPrev.delete(postId);
+    _reactBaseline.delete(postId);
     _applyReactUI(postId);
     _reactLock.delete(postId);
     const b = document.getElementById(`like-btn-${postId}`);
