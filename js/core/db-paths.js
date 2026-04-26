@@ -215,3 +215,16 @@ export function voteDoc(barangay, pollId, userId) {
 export function pollActionsCol(barangay, pollId) {
   return collection(db, 'barangays', barangayId(barangay), 'polls', pollId, 'poll_actions');
 }
+
+export function eventsCol(barangay) {
+  return collection(db, 'barangays', barangayId(barangay), 'events');
+}
+export function eventDoc(barangay, eventId) {
+  return doc(db, 'barangays', barangayId(barangay), 'events', eventId);
+}
+export function eventRsvpsCol(barangay, eventId) {
+  return collection(db, 'barangays', barangayId(barangay), 'events', eventId, 'rsvps');
+}
+export function eventPhotoPath(barangay, uid, fileName) {
+  return `barangays/${barangayId(barangay)}/events/${uid}/${fileName}`;
+}

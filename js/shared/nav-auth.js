@@ -81,6 +81,10 @@ export function initNavAuth({ onResolved } = {}) {
       sessionStorage.setItem('bc_role', role);
       _applyRole(role);
 
+      /* Inject barangay name into community hero eyebrow if present */
+      const _heroNameEl = document.getElementById('heroBarangayName');
+      if (_heroNameEl && barangay) _heroNameEl.textContent = barangay.toUpperCase();
+
       initNotifications(toBid(barangay), user.uid);
       onResolved?.({ user, role, barangay });
 

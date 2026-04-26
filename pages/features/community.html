@@ -64,6 +64,7 @@
   <link rel="stylesheet" href="../../css/features/community/community.css" />
   <link rel="stylesheet" href="../../css/features/community/polls.css" />
   <link rel="stylesheet" href="../../css/features/community/gallery.css" />
+  <link rel="stylesheet" href="../../css/features/community/events.css" />
 
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script type="module" src="../../js/shared/nav-auth.js"></script>
@@ -162,7 +163,7 @@
   <section class="community-hero">
     <div class="community-hero__inner">
 
-      <p class="community-hero__eyebrow">BARANGAY BANCOD</p>
+      <p class="community-hero__eyebrow" id="heroBarangayName">BARANGAY</p>
       <h1 class="community-hero__title">Community Hub</h1>
 
       <!--
@@ -178,14 +179,11 @@
         <button class="btn btn--category" data-tab="polls" role="tab" aria-selected="false">
           <i data-lucide="bar-chart-2"></i> Polls
         </button>
-        <button class="btn btn--category" data-tab="calendar" role="tab" aria-selected="false">
-          <i data-lucide="calendar"></i> Calendar
+        <button class="btn btn--category" data-tab="events" role="tab" aria-selected="false">
+          <i data-lucide="calendar-days"></i> Events
         </button>
         <button class="btn btn--category" data-tab="gallery" role="tab" aria-selected="false">
           <i data-lucide="image"></i> Gallery
-        </button>
-        <button class="btn btn--category" data-tab="youth" role="tab" aria-selected="false">
-          <i data-lucide="users"></i> Youth Zone
         </button>
         <button class="btn btn--category" data-tab="pets" role="tab" aria-selected="false">
           <i data-lucide="paw-print"></i> Pet Board
@@ -295,118 +293,198 @@
 
 
     <!-- ─────────────────────────────────────────────────────────────
-         TAB PANEL: CALENDAR
+         TAB PANEL: EVENTS
          ─────────────────────────────────────────────────────────────
-         Two-column layout (.calendar-layout from community.css):
-           Left  → .cal widget from frames.css
-           Right → .cal__events-header + .event-item list from frames.css
-         Day state modifiers: .cal__day--today / --selected / --has-event / --empty
-         Event accent variants: .event-item--orange / --red / --blue (default = green)
+         View toggle: Cards (default) / Calendar.
+         Filters: category pills + source seg + availability seg + My Events toggle.
+         Cards: .events-cards-grid injected or static demo cards.
+         Calendar: .events-cal-layout — calendar widget + sidebar list.
+         Events data and interactivity wired by events.js (Phase 2).
     ──────────────────────────────────────────────────────────────── -->
-    <section class="tab-panel tab-panel--calendar" id="tab-calendar" role="tabpanel">
+    <section class="tab-panel tab-panel--events" id="tab-events" role="tabpanel">
       <div class="community-panel-inner">
 
-        <div class="calendar-layout">
+        <!-- ── FILTER SYSTEM ── -->
+        <div class="events-filters-wrap">
 
-          <!-- LEFT: Calendar widget -->
-          <div class="calendar-layout__cal">
-            <div class="cal">
+          <!-- Row 1: category pills left, view toggle right — mirrors .gallery-controls-row -->
+          <div class="gallery-controls-row">
+            <div class="events-category-filters" id="eventsCategoryFilters">
+              <button class="btn btn--filter is-active" data-category="all">All</button>
+              <button class="btn btn--filter" data-category="health">
+                <i data-lucide="activity"></i> Health
+              </button>
+              <button class="btn btn--filter" data-category="sports">
+                <i data-lucide="trophy"></i> Sports
+              </button>
+              <button class="btn btn--filter" data-category="youth">
+                <i data-lucide="zap"></i> Youth
+              </button>
+              <button class="btn btn--filter" data-category="livelihood">
+                <i data-lucide="briefcase"></i> Livelihood
+              </button>
+              <button class="btn btn--filter" data-category="culture">
+                <i data-lucide="sparkles"></i> Culture
+              </button>
+              <button class="btn btn--filter" data-category="seniors">
+                <i data-lucide="heart"></i> Seniors
+              </button>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+              <div class="events-view-toggle" id="eventsViewToggle">
+                <button class="events-view-btn is-active" data-view="cards" aria-label="Cards view">
+                  <i data-lucide="layout-grid"></i> Cards
+                </button>
+                <button class="events-view-btn" data-view="calendar" aria-label="Calendar view">
+                  <i data-lucide="calendar"></i> Calendar
+                </button>
+              </div>
+            </div>
+          </div>
 
-              <div class="cal__header">
-                <span class="cal__month">June 2025</span>
-                <div class="cal__nav">
-                  <button class="cal__nav-btn" aria-label="Previous month">
-                    <i data-lucide="chevron-left"></i>
-                  </button>
-                  <button class="cal__nav-btn" aria-label="Next month">
-                    <i data-lucide="chevron-right"></i>
-                  </button>
+          <!-- Row 2: Source + Availability + My Events -->
+          <div class="events-sub-filters-row">
+
+            <div style="display:flex;align-items:center;gap:.4rem;">
+              <span class="events-filter-label">Source</span>
+              <div class="events-seg-control">
+                <button class="events-seg-btn is-active" data-source="all">All</button>
+                <button class="events-seg-btn" data-source="official">
+                  <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
+                </button>
+                <button class="events-seg-btn" data-source="community">
+                  <i data-lucide="users" style="width:11px;height:11px;"></i> Community
+                </button>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:.4rem;">
+              <span class="events-filter-label">Slots</span>
+              <div class="events-seg-control">
+                <button class="events-seg-btn is-active" data-avail="all">All</button>
+                <button class="events-seg-btn" data-avail="open">Open</button>
+                <button class="events-seg-btn" data-avail="walkin">Walk-in</button>
+              </div>
+            </div>
+
+            <!-- My Events toggle — shown after login (Phase 2) -->
+            <label class="events-my-toggle" id="myEventsToggle" style="display:none;">
+              <input type="checkbox" class="toggle-input" id="myEventsCheck" />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span style="font-size:var(--text-sm);font-weight:var(--fw-semibold);color:var(--gray-700);">
+                My Events
+              </span>
+            </label>
+
+            <!-- Propose button — pushed to right, shown after login (Phase 2) -->
+            <button class="btn btn--orange btn--sm" id="proposeEventBtn" style="display:none;margin-left:auto;">
+              <i data-lucide="plus"></i> Propose Event
+            </button>
+
+          </div>
+        </div><!-- /events-filters-wrap -->
+
+        <!-- ── CARDS VIEW (default) ── -->
+        <div class="events-cards-view" id="eventsCardsView">
+          <div class="events-cards-grid" id="eventsCardsGrid">
+
+            <!-- DEMO CARD 1 — remove when events.js is wired (Phase 2) -->
+            <div class="event-card">
+              <div class="event-card__img-wrap">
+                <img src="../../assets/images/youth/basketball.jpg" alt="Basketball Summer League" class="event-card__img" />
+                <span class="event-card__category-tag tag tag--amber">Youth &amp; Sports</span>
+                <span class="event-card__source-badge">
+                  <i data-lucide="shield-check" style="width:10px;height:10px;"></i> Official
+                </span>
+              </div>
+              <div class="event-card__body">
+                <h3 class="event-card__title">Basketball Summer League</h3>
+                <p class="event-card__date-row">
+                  <i data-lucide="calendar" style="width:13px;height:13px;"></i>
+                  Jun 14 – Jun 28 &nbsp;·&nbsp; 8:00 AM
+                </p>
+                <p class="event-card__location-row">
+                  <i data-lucide="map-pin" style="width:13px;height:13px;"></i>
+                  Barangay Basketball Court
+                </p>
+                <div class="event-card__footer">
+                  <span class="badge-slots"><i data-lucide="users"></i> 6 slots left</span>
+                  <button class="btn btn--green btn--sm">RSVP</button>
                 </div>
               </div>
+            </div><!-- /event-card -->
 
-              <div class="cal__weekdays">
-                <span>Sun</span><span>Mon</span><span>Tue</span>
-                <span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            <!-- DEMO CARD 2 -->
+            <div class="event-card">
+              <div class="event-card__img-wrap">
+                <img src="../../assets/images/youth/tutoring.jpg" alt="Free Medical Mission" class="event-card__img" />
+                <span class="event-card__category-tag tag tag--green">Health</span>
+                <span class="event-card__source-badge">
+                  <i data-lucide="shield-check" style="width:10px;height:10px;"></i> Official
+                </span>
               </div>
-
-              <div class="cal__grid">
-                <!-- Week 1 -->
-                <button class="cal__day cal__day--empty"></button>
-                <button class="cal__day cal__day--empty"></button>
-                <button class="cal__day cal__day--empty"></button>
-                <button class="cal__day cal__day--empty"></button>
-                <button class="cal__day cal__day--empty"></button>
-                <button class="cal__day cal__day--empty"></button>
-                <button class="cal__day">1</button>
-                <!-- Week 2 -->
-                <button class="cal__day cal__day--has-event">2</button>
-                <button class="cal__day">3</button>
-                <button class="cal__day">4</button>
-                <button class="cal__day cal__day--has-event">5</button>
-                <button class="cal__day">6</button>
-                <button class="cal__day">7</button>
-                <button class="cal__day">8</button>
-                <!-- Week 3 -->
-                <button class="cal__day cal__day--has-event">9</button>
-                <button class="cal__day">10</button>
-                <button class="cal__day">11</button>
-                <button class="cal__day cal__day--today cal__day--selected cal__day--has-event">12</button>
-                <button class="cal__day">13</button>
-                <button class="cal__day">14</button>
-                <button class="cal__day cal__day--has-event">15</button>
-                <!-- Week 4 -->
-                <button class="cal__day">16</button>
-                <button class="cal__day">17</button>
-                <button class="cal__day cal__day--has-event">18</button>
-                <button class="cal__day">19</button>
-                <button class="cal__day">20</button>
-                <button class="cal__day">21</button>
-                <button class="cal__day">22</button>
-                <!-- Week 5 -->
-                <button class="cal__day cal__day--has-event">23</button>
-                <button class="cal__day">24</button>
-                <button class="cal__day">25</button>
-                <button class="cal__day cal__day--has-event">26</button>
-                <button class="cal__day">27</button>
-                <button class="cal__day">28</button>
-                <button class="cal__day">29</button>
-                <!-- Week 6 -->
-                <button class="cal__day">30</button>
-              </div>
-
-            </div>
-          </div><!-- /calendar-layout__cal -->
-
-          <!-- RIGHT: Events for selected date -->
-          <div class="calendar-layout__events">
-            <p class="cal__events-header">Events on June 12</p>
-
-            <!--
-              .event-item from frames.css.
-              Left stripe color from .event-item__accent div.
-              Default (no modifier) = green stripe.
-            -->
-            <div class="event-item">
-              <div class="event-item__accent"></div>
-              <div class="event-item__body">
-                <h3 class="event-item__title">Free Medical Mission</h3>
-                <p class="event-item__meta">
-                  <i data-lucide="clock"></i> 7:00 AM – 5:00 PM
+              <div class="event-card__body">
+                <h3 class="event-card__title">Free Medical Mission</h3>
+                <p class="event-card__date-row">
+                  <i data-lucide="calendar" style="width:13px;height:13px;"></i>
+                  Jun 12, 2025 &nbsp;·&nbsp; 7:00 AM – 5:00 PM
                 </p>
-                <p class="event-item__meta">
-                  <i data-lucide="map-pin"></i> Barangay Hall
+                <p class="event-card__location-row">
+                  <i data-lucide="map-pin" style="width:13px;height:13px;"></i>
+                  Barangay Hall
                 </p>
+                <div class="event-card__footer">
+                  <span class="badge-slots" style="background:var(--green-100);color:var(--green-800);">
+                    <i data-lucide="check-circle"></i> Walk-in welcome
+                  </span>
+                  <button class="btn btn--green btn--sm">Join</button>
+                </div>
               </div>
-              <button class="btn btn--orange btn--sm">RSVP Now</button>
+            </div><!-- /event-card -->
+
+            <!-- DEMO CARD 3 — postponed state -->
+            <div class="event-card">
+              <div class="event-card__status-bar event-card__status-bar--postponed">
+                <i data-lucide="clock" style="width:12px;height:12px;"></i> Postponed
+              </div>
+              <div class="event-card__img-wrap">
+                <img src="../../assets/images/youth/digital-skills.jpeg" alt="Digital Skills Workshop" class="event-card__img" />
+                <span class="event-card__category-tag tag tag--blue">Livelihood</span>
+              </div>
+              <div class="event-card__body">
+                <h3 class="event-card__title">Digital Skills Workshop</h3>
+                <p class="event-card__date-row">
+                  <i data-lucide="calendar" style="width:13px;height:13px;"></i>
+                  TBD &nbsp;·&nbsp; 1:00 PM – 4:00 PM
+                </p>
+                <p class="event-card__location-row">
+                  <i data-lucide="map-pin" style="width:13px;height:13px;"></i>
+                  Barangay Hall, Room 2
+                </p>
+                <div class="event-card__footer">
+                  <span class="badge-slots"><i data-lucide="users"></i> 12 slots</span>
+                  <button class="btn btn--outline btn--sm" disabled>Postponed</button>
+                </div>
+              </div>
+            </div><!-- /event-card -->
+
+          </div><!-- /events-cards-grid -->
+        </div><!-- /events-cards-view -->
+
+        <!-- ── CALENDAR VIEW (hidden until toggle) ── -->
+        <div class="events-calendar-view" id="eventsCalendarView" style="display:none;">
+          <div class="events-cal-layout">
+            <!-- Calendar widget injected by events-calendar.js (Phase 2) -->
+            <div id="eventsCalContainer"></div>
+            <div class="events-cal-sidebar" id="eventsCalSidebar">
+              <p class="cal__events-header" id="eventsCalSidebarTitle">Select a date</p>
+              <div id="eventsCalSidebarList"></div>
             </div>
-
-          </div><!-- /calendar-layout__events -->
-
-        </div><!-- /calendar-layout -->
+          </div>
+        </div><!-- /events-calendar-view -->
 
       </div><!-- /community-panel-inner -->
-    </section><!-- /tab-panel--calendar -->
-
+    </section><!-- /tab-panel--events -->
 
     <!-- ─────────────────────────────────────────────────────────────
          TAB PANEL: GALLERY
@@ -502,106 +580,6 @@
 
       </div>
     </section><!-- /tab-panel--gallery -->
-
-
-    <!-- ─────────────────────────────────────────────────────────────
-         TAB PANEL: YOUTH ZONE
-         ─────────────────────────────────────────────────────────────
-         .notice-banner .notice-banner--red from components.css at top.
-         3-column .youth-programs-grid from community.css below.
-         Cards:      .program-card from frames.css.
-         Icon color: .program-card__icon--green / --orange / --blue
-         Slots badge: .badge-slots from components.css.
-    ──────────────────────────────────────────────────────────────── -->
-    <section class="tab-panel tab-panel--youth" id="tab-youth" role="tabpanel">
-      <div class="community-panel-inner">
-
-        <!-- Anti-bullying notice banner — .notice-banner .notice-banner--red from components.css -->
-        <div class="notice-banner notice-banner--red">
-          <div class="notice-banner__icon">
-            <i data-lucide="alert-circle"></i>
-          </div>
-          <div class="notice-banner__body">
-            <p class="notice-banner__title">Experiencing bullying? You're not alone.</p>
-            <p class="notice-banner__sub">Report incidents confidentially to our Youth Protection Officer.</p>
-          </div>
-          <button class="btn btn--red btn--sm" onclick="openModal('bullyingModal')">Report Now</button>
-        </div>
-
-        <!-- 3-column program cards grid — .youth-programs-grid from community.css -->
-        <div class="youth-programs-grid">
-
-          <div class="program-card">
-            <div class="program-card__img-wrap">
-              <img src="../../assets/images/youth/basketball.jpg" alt="Basketball Summer League" class="program-card__img" />
-            </div>
-            <div class="program-card__body">
-              <div class="program-card__icon program-card__icon--orange">
-                <i data-lucide="trophy"></i>
-              </div>
-              <h3 class="program-card__title">Basketball Summer League</h3>
-              <p class="program-card__desc">Open to youth ages 13–25. Team registration now open. Scheduled games every Saturday.</p>
-              <p class="program-card__meta">
-                <i data-lucide="clock"></i> Every Saturday · 8:00 AM
-              </p>
-              <div class="program-card__footer">
-                <span class="badge-slots">
-                  <i data-lucide="users"></i> 6 slots remaining
-                </span>
-                <button class="btn btn--green btn--sm">Register</button>
-              </div>
-            </div>
-          </div><!-- /program-card -->
-
-          <div class="program-card">
-            <div class="program-card__img-wrap">
-              <img src="../../assets/images/youth/tutoring.jpg" alt="Bayanihan Homework Hub" class="program-card__img" />
-            </div>
-            <div class="program-card__body">
-              <div class="program-card__icon program-card__icon--green">
-                <i data-lucide="book-open"></i>
-              </div>
-              <h3 class="program-card__title">Bayanihan Homework Hub</h3>
-              <p class="program-card__desc">Free tutoring for Grades 4–12 by certified teacher-volunteers every weekday afternoon.</p>
-              <p class="program-card__meta">
-                <i data-lucide="clock"></i> Mon–Fri · 3:00 PM – 5:00 PM
-              </p>
-              <div class="program-card__footer">
-                <span class="badge-slots" style="background: var(--green-100); color: var(--green-800);">
-                  <i data-lucide="check-circle"></i> Walk-in welcome
-                </span>
-                <button class="btn btn--green btn--sm">Register</button>
-              </div>
-            </div>
-          </div><!-- /program-card -->
-
-          <div class="program-card">
-            <div class="program-card__img-wrap">
-              <img src="../../assets/images/youth/digital-skills.jpeg" alt="Digital Skills Workshop" class="program-card__img" />
-            </div>
-            <div class="program-card__body">
-              <div class="program-card__icon program-card__icon--blue">
-                <i data-lucide="monitor"></i>
-              </div>
-              <h3 class="program-card__title">Digital Skills Workshop</h3>
-              <p class="program-card__desc">Learn basic computer skills, digital safety, and Google Workspace. Certificate upon completion.</p>
-              <p class="program-card__meta">
-                <i data-lucide="clock"></i> Wednesdays · 1:00 PM – 4:00 PM
-              </p>
-              <div class="program-card__footer">
-                <span class="badge-slots">
-                  <i data-lucide="users"></i> 12 slots remaining
-                </span>
-                <button class="btn btn--green btn--sm">Register</button>
-              </div>
-            </div>
-          </div><!-- /program-card -->
-
-        </div><!-- /youth-programs-grid -->
-
-      </div><!-- /community-panel-inner -->
-    </section><!-- /tab-panel--youth -->
-
 
     <!-- ─────────────────────────────────────────────────────────────
          TAB PANEL: PET BOARD
@@ -699,6 +677,59 @@
 
 
   </main><!-- /community-main -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL — Event Detail
+       ───────────────────────────────────────────────────────────────
+       Opened when a resident clicks an event card.
+       Header, body, and footer are fully injected by events.js.
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="eventDetailModal" onclick="closeOnBackdrop(event)">
+    <div class="modal modal--event-detail">
+      <div class="modal__body" id="eventDetailBody"></div>
+      <div class="modal__footer" id="eventDetailFooter"></div>
+    </div>
+  </div><!-- /eventDetailModal -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       MODAL — Propose Event
+       ───────────────────────────────────────────────────────────────
+       Resident-facing form to submit an event for approval.
+       Fields and submission logic wired by events.js (Phase 2).
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="proposeEventModal" onclick="closeOnBackdrop(event)">
+    <div class="modal">
+
+      <div class="modal__header modal__header--green">
+        <div class="modal__header-icon"><i data-lucide="calendar-plus"></i></div>
+        <div class="modal__header-content">
+          <p class="modal__header-label">Community Events</p>
+          <h2 class="modal__header-title">Propose an Event</h2>
+          <p class="modal__header-sub">Submit an event for officer/admin approval</p>
+        </div>
+        <button class="btn btn--close btn--sm modal__close" onclick="closeModal('proposeEventModal')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal__body" id="proposeEventBody">
+        <!-- Fields injected by events.js (Phase 2) -->
+        <p style="color:var(--gray-400);font-size:var(--text-sm);text-align:center;padding:var(--space-xl) 0;">
+          Event proposal form loading…
+        </p>
+      </div>
+
+      <div class="modal__footer">
+        <button class="btn btn--outline" onclick="closeModal('proposeEventModal')">Cancel</button>
+        <button class="btn btn--green btn--full" id="proposeEventSubmitBtn" disabled>
+          <i data-lucide="send"></i> Submit for Review
+        </button>
+      </div>
+
+    </div>
+  </div><!-- /proposeEventModal -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════
@@ -1155,8 +1186,8 @@
 
           /* Update panel heading to match active tab */
           const _tabLabels = {
-            bulletin: 'Bulletin', polls: 'Polls', calendar: 'Calendar',
-            gallery: 'Gallery', youth: 'Youth Zone', pets: 'Pet Board',
+            bulletin: 'Bulletin', polls: 'Polls', events: 'Events',
+            gallery: 'Gallery', pets: 'Pet Board',
           };
 
           /* ── Gallery lazy init — start subscriptions when tab is opened ── */
@@ -1479,6 +1510,8 @@
   <script type="module" src="../../js/features/profile/profile.js"></script>
   <script type="module" src="../../js/features/community/community-polls.js"></script>
   <script type="module" src="../../js/features/community/gallery.js"></script>
+  <script type="module" src="../../js/features/community/events.js"></script>
+  <script type="module" src="../../js/features/community/events-calendar.js"></script>
 
   <script>
     const _CK = 'communityTab';
