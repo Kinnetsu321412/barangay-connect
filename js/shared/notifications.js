@@ -183,7 +183,7 @@ function renderDropdown(notifs, barangayId, uid) {
         : notifs.map(n => {
             const meta = ICONS[n.type] ?? ICONS.comment;
             const msg =
-            n.type === 'like'          ? 'liked your comment on' :
+            n.type === 'like'          ? (n.commentId ? 'liked your comment on' : 'liked your post') :
             n.type === 'reply'         ? 'replied to your comment on' :
             n.type === 'poll_created'  ? 'A new community poll has been published:' :
             n.type === 'poll_closed'   ? 'A community poll has been closed:' :

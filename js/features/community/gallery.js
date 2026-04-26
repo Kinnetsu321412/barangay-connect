@@ -53,8 +53,8 @@
 // IMPORTS
 // ================================================
 
-import { db }                                          from '../../core/firebase-config.js';
-import { openImageViewer as _openViewer, _injectImageViewer } from '../../shared/image-viewer.js';
+import { db }                                          from '/js/core/firebase-config.js';
+import { openImageViewer as _openViewer, _injectImageViewer } from '/js/shared/image-viewer.js';
 import { showConfirm }                                 from '/js/shared/confirm-modal.js';
 
 import {
@@ -69,6 +69,7 @@ import {
 let BARANGAY_ID      = null;
 let _currentUid      = null;
 let _currentUserRole = 'resident';
+let _currentUserName = 'Resident';
 
 let _allFeatured     = [];   // merged + sorted featured posts
 let _activeCategory  = 'all';
@@ -85,6 +86,7 @@ let _dragOccurred    = false;  // suppress ghost click fired after dragend
 let _photoOrder         = [];   // admin-set custom photo order (postIds)
 let _albumOrder         = [];   // admin-set custom album order (albumIds)
 let _albumDragOccurred  = false; // suppress ghost click after album drag
+let _pendingAddCol      = null;  // collection of post being added, set by _addPostToAlbum
 
 
 // ================================================
@@ -152,9 +154,10 @@ function getImages(post) {
 */
 export async function initGallery() {
   /* Only initialize once per page load */
+  const heroSlot = document.getElementById('galleryHeroSlot');
+
   if (_initialized) {
   const _subFiltersRow = document.getElementById('gallerySubFiltersRow');
-  /* Scope all syncs to the gallery panel to avoid grabbing stray duplicates */
   const _galleryPanel  = heroSlot?.closest('.tab-panel') ?? document;
 
   _galleryPanel.querySelectorAll('.gallery-content-seg__btn').forEach(b => {
@@ -173,8 +176,6 @@ export async function initGallery() {
   else _renderGallery();
   return;
 }
-
-  const heroSlot = document.getElementById('galleryHeroSlot');
   const gridEl   = document.getElementById('galleryGrid');
   if (!heroSlot || !gridEl) return;
 
@@ -566,6 +567,12 @@ function _renderGallery() {
   if ((_currentUserRole === 'admin' || _currentUserRole === 'officer') && _sortMode === 'custom') {
     _wireDragReorderPhotos(gridEl);
   }
+
+  /* Reapply bulk state — Firestore snapshot rebuilds DOM and wipes classes */
+  if (_bulkSelectMode) {
+    _refreshBulkCardStates();
+    _renderBulkToolbar();
+  }
 }
 
 
@@ -640,6 +647,7 @@ function _buildGalleryCard(post) {
   const canManage = _currentUserRole === 'admin' || _currentUserRole === 'officer';
   const canDrag   = canManage && _sortMode === 'custom';
   const canBulk   = canManage; /* bulk available in all sort modes */
+  const images    = getImages(post);
 
   /* Placeholder for image-less posts — show a tinted color block */
   if (!coverUrl) {
@@ -686,6 +694,14 @@ function _buildGalleryCard(post) {
           alt="${ptitle}"
           class="gallery-card__img"
           loading="lazy" />
+        ${images.length > 1 ? `
+        <span style="position:absolute;top:6px;left:6px;display:inline-flex;align-items:center;
+          gap:3px;background:rgba(0,0,0,.52);color:#fff;font-size:var(--text-2xs);
+          font-family:var(--font-display);font-weight:600;padding:2px 7px 2px 5px;
+          border-radius:999px;pointer-events:none;backdrop-filter:blur(4px);">
+          <i data-lucide="images" style="width:10px;height:10px;flex-shrink:0;"></i>
+          ${images.length}
+        </span>` : ''}
         <div class="gallery-card__overlay">
           <div class="gallery-card__meta">
             <span class="tag ${meta.tagClass}"
@@ -1604,6 +1620,14 @@ function _buildAlbumPostCard(post, album, index, total) {
       <div class="gallery-card__img-wrap">
         <img src="${esc(coverUrl)}" alt="${ptitle}"
           class="gallery-card__img" loading="lazy" />
+        ${getImages(post).length > 1 ? `
+        <span style="position:absolute;top:6px;left:6px;display:inline-flex;align-items:center;
+          gap:3px;background:rgba(0,0,0,.52);color:#fff;font-size:var(--text-2xs);
+          font-family:var(--font-display);font-weight:600;padding:2px 7px 2px 5px;
+          border-radius:999px;pointer-events:none;backdrop-filter:blur(4px);">
+          <i data-lucide="images" style="width:10px;height:10px;flex-shrink:0;"></i>
+          ${getImages(post).length}
+        </span>` : ''}
         <div class="gallery-card__overlay">
           <div class="gallery-card__meta">
             <span class="tag ${meta.tagClass}"
@@ -2093,7 +2117,7 @@ window._deleteAlbum = async function (albumId) {
     const { doc: _d, deleteDoc } =
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await deleteDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', albumId));
-    _showGalleryToast('Album deleted.');
+    _showGalleryToast('Album deleted.', 'error');
     return true;
   } catch (err) {
     console.error('[deleteAlbum]', err);
@@ -2116,7 +2140,29 @@ window._deleteAlbum = async function (albumId) {
    anchorEl — the button that was clicked (used to position the picker)
 */
 window._addPostToAlbum = async function (postId, col, anchorEl) {
+  /* Lazy-resolve FIRST — gallery may not be initialized if bulletin called this */
+  if (!BARANGAY_ID || _currentUserRole === 'resident') {
+    BARANGAY_ID      = window._communityBid    ?? BARANGAY_ID;
+    _currentUserRole = window._currentUserRole ?? _currentUserRole;
+    _currentUid      = window._communityUid    ?? _currentUid;
+    _currentUserName = window._communityUserName ?? _currentUserName;
+  }
   if (_currentUserRole !== 'admin' && _currentUserRole !== 'officer') return;
+  if (!BARANGAY_ID) return;
+
+  /* Lazy-fetch albums if the gallery subscription hasn't started yet */
+  if (!_initialized) {
+    try {
+      const { getDocs, collection: _lc, query: _lq, orderBy: _lo } =
+        await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+      const _asnap = await getDocs(_lq(_lc(db, 'barangays', BARANGAY_ID, 'albums'), _lo('createdAt', 'desc')));
+      _allAlbums = _asnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (_e) { console.error('[addPostToAlbum] album fetch:', _e); }
+  }
+
+  /* Store col so _confirmAddToAlbum can auto-feature the post if needed */
+  _pendingAddCol = col ?? null;
+
   if (!_allAlbums.length) {
     /* No albums yet — offer to create one */
     const ok = await showConfirm({
@@ -2141,10 +2187,14 @@ window._addPostToAlbum = async function (postId, col, anchorEl) {
 
   /* Position below anchor — account for fixed viewer overlay */
   if (anchorEl) {
-    const rect         = anchorEl.getBoundingClientRect();
-    picker.style.top   = `${rect.bottom + 6}px`;
-    picker.style.left  = `${rect.left}px`;
-    picker.style.zIndex = '10001'; /* above image viewer z-index:9999 */
+    const rect        = anchorEl.getBoundingClientRect();
+    const pickerWidth = 220;
+    const rawLeft     = rect.left + rect.width / 2 - pickerWidth / 2;
+    const left        = Math.max(8, Math.min(rawLeft, window.innerWidth - pickerWidth - 8));
+    picker.style.top  = `${rect.bottom + window.scrollY + 6}px`;
+    picker.style.left = `${left}px`;
+    picker.style.position = 'absolute';
+    picker.style.zIndex   = '10001';
   }
 
   /* Sort: albums containing this post first, then rest */
@@ -2205,15 +2255,32 @@ window._confirmAddToAlbum = async function (postId, albumId, alreadyIn) {
   }
 
   try {
-    const { doc: _d, updateDoc, arrayUnion } =
+    const { doc: _d, updateDoc, arrayUnion, getDoc, serverTimestamp: _ts } =
       await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+
+    /* Auto-feature post if not already in gallery — every album post must be featured */
+    const _inFeatured = _allFeatured.some(p => p.id === postId);
+    if (!_inFeatured && _pendingAddCol && BARANGAY_ID) {
+      try {
+        const _pSnap = await getDoc(_d(db, 'barangays', BARANGAY_ID, _pendingAddCol, postId));
+        if (_pSnap.exists() && !_pSnap.data().isFeatured) {
+          await updateDoc(_d(db, 'barangays', BARANGAY_ID, _pendingAddCol, postId), {
+            isFeatured:         true,
+            featuredAt:         _ts(),
+            featuredCoverIndex: 0,
+            featuredBy:         _currentUid ?? null,
+            featuredByName:     _currentUserName ?? null,
+          });
+        }
+      } catch (_fe) { console.warn('[addToAlbum] auto-feature failed:', _fe); }
+    }
+
     await updateDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', albumId), {
       postIds: arrayUnion(postId),
     });
 
-    /* Toast — reuse bulletin's showToast if available, else console */
     const album = _allAlbums.find(a => a.id === albumId);
-    _showGalleryToast(`Added to "${album?.title ?? 'album'}"`);
+    _showGalleryToast(`Added to "${album?.title ?? 'album'}"${!_inFeatured ? ' · also added to gallery' : ''}`);
   } catch (err) { console.error('[addToAlbum]', err); }
 };
 
@@ -2347,6 +2414,7 @@ function _wireDragReorderPhotos(gridEl) {
 
       /* Patch DOM immediately — subscription will confirm */
       card.parentNode.insertBefore(_dragSrc, toIdx > fromIdx ? card.nextSibling : card);
+      if (_bulkSelectMode) _refreshBulkCardStates(); /* restore selection rings after DOM move */
 
       try {
         const { doc: _d, setDoc: _set } =

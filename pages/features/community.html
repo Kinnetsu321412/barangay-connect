@@ -726,29 +726,6 @@
         </button>
       </div>
 
-      <!-- Approval / admin / guideline notices (shown contextually via JS) -->
-      <div id="newPostApprovalWarning"
-        style="display:none;align-items:center;gap:.5rem;background:#fef9c3;
-          border:1px solid #fde68a;border-radius:8px;padding:.6rem .85rem;
-          font-size:.78rem;color:#854d0e;margin-bottom:.5rem;">
-        <i data-lucide="clock" style="width:14px;height:14px;flex-shrink:0;"></i>
-        Your post will be reviewed by an admin before it appears on the bulletin.
-      </div>
-
-      <div id="newPostAdminNotice"
-        style="display:none;align-items:center;gap:.5rem;background:#eff6ff;
-          border:1px solid #bfdbfe;border-radius:8px;padding:.6rem .85rem;
-          font-size:.78rem;color:#1e40af;margin-bottom:.5rem;">
-        <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
-        You're posting as <strong>staff</strong>. For official announcements, use the
-        <a href="../../admin.html" style="color:#1e40af;font-weight:700;text-decoration:underline;">Admin Panel</a> instead.
-      </div>
-
-      <div id="newPostGuidelineText"
-        style="display:none;font-size:.75rem;color:#6b7280;padding:.5rem .75rem;
-          background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:.5rem;">
-      </div>
-
       <div class="modal__body">
 
         <p class="modal-section-label">Report Type</p>
@@ -921,27 +898,10 @@
 
       <div class="modal__body">
 
-        <!-- Approval / admin / guideline notices (shown contextually via JS) -->
-        <div id="newPostApprovalWarning"
-          style="display:none;align-items:center;gap:.5rem;background:#fef9c3;
-            border:1px solid #fde68a;border-radius:8px;padding:.6rem .85rem;
-            font-size:.78rem;color:#854d0e;margin-bottom:.5rem;">
-          <i data-lucide="clock" style="width:14px;height:14px;flex-shrink:0;"></i>
-          Your post will be reviewed by an admin before it appears on the bulletin.
-        </div>
-
-        <div id="newPostAdminNotice"
-          style="display:none;align-items:center;gap:.5rem;background:#eff6ff;
-            border:1px solid #bfdbfe;border-radius:8px;padding:.6rem .85rem;
-            font-size:.78rem;color:#1e40af;margin-bottom:.5rem;">
-          <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
-          You're posting as <strong>staff</strong>.
-        </div>
-
-        <div id="newPostGuidelineText"
-          style="display:none;font-size:.75rem;color:#6b7280;padding:.5rem .75rem;
-            background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:.5rem;">
-        </div>
+        <!-- Approval / admin / guideline notices — content injected by JS -->
+        <div id="newPostApprovalWarning" style="display:none;"></div>
+        <div id="newPostAdminNotice"     style="display:none;"></div>
+        <div id="newPostGuidelineText"   style="display:none;"></div>
 
         <div class="form-group">
           <label class="form-label">
@@ -1389,16 +1349,46 @@
       _origOpenModal?.(id);
       if (id !== 'newPostModal') return;
 
-      const settings    = await getModerationSettings();
-      const warningEl   = document.getElementById('newPostApprovalWarning');
-      const guidelineEl = document.getElementById('newPostGuidelineText');
+      const settings     = await getModerationSettings();
+      const warningEl    = document.getElementById('newPostApprovalWarning');
       const adminNoticeEl = document.getElementById('newPostAdminNotice');
+      const guidelineEl  = document.getElementById('newPostGuidelineText');
+      const isPrivileged = _currentUserRole === 'admin' || _currentUserRole === 'officer';
 
-      if (warningEl)     warningEl.style.display     = settings.requirePostApproval ? 'flex' : 'none';
-      if (adminNoticeEl) adminNoticeEl.style.display  = (_currentUserRole === 'admin' || _currentUserRole === 'officer') ? 'flex' : 'none';
+      /* Approval warning — residents only, when setting is on */
+      if (warningEl) {
+        const show = !isPrivileged && (settings.requirePostApproval ?? false);
+        warningEl.style.cssText = show
+          ? 'display:flex;align-items:center;gap:.5rem;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:.6rem .85rem;font-size:.78rem;color:#854d0e;margin-bottom:.5rem;'
+          : 'display:none;';
+        warningEl.innerHTML = show
+          ? `<i data-lucide="clock" style="width:14px;height:14px;flex-shrink:0;"></i>
+             Your post will be reviewed by an admin before it goes live.`
+          : '';
+        if (show) lucide.createIcons({ el: warningEl });
+      }
+
+      /* Role notice — officers and admins posting from community page */
+      if (adminNoticeEl) {
+        const show    = isPrivileged;
+        const isAdmin = _currentUserRole === 'admin';
+        adminNoticeEl.style.cssText = show
+          ? 'display:flex;align-items:flex-start;gap:.5rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.6rem .85rem;font-size:.78rem;color:#1e40af;margin-bottom:.5rem;'
+          : 'display:none;';
+        adminNoticeEl.innerHTML = show
+          ? `<i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;margin-top:1px;"></i>
+             <span>Posting as <strong>${isAdmin ? 'Admin' : 'Officer'}</strong> — your post will show your role badge, but won't carry the <strong>Official</strong> tag. For official announcements, use the <a href="/admin.html" style="color:#1e40af;font-weight:700;text-decoration:underline;">Admin Panel</a>.</span>`
+          : '';
+        if (show) lucide.createIcons({ el: adminNoticeEl });
+      }
+
+      /* Community guidelines — set by admin in settings */
       if (guidelineEl) {
-        guidelineEl.textContent  = settings.postWarningText || '';
-        guidelineEl.style.display = settings.postWarningText ? 'block' : 'none';
+        const text = settings.postWarningText || '';
+        guidelineEl.style.cssText = text
+          ? 'display:block;font-size:.75rem;color:#6b7280;padding:.5rem .75rem;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:.5rem;'
+          : 'display:none;';
+        guidelineEl.textContent = text;
       }
     };
 

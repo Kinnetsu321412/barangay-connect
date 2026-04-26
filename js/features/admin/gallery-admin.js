@@ -57,6 +57,9 @@ let _albums               = [];
 let _albumOrder           = [];
 let _photoOrder           = [];
 let _activeSection        = 'featured'; // 'featured' | 'pending' | 'albums'
+let _gaSelectedFeatured   = new Set();  // postIds selected for bulk unfeature
+let _gaSelectedAlbums     = new Set();  // albumIds selected for bulk delete
+let _gaSelectedPending    = new Set();  // postIds selected for bulk approve/reject
 
 
 // ================================================
@@ -145,6 +148,9 @@ function _renderShell() {
 
 window._switchGallerySection = function (section, btn) {
   _activeSection = section;
+  _gaSelectedFeatured.clear(); /* reset selection on tab switch */
+  _gaSelectedAlbums.clear();
+  _gaSelectedPending.clear();
   document.querySelectorAll('.gallery-admin-sec-btn')
     .forEach(b => b.classList.remove('active', 'is-active'));
   btn.classList.add('active');
@@ -277,20 +283,52 @@ function _renderFeatured(el) {
     return;
   }
 
-  el.innerHTML = all.map(p => {
+  /* Bulk toolbar — visible when any rows are checked */
+  const _bulkBar = _gaSelectedFeatured.size > 0 ? `
+    <div style="display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;
+      margin-bottom:.5rem;background:#fef3c7;border-radius:10px;
+      border:1.5px solid #fde68a;flex-wrap:wrap;">
+      <span style="font-size:.82rem;font-weight:700;color:#92400e;flex:1;">
+        ${_gaSelectedFeatured.size} post${_gaSelectedFeatured.size !== 1 ? 's' : ''} selected
+      </span>
+      <button onclick="window._gaSelectAllFeatured()"
+        style="${_btnStyle('#f0fdf4','#15803d','#bbf7d0')}padding:.35rem .75rem;font-size:.78rem;">
+        Select All
+      </button>
+      <button onclick="window._gaClearFeaturedSelection()"
+        style="${_btnStyle('#fff','#6b7280','#d1d5db')}padding:.35rem .75rem;font-size:.78rem;">
+        Clear
+      </button>
+      <button onclick="window._gaBulkUnfeature()"
+        style="${_btnStyle('#fff','#dc2626','#fca5a5')}padding:.35rem .75rem;font-size:.78rem;">
+        <i data-lucide="star-off" style="width:11px;height:11px;"></i>
+        Unfeature ${_gaSelectedFeatured.size}
+      </button>
+    </div>` : '';
+
+  el.innerHTML = _bulkBar + all.map(p => {
     const meta   = categoryMeta(p.category);
     const cover  = p.imageURLs?.[p.featuredCoverIndex ?? 0] ?? p.imageURL ?? null;
     const heroLabel = p.isHeroFeatured
       ? `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:999px;
            font-size:.68rem;font-weight:700;">⭐ Spotlight</span>` : '';
 
-    return `
-      <div class="_gaFeaturedRow" data-post-id="${esc(p.id)}"
-        style="background:#fff;border-radius:12px;padding:1rem 1.25rem;
-        box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;
-        gap:1rem;flex-wrap:wrap;border-left:3px solid var(--green-dark);cursor:grab;">
-        ${cover ? `<img src="${esc(cover)}" style="width:72px;height:56px;object-fit:cover;
-            border-radius:8px;flex-shrink:0;border:1px solid #e5e7eb;" />` : ''}
+      const _sel = _gaSelectedFeatured.has(p.id);
+      return `
+        <div class="_gaFeaturedRow" data-post-id="${esc(p.id)}"
+          style="background:${_sel ? '#f0fdf4' : '#fff'};border-radius:12px;padding:1rem 1.25rem;
+          box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;
+          gap:1rem;flex-wrap:wrap;border-left:3px solid ${_sel ? '#16a34a' : 'var(--green-dark)'};cursor:grab;">
+          <i data-lucide="grip-vertical"
+            style="width:14px;height:14px;color:#d1d5db;flex-shrink:0;cursor:grab;"></i>
+          <div onclick="event.stopPropagation();window._gaToggleFeaturedSelect('${esc(p.id)}')"
+            style="width:18px;height:18px;border-radius:4px;flex-shrink:0;cursor:pointer;
+              border:2px solid ${_sel ? '#16a34a' : '#d1d5db'};background:${_sel ? '#16a34a' : '#fff'};
+              display:flex;align-items:center;justify-content:center;">
+            ${_sel ? `<i data-lucide="check" style="width:11px;height:11px;color:#fff;pointer-events:none;"></i>` : ''}
+          </div>
+          ${cover ? `<img src="${esc(cover)}" style="width:72px;height:56px;object-fit:cover;
+              border-radius:8px;flex-shrink:0;border:1px solid #e5e7eb;" />` : ''}
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:2px;">
             <span style="font-weight:700;font-size:.9rem;">${esc(p.title ?? '')}</span>
@@ -303,7 +341,7 @@ function _renderFeatured(el) {
           </p>
         </div>
         <div style="display:flex;gap:.4rem;flex-shrink:0;flex-wrap:wrap;">
-          ${!p.isHeroFeatured ? `
+          ${_gaSelectedFeatured.size <= 1 ? (!p.isHeroFeatured ? `
           <button onclick="window._gaSetHero('${esc(p.id)}','${esc(p._col)}')"
             style="${_btnStyle('#f9fafb','#374151','#e5e7eb')}">
             <i data-lucide="crown" style="width:12px;height:12px;"></i> Spotlight
@@ -311,11 +349,12 @@ function _renderFeatured(el) {
           <button onclick="window._gaRemoveHero('${esc(p.id)}','${esc(p._col)}')"
             style="${_btnStyle('#fef3c7','#92400e','#fde68a')}">
             <i data-lucide="crown" style="width:12px;height:12px;"></i> Remove
-          </button>`}
+          </button>`) : ''}
+          ${_gaSelectedFeatured.size === 0 ? `
           <button onclick="window._gaUnfeature('${esc(p.id)}','${esc(p._col)}')"
             style="${_btnStyle('#fff','#dc2626','#fca5a5')}">
             <i data-lucide="star-off" style="width:12px;height:12px;"></i> Unfeature
-          </button>
+          </button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -367,9 +406,53 @@ function _wireDragReorderFeatured(listEl, orderedPosts) {
   });
 }
 
-// ================================================
-// RENDER — Pending Requests
-// ================================================
+/* Toggles a single post in/out of the featured bulk selection */
+window._gaToggleFeaturedSelect = function (postId) {
+  if (_gaSelectedFeatured.has(postId)) _gaSelectedFeatured.delete(postId);
+  else _gaSelectedFeatured.add(postId);
+  const el = document.getElementById('galleryAdminList');
+  if (el) _renderFeatured(el);
+};
+
+window._gaSelectAllFeatured = function () {
+  const all = [..._featuredAnn, ..._featuredComm];
+  all.forEach(p => _gaSelectedFeatured.add(p.id));
+  const el = document.getElementById('galleryAdminList');
+  if (el) _renderFeatured(el);
+};
+
+window._gaClearFeaturedSelection = function () {
+  _gaSelectedFeatured.clear();
+  const el = document.getElementById('galleryAdminList');
+  if (el) _renderFeatured(el);
+};
+
+/* Bulk-unfeatures all selected posts */
+window._gaBulkUnfeature = async function () {
+  if (!_gaSelectedFeatured.size) return;
+  const count = _gaSelectedFeatured.size;
+  const ok = await showConfirm({
+    title:   `Remove ${count} post${count !== 1 ? 's' : ''} from Gallery?`,
+    body:    'These posts will no longer appear in the Featured Gallery.',
+    confirm: 'Remove', cancel: 'Go Back', variant: 'warning',
+  });
+  if (!ok) return;
+  const all = [..._featuredAnn, ..._featuredComm];
+  try {
+    await Promise.all([..._gaSelectedFeatured].map(postId => {
+      const p = all.find(x => x.id === postId);
+      if (!p) return Promise.resolve();
+      return updateDoc(doc(db, 'barangays', BID, p._col, postId), {
+        isFeatured: deleteField(), featuredAt: deleteField(),
+        isHeroFeatured: deleteField(), featuredBy: deleteField(),
+        featuredByName: deleteField(), featuredCoverIndex: deleteField(),
+      });
+    }));
+    _gaSelectedFeatured.clear();
+    _showGaToast(`${count} post${count !== 1 ? 's' : ''} removed from gallery.`, 'error');
+  } catch (err) { _showGaToast('Failed. Try again.', 'error'); }
+};
+
 
 // ================================================
 // RENDER — Pending Requests
@@ -387,12 +470,40 @@ function _renderPending(el) {
     return;
   }
 
-  el.innerHTML = all.map(p => {
+  const _pendingBulkBar = _gaSelectedPending.size > 0 ? `
+    <div style="display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;
+      margin-bottom:.5rem;background:#fef3c7;border-radius:10px;
+      border:1.5px solid #fde68a;flex-wrap:wrap;">
+      <span style="font-size:.82rem;font-weight:700;color:#92400e;flex:1;">
+        ${_gaSelectedPending.size} request${_gaSelectedPending.size !== 1 ? 's' : ''} selected
+      </span>
+      <button onclick="window._gaSelectAllPending()"
+        style="${_btnStyle('#f0fdf4','#15803d','#bbf7d0')}padding:.35rem .75rem;font-size:.78rem;">
+        Select All
+      </button>
+      <button onclick="window._gaClearPendingSelection()"
+        style="${_btnStyle('#fff','#6b7280','#d1d5db')}padding:.35rem .75rem;font-size:.78rem;">
+        Clear
+      </button>
+      <button onclick="window._gaBulkApprovePending()"
+        style="${_btnStyle('#1a3a1a','#fff','#1a3a1a')}padding:.35rem .75rem;font-size:.78rem;">
+        <i data-lucide="check" style="width:11px;height:11px;"></i>
+        Approve ${_gaSelectedPending.size}
+      </button>
+      <button onclick="window._gaBulkRejectPending()"
+        style="${_btnStyle('#fff','#dc2626','#fca5a5')}padding:.35rem .75rem;font-size:.78rem;">
+        <i data-lucide="x" style="width:11px;height:11px;"></i>
+        Reject ${_gaSelectedPending.size}
+      </button>
+    </div>` : '';
+
+  el.innerHTML = _pendingBulkBar + all.map(p => {
+    const _psel = _gaSelectedPending.has(p.id);
     const meta = categoryMeta(p.category);
     return `
-      <div style="background:#fff;border-radius:12px;padding:1rem 1.25rem;
+      <div style="background:${_psel ? '#f0fdf4' : '#fff'};border-radius:12px;padding:1rem 1.25rem;
         box-shadow:0 1px 4px rgba(0,0,0,.07);display:flex;align-items:center;
-        gap:1rem;flex-wrap:wrap;border-left:3px solid #f59e0b;">
+        gap:1rem;flex-wrap:wrap;border-left:3px solid ${_psel ? '#16a34a' : '#f59e0b'};">
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:2px;">
             <span style="font-weight:700;font-size:.9rem;">${esc(p.title ?? '')}</span>
@@ -403,7 +514,15 @@ function _renderPending(el) {
             ${esc(meta.label)} · Requested by <strong>${esc(p.featuredByName ?? 'Officer')}</strong>
           </p>
         </div>
-        <div style="display:flex;gap:.4rem;flex-shrink:0;">
+        <div style="display:flex;gap:.4rem;flex-shrink:0;align-items:center;">
+          <div onclick="event.stopPropagation();window._gaTogglePendingSelect('${esc(p.id)}')"
+            style="width:18px;height:18px;border-radius:4px;flex-shrink:0;cursor:pointer;
+              border:2px solid ${_gaSelectedPending.has(p.id) ? '#16a34a' : '#d1d5db'};
+              background:${_gaSelectedPending.has(p.id) ? '#16a34a' : '#fff'};
+              display:flex;align-items:center;justify-content:center;">
+            ${_gaSelectedPending.has(p.id) ? `<i data-lucide="check" style="width:11px;height:11px;color:#fff;pointer-events:none;"></i>` : ''}
+          </div>
+          ${_gaSelectedPending.size === 0 ? `
           <button onclick="window._gaApprovePending('${esc(p.id)}','${esc(p._col)}')"
             style="${_btnStyle('#1a3a1a','#fff','#1a3a1a')}">
             <i data-lucide="check" style="width:12px;height:12px;"></i> Approve
@@ -411,7 +530,7 @@ function _renderPending(el) {
           <button onclick="window._gaRejectPending('${esc(p.id)}','${esc(p._col)}')"
             style="${_btnStyle('#fff','#dc2626','#fca5a5')}">
             <i data-lucide="x" style="width:12px;height:12px;"></i> Reject
-          </button>
+          </button>` : ''}
         </div>
       </div>`;
   }).join('');
@@ -438,6 +557,28 @@ function _renderAlbums(el) {
     return;
   }
 
+  const _albumBulkBar = _gaSelectedAlbums.size > 0 ? `
+    <div style="display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;
+      margin-bottom:.5rem;background:#fef3c7;border-radius:10px;
+      border:1.5px solid #fde68a;flex-wrap:wrap;">
+      <span style="font-size:.82rem;font-weight:700;color:#92400e;flex:1;">
+        ${_gaSelectedAlbums.size} album${_gaSelectedAlbums.size !== 1 ? 's' : ''} selected
+      </span>
+      <button onclick="window._gaSelectAllAlbums()"
+        style="${_btnStyle('#f0fdf4','#15803d','#bbf7d0')}padding:.35rem .75rem;font-size:.78rem;">
+        Select All
+      </button>
+      <button onclick="window._gaClearAlbumSelection()"
+        style="${_btnStyle('#fff','#6b7280','#d1d5db')}padding:.35rem .75rem;font-size:.78rem;">
+        Clear
+      </button>
+      <button onclick="window._gaBulkDeleteAlbums()"
+        style="${_btnStyle('#fff','#dc2626','#fca5a5')}padding:.35rem .75rem;font-size:.78rem;">
+        <i data-lucide="trash-2" style="width:11px;height:11px;"></i>
+        Delete ${_gaSelectedAlbums.size}
+      </button>
+    </div>` : '';
+
   const _ordered = _albumOrder.length
     ? [..._albums].sort((a, b) => {
         const ai = _albumOrder.indexOf(a.id);
@@ -445,7 +586,7 @@ function _renderAlbums(el) {
         return (ai === -1 ? Infinity : ai) - (bi === -1 ? Infinity : bi);
       })
     : _albums;
-  el.innerHTML = createBtn + `<div id="_gaAlbumList" style="display:flex;flex-direction:column;gap:.5rem;">` +
+  el.innerHTML = createBtn + _albumBulkBar + `<div id="_gaAlbumList" style="display:flex;flex-direction:column;gap:.5rem;">` +
     _ordered.map(album => _buildAdminAlbumRow(album)).join('') + `</div>`;
 
   lucide.createIcons({ el });
@@ -483,9 +624,14 @@ function _buildAdminAlbumRow(album) {
     <div class="_gaAlbumRow" data-album-id="${aid}"
       style="background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.07);
         border-left:3px solid #6b7280;overflow:hidden;">
-      <div style="display:flex;align-items:center;gap:.75rem;padding:.85rem 1.25rem;flex-wrap:wrap;">
+      <div onclick="window._gaToggleAlbumPosts('${aid}')"
+        style="display:flex;align-items:center;gap:.75rem;padding:.85rem 1.25rem;
+          flex-wrap:wrap;cursor:pointer;user-select:none;">
         <i data-lucide="grip-vertical"
-          style="width:14px;height:14px;color:#d1d5db;flex-shrink:0;cursor:grab;"></i>
+          style="width:14px;height:14px;color:#d1d5db;flex-shrink:0;cursor:grab;"
+          onclick="event.stopPropagation()"></i>
+        <i data-lucide="chevron-right" id="_gaAlbumChevron_${aid}"
+          style="width:14px;height:14px;color:#9ca3af;flex-shrink:0;transition:transform .2s;"></i>
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:baseline;gap:.5rem;flex-wrap:wrap;">
             <span style="font-weight:700;font-size:.9rem;">${esc(album.title)}</span>
@@ -496,19 +642,24 @@ function _buildAdminAlbumRow(album) {
             ${album.description ? ` · ${esc(album.description.slice(0, 60))}` : ''}
           </p>
         </div>
-        <div style="display:flex;gap:.4rem;flex-shrink:0;align-items:center;">
-          <button onclick="window._gaToggleAlbumPosts('${aid}')"
-            style="${_btnStyle('#f0fdf4','#15803d','#bbf7d0')}">
-            <i data-lucide="images" style="width:12px;height:12px;"></i> Posts
-          </button>
+        <div style="display:flex;gap:.4rem;flex-shrink:0;align-items:center;"
+          onclick="event.stopPropagation()">
+          <div onclick="event.stopPropagation();window._gaToggleAlbumSelect('${aid}')"
+            style="width:18px;height:18px;border-radius:4px;flex-shrink:0;cursor:pointer;
+              border:2px solid ${_gaSelectedAlbums.has(aid) ? '#16a34a' : '#d1d5db'};
+              background:${_gaSelectedAlbums.has(aid) ? '#16a34a' : '#fff'};
+              display:flex;align-items:center;justify-content:center;">
+            ${_gaSelectedAlbums.has(aid) ? `<i data-lucide="check" style="width:11px;height:11px;color:#fff;pointer-events:none;"></i>` : ''}
+          </div>
           <button onclick="window._gaEditAlbum('${aid}')"
             style="${_btnStyle('#f9fafb','#374151','#e5e7eb')}">
             <i data-lucide="pencil" style="width:12px;height:12px;"></i> Edit
           </button>
+          ${_gaSelectedAlbums.size === 0 ? `
           <button onclick="window._gaDeleteAlbum('${aid}','${esc(album.title)}')"
             style="${_btnStyle('#fff','#dc2626','#fca5a5')}">
             <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
-          </button>
+          </button>` : ''}
         </div>
       </div>
       <div id="_gaAlbumPosts_${aid}" style="display:none;padding:.5rem 1rem .75rem 1rem;
@@ -732,6 +883,110 @@ window._gaDeleteAlbum = async function (albumId, title) {
 };
 
 
+window._gaToggleAlbumSelect = function (albumId) {
+  if (_gaSelectedAlbums.has(albumId)) _gaSelectedAlbums.delete(albumId);
+  else _gaSelectedAlbums.add(albumId);
+  const el = document.getElementById('galleryAdminList');
+  if (el) _renderAlbums(el);
+};
+
+window._gaSelectAllAlbums = function () {
+  _albums.forEach(a => _gaSelectedAlbums.add(a.id));
+  const el = document.getElementById('galleryAdminList');
+  if (el) _renderAlbums(el);
+};
+
+window._gaClearAlbumSelection = function () {
+  _gaSelectedAlbums.clear();
+  const el = document.getElementById('galleryAdminList');
+  if (el) _renderAlbums(el);
+};
+
+window._gaBulkDeleteAlbums = async function () {
+  if (!_gaSelectedAlbums.size) return;
+  const count = _gaSelectedAlbums.size;
+  const ok = await showConfirm({
+    title:   `Delete ${count} album${count !== 1 ? 's' : ''}?`,
+    body:    'Albums will be deleted. Posts inside are not affected.',
+    confirm: 'Delete', cancel: 'Go Back', variant: 'danger',
+  });
+  if (!ok) return;
+  try {
+    await Promise.all([..._gaSelectedAlbums].map(id =>
+      deleteDoc(doc(db, 'barangays', BID, 'albums', id))
+    ));
+    _gaSelectedAlbums.clear();
+    _showGaToast(`${count} album${count !== 1 ? 's' : ''} deleted.`, 'error');
+  } catch (err) { _showGaToast('Failed. Try again.', 'error'); }
+};
+
+
+window._gaTogglePendingSelect = function (postId) {
+  if (_gaSelectedPending.has(postId)) _gaSelectedPending.delete(postId);
+  else _gaSelectedPending.add(postId);
+  const el = document.getElementById('galleryAdminList');
+  if (el) _renderPending(el);
+};
+
+window._gaSelectAllPending = function () {
+  [..._pendingAnn, ..._pendingComm].forEach(p => _gaSelectedPending.add(p.id));
+  const el = document.getElementById('galleryAdminList');
+  if (el) _renderPending(el);
+};
+
+window._gaClearPendingSelection = function () {
+  _gaSelectedPending.clear();
+  const el = document.getElementById('galleryAdminList');
+  if (el) _renderPending(el);
+};
+
+window._gaBulkApprovePending = async function () {
+  if (!_gaSelectedPending.size) return;
+  const count = _gaSelectedPending.size;
+  const ok = await showConfirm({
+    title:   `Approve ${count} request${count !== 1 ? 's' : ''}?`,
+    body:    'These posts will be added to the Featured Gallery.',
+    confirm: 'Approve', cancel: 'Go Back', variant: 'confirm',
+  });
+  if (!ok) return;
+  const all = [..._pendingAnn, ..._pendingComm];
+  try {
+    await Promise.all([..._gaSelectedPending].map(postId => {
+      const p = all.find(x => x.id === postId);
+      if (!p) return Promise.resolve();
+      return updateDoc(doc(db, 'barangays', BID, p._col, postId), {
+        isFeatured: true, featuredAt: serverTimestamp(), pendingFeatured: deleteField(),
+      });
+    }));
+    _gaSelectedPending.clear();
+    _showGaToast(`${count} request${count !== 1 ? 's' : ''} approved.`);
+  } catch (err) { _showGaToast('Failed. Try again.', 'error'); }
+};
+
+window._gaBulkRejectPending = async function () {
+  if (!_gaSelectedPending.size) return;
+  const count = _gaSelectedPending.size;
+  const ok = await showConfirm({
+    title:   `Reject ${count} request${count !== 1 ? 's' : ''}?`,
+    body:    "These feature requests will be dismissed.",
+    confirm: 'Reject', cancel: 'Go Back', variant: 'danger',
+  });
+  if (!ok) return;
+  const all = [..._pendingAnn, ..._pendingComm];
+  try {
+    await Promise.all([..._gaSelectedPending].map(postId => {
+      const p = all.find(x => x.id === postId);
+      if (!p) return Promise.resolve();
+      return updateDoc(doc(db, 'barangays', BID, p._col, postId), {
+        pendingFeatured: deleteField(), featuredBy: deleteField(), featuredByName: deleteField(),
+      });
+    }));
+    _gaSelectedPending.clear();
+    _showGaToast(`${count} request${count !== 1 ? 's' : ''} rejected.`, 'error');
+  } catch (err) { _showGaToast('Failed. Try again.', 'error'); }
+};
+
+
 // ================================================
 // UTILITIES
 // ================================================
@@ -754,10 +1009,12 @@ function _btnStyle(bg, color, border) {
 
 /* Toggle post list inside an admin album row */
 window._gaToggleAlbumPosts = function (albumId) {
-  const el = document.getElementById(`_gaAlbumPosts_${albumId}`);
+  const el      = document.getElementById(`_gaAlbumPosts_${albumId}`);
+  const chevron = document.getElementById(`_gaAlbumChevron_${albumId}`);
   if (!el) return;
   const showing = el.style.display !== 'block';
   el.style.display = showing ? 'block' : 'none';
+  if (chevron) chevron.style.transform = showing ? 'rotate(90deg)' : '';
   if (showing) _wireAdminPostDrag(albumId);
 };
 

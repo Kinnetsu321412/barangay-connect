@@ -66,7 +66,7 @@
 // IMPORTS
 // ================================================
 
-import { db } from '../../core/firebase-config.js';
+import { db } from '/js/core/firebase-config.js';
 
 import {
   collection, onSnapshot, query, where, orderBy,
@@ -431,8 +431,14 @@ export async function initBulletin() {
   initCommunityPosts(BARANGAY_ID, _currentUid, _currentUserName, _currentUserRole);
 
   /* Expose barangay and role for cross-module use */
-  window._communityBid    = BARANGAY_ID;
-  window._currentUserRole = _currentUserRole;
+  window._communityBid       = BARANGAY_ID;
+  window._currentUserRole    = _currentUserRole;
+  window._communityUid       = _currentUid;
+  window._communityUserName  = _currentUserName;
+
+  /* Eagerly load gallery module so window._addPostToAlbum is always available
+     even if the user never visits the gallery tab. Fire-and-forget. */
+  import('../gallery/gallery.js').then(({ initGallery }) => initGallery()).catch(() => {});
 
   /* Community posts live subscription */
   let _communityInitialLoad = true;
@@ -1424,6 +1430,19 @@ window.toggleFeatured = async function (postId, col) {
         featuredByName:  deleteField(),
         isHeroFeatured:  deleteField(),
       });
+
+      /* Remove post from any albums it belongs to */
+      try {
+        const { getDocs, collection: _ac, query: _aq, where: _aw, arrayRemove: _arr } =
+          await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+        const albumSnap = await getDocs(
+          _aq(_ac(db, 'barangays', BARANGAY_ID, 'albums'), _aw('postIds', 'array-contains', postId))
+        );
+        await Promise.all(albumSnap.docs.map(a =>
+          updateDoc(_d(db, 'barangays', BARANGAY_ID, 'albums', a.id), { postIds: _arr(postId) })
+        ));
+      } catch (_ae) { console.warn('[toggleFeatured] album cleanup failed:', _ae); }
+
       return;
     }
 
