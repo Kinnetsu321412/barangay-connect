@@ -183,7 +183,7 @@ function _renderShell() {
   el.innerHTML = `
     <div style="display:flex;align-items:center;justify-content:space-between;
       margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
-      <h1 style="font-size:1.5rem;font-weight:700;margin:0;">Community Polls</h1>
+      <h1 style="font-size:var(--text-3xl);font-weight:var(--fw-black);margin:0;letter-spacing:-0.025em;font-family:var(--font-display);line-height:1;">Community Polls</h1>
       <button onclick="window.openPollForm()"
         style="display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1.1rem;
           border-radius:8px;background:#1a3a1a;color:#fff;border:none;
@@ -193,10 +193,10 @@ function _renderShell() {
     </div>
 
     <div class="admin-subtab-row" style="margin-bottom:.75rem;">
-      <button class="bulletin-view-btn admin-subtab-btn is-active" onclick="window._pollAdminTab('active',this)">
+      <button class="bulletin-section-btn admin-subtab-btn active" onclick="window._pollAdminTab('active',this)">
         <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Active &amp; Closed
       </button>
-      <button class="bulletin-view-btn admin-subtab-btn" onclick="window._pollAdminTab('archived',this)">
+      <button class="bulletin-section-btn admin-subtab-btn" onclick="window._pollAdminTab('archived',this)">
         <i data-lucide="archive" style="width:14px;height:14px;"></i> Archived
         <span id="pollArchivedCount" style="display:none;background:rgba(0,0,0,.08);
           border-radius:999px;padding:0 6px;font-size:.68rem;font-weight:700;"></span>
@@ -1029,8 +1029,8 @@ window._pollAdminTab = function (tab, btn) {
   _adminTab    = tab;
   _adminFilter = 'all';
   document.querySelectorAll('.admin-subtab-btn[onclick*="_pollAdminTab"]')
-    .forEach(b => b.classList.remove('is-active'));
-  btn.classList.add('is-active');
+    .forEach(b => b.classList.remove('is-active', 'active'));
+  btn.classList.add('active');
   document.querySelectorAll('.bulletin-view-btn[onclick*="_pollAdminFilter"]')
     .forEach(b => b.classList.remove('is-active'));
   document.querySelector('.bulletin-view-btn[onclick*="_pollAdminFilter"]')

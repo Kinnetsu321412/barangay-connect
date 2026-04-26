@@ -117,20 +117,21 @@ function _renderShell() {
   if (!el) return;
 
   el.innerHTML = `
+    <h1 class="panel-heading">Gallery Management</h1>
     <div class="admin-subtab-row" id="galleryAdminSectionRow">
-      <button class="gallery-admin-sec-btn admin-subtab-btn active"
+      <button class="gallery-admin-sec-btn bulletin-section-btn admin-subtab-btn active" style="line-height:1;"
         onclick="window._switchGallerySection('featured',this)">
         <i data-lucide="star" style="width:13px;height:13px;"></i> Featured
         <span id="gaFeaturedBadge" style="display:none;background:rgba(0,0,0,.09);
           border-radius:999px;padding:0 6px;font-size:.68rem;"></span>
       </button>
-      <button class="gallery-admin-sec-btn admin-subtab-btn"
+      <button class="gallery-admin-sec-btn bulletin-section-btn admin-subtab-btn" style="line-height:1;"
         onclick="window._switchGallerySection('pending',this)">
         <i data-lucide="clock" style="width:13px;height:13px;"></i> Pending
         <span id="gaP endingBadge" style="display:none;background:rgba(0,0,0,.09);
           border-radius:999px;padding:0 6px;font-size:.68rem;"></span>
       </button>
-      <button class="gallery-admin-sec-btn admin-subtab-btn"
+      <button class="gallery-admin-sec-btn bulletin-section-btn admin-subtab-btn" style="line-height:1;"
         onclick="window._switchGallerySection('albums',this)">
         <i data-lucide="folder" style="width:13px;height:13px;"></i> Albums
         <span id="gaAlbumsBadge" style="display:none;background:rgba(0,0,0,.09);
@@ -145,7 +146,7 @@ function _renderShell() {
 window._switchGallerySection = function (section, btn) {
   _activeSection = section;
   document.querySelectorAll('.gallery-admin-sec-btn')
-    .forEach(b => b.classList.remove('active'));
+    .forEach(b => b.classList.remove('active', 'is-active'));
   btn.classList.add('active');
   _renderSection();
 };
@@ -820,6 +821,7 @@ function _wireAdminPostDrag(albumId) {
     const bar = document.getElementById(`_gaPostOrderBar_${aid}`);
     if (bar) bar.style.display = 'none';
     _isDirty = false;
+    _showGaToast('Changes discarded.', 'error');
   };
 
   posts.forEach(post => {

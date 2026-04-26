@@ -190,7 +190,7 @@ window.bulletinOpenViewer = function(images, index, title, postId) {
 
     /* ── Layout wrapper: left info | right actions ── */
     const layout = document.createElement('div');
-    layout.className = 'bv-layout';
+    layout.className = post?.body ? 'bv-layout' : 'bv-layout bv-layout--no-body';
     layout.innerHTML = `
       <div class="bv-info">
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">

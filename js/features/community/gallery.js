@@ -1737,7 +1737,7 @@ if (_existingStrip?._gallerySlideHandler) {
 
     /* Layout — mirrors bulletin viewer */
     const layout = document.createElement('div');
-    layout.className = 'bv-layout';
+    layout.className = post?.body ? 'bv-layout' : 'bv-layout bv-layout--no-body';
     layout.innerHTML = `
       <div class="bv-info">
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px;">

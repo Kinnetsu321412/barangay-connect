@@ -2011,3 +2011,22 @@
   }
   .bv-info__title { white-space: normal; }
 }
+
+/* No-body variant — centers info, keeps buttons right */
+.bv-layout--no-body {
+  justify-content: center;
+  gap: var(--space-lg);
+}
+
+.bv-layout--no-body .bv-info {
+  flex: 0 1 auto;
+  text-align: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.bv-layout--no-body .bv-info__title {
+  font-size: var(--text-base-sm);
+  white-space: normal;
+}

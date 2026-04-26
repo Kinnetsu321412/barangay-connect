@@ -213,6 +213,7 @@
   border-bottom: 2px solid var(--gray-100);
   flex-wrap: wrap;
   align-items: center;
+  line-height: 1;
 }
 
 /* Sub-tab pill buttons (light theme, inside white content) */
@@ -1665,8 +1666,10 @@
 }
 
 .bulletin-section-btn {
-  padding: 6px 14px;
-  font-size: var(--text-xs);
+  padding: 7px 14px;
+  font-size: var(--text-sm);
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .bulletin-view-btn:hover {
