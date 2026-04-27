@@ -98,13 +98,13 @@ onAuthStateChanged(auth, async (user) => {
     const reports = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
     /* Update nav badge count */
-    const badge = document.getElementById('reportedPostsBadge');
-    if (badge) {
+    /* Update whichever badge elements are currently in the DOM */
+    ['reportedPostsBadge', 'reportsMainBadge'].forEach(id => {
+      const badge = document.getElementById(id);
+      if (!badge) return;
       badge.textContent   = reports.length;
       badge.style.display = reports.length ? 'inline' : 'none';
-      badge.style.background = 'rgba(0,0,0,0.12)';
-      badge.style.color      = '#374151';
-    }
+    });
 
     renderReports(reports);
   });

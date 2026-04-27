@@ -45,6 +45,7 @@
   ─────────────────────────────────────────────
 -->
 <body class="role-guest" data-role-init="pending">
+  <script>!function(){var r=localStorage.getItem('bc_role');if(r){document.body.className='role-'+r;document.body.removeAttribute('data-role-init');}}();</script>
 
 
   <!-- ═══════════════════════════════════════════════════════════════
@@ -167,10 +168,10 @@
           CLASS: .btn .btn--outline-hero from buttons.css
         -->
         <div class="hero__cta">
-          <a href="services.html" class="btn btn--outline-hero">
+          <a href="services.html" onclick="localStorage.setItem('servicesTab','report')" class="btn btn--outline-hero">
             Get Started <i data-lucide="arrow-right"></i>
           </a>
-          <a href="community.html" class="btn btn--outline-hero">
+          <a href="community.html" onclick="localStorage.setItem('communityTab','bulletin')" class="btn btn--outline-hero">
             Browse Community
           </a>
         </div>
@@ -197,14 +198,14 @@
         </div>
 
         <div class="hero__widget-btns">
-          <button class="hero__widget-btn">
-            <i data-lucide="shield"></i>
-            <span>Docs</span>
-          </button>
-          <button class="hero__widget-btn">
-            <i data-lucide="triangle-alert"></i>
-            <span>Events</span>
-          </button>
+          <a href="services.html" onclick="localStorage.setItem('servicesTab','documents')" class="hero__widget-btn">
+          <i data-lucide="shield"></i>
+          <span>Docs</span>
+        </a>
+        <a href="community.html" onclick="localStorage.setItem('communityTab','events')" class="hero__widget-btn">
+          <i data-lucide="triangle-alert"></i>
+          <span>Events</span>
+        </a>
         </div>
 
       </div><!-- /hero__right -->
@@ -235,13 +236,19 @@
     <h2 class="section-heading">What do you need today?</h2>
 
     <div class="quick-actions__grid">
-      <button class="btn btn--selector"><i data-lucide="shield"></i> Emergency</button>
-      <button class="btn btn--selector"><i data-lucide="triangle-alert"></i> Report Issue</button>
-      <button class="btn btn--selector"><i data-lucide="file-text"></i> Request Docs</button>
-      <button class="btn btn--selector"><i data-lucide="calendar"></i> Events</button>
-      <button class="btn btn--selector"><i data-lucide="users"></i> Community</button>
-      <button class="btn btn--selector"><i data-lucide="wrench"></i> Services</button>
-    </div>
+  <a href="services.html" onclick="localStorage.setItem('servicesTab','emergency')"
+    class="btn btn--selector"><i data-lucide="shield"></i> Emergency</a>
+  <a href="services.html" onclick="localStorage.setItem('servicesTab','report')"
+    class="btn btn--selector"><i data-lucide="triangle-alert"></i> Report Issue</a>
+  <a href="services.html" onclick="localStorage.setItem('servicesTab','documents')"
+    class="btn btn--selector"><i data-lucide="file-text"></i> Request Docs</a>
+  <a href="community.html" onclick="localStorage.setItem('communityTab','events')"
+    class="btn btn--selector"><i data-lucide="calendar"></i> Events</a>
+  <a href="community.html" onclick="localStorage.setItem('communityTab','bulletin')"
+    class="btn btn--selector"><i data-lucide="users"></i> Community</a>
+  <a href="services.html" onclick="localStorage.setItem('servicesTab','report')"
+    class="btn btn--selector"><i data-lucide="wrench"></i> Services</a>
+</div>
 
   </section><!-- /section-quick-actions -->
 
@@ -441,8 +448,12 @@
     ══════════════════════════════════════════════════════════════════ -->
     <section class="section-cta">
 
-      <!-- Orange circle-check icon centered above heading -->
-      <i data-lucide="circle-check" class="section-cta__icon"></i>
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+      fill="none" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round"
+      stroke-linejoin="round" style="display:block;margin:0 auto var(--space-md);">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="m9 12 2 2 4-4"/>
+    </svg>
 
       <h2 class="section-cta__heading">
         Ready to connect with<br> your community?
@@ -672,6 +683,116 @@
     });
 
   </script>
+
+  <script type="module">
+  import { db }           from '../../js/core/firebase-config.js';
+  import { userIndexDoc } from '../../js/core/db-paths.js';
+  import { collection, query, where, orderBy, limit, onSnapshot, getDocs }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { auth } from '../../js/core/firebase-config.js';
+
+  /* ── Helpers ── */
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function relTime(ts) {
+    if (!ts?.toDate) return '';
+    const d = Date.now() - ts.toDate().getTime();
+    const m = Math.floor(d/60000), h = Math.floor(d/3600000), dy = Math.floor(d/86400000);
+    if (m < 1) return 'Just now';
+    if (m < 60) return `${m}m ago`;
+    if (h < 24) return `${h}h ago`;
+    if (dy < 2) return 'Yesterday';
+    return ts.toDate().toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'});
+  }
+  const CAT = {
+    announcements: { tag:'tag--blue',   accent:'post-row--blue',   label:'Announcement'   },
+    health:        { tag:'tag--green',  accent:'post-row--green',  label:'Health'         },
+    infrastructure:{ tag:'tag--amber',  accent:'post-row--orange', label:'Infrastructure' },
+    safety:        { tag:'tag--red',    accent:'post-row--red',    label:'Safety'         },
+    events:        { tag:'tag--purple', accent:'post-row--purple', label:'Events'         },
+    general:       { tag:'tag--teal',   accent:'post-row--teal',   label:'General'        },
+  };
+  const meta = c => CAT[c] ?? CAT.general;
+
+  onAuthStateChanged(auth, async user => {
+    if (!user) return;
+    const snap = await getDocs(query(collection(db,'userIndex'), where('__name__','==',user.uid)));
+    // use userIndexDoc helper
+    const { getDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const idxSnap = await getDoc(doc(db,'userIndex',user.uid));
+    if (!idxSnap.exists()) return;
+
+    const { barangayId: toBid } = await import('../../js/core/db-paths.js');
+    const bid = toBid(idxSnap.data().barangay);
+
+    /* ── Subscribe to top 3 pinned-first announcements ── */
+    const q = query(
+      collection(db,'barangays',bid,'announcements'),
+      where('status','==','published'),
+      orderBy('isPinned','desc'),
+      orderBy('createdAt','desc'),
+      limit(3)
+    );
+
+    onSnapshot(q, s => {
+      const posts = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (!posts.length) return;
+
+      const [featured, ...rows] = posts;
+      const fm = meta(featured.category);
+
+      /* Featured card */
+      const featuredEl = document.querySelector('.post-featured');
+      if (featuredEl && featured) {
+        featuredEl.querySelector('.badge-featured__category').textContent = esc(fm.label);
+        featuredEl.querySelector('.post-featured__title').textContent     = esc(featured.title);
+        featuredEl.querySelector('.post-featured__body').textContent      = esc((featured.body ?? '').slice(0,160));
+        const footerName = featuredEl.querySelector('.post-featured__author-name');
+        const footerTime = featuredEl.querySelector('.post-featured__author-time');
+        const footerReplies = featuredEl.querySelector('.post-featured__replies');
+        if (footerName) footerName.textContent = esc(featured.authorName ?? 'BarangayConnect');
+        if (footerTime) footerTime.textContent = relTime(featured.createdAt);
+        if (footerReplies) footerReplies.innerHTML = `<i data-lucide="message-circle"></i> ${featured.commentCount ?? 0} comments`;
+        lucide.createIcons({ el: featuredEl });
+      }
+
+      /* Row cards */
+      const rowsEl = document.querySelector('.section-updates__rows');
+      if (!rowsEl || !rows.length) return;
+
+      /* Remove old static articles but keep the view-all button */
+      rowsEl.querySelectorAll('article.post-row').forEach(a => a.remove());
+
+      rows.forEach(post => {
+        const m = meta(post.category);
+        const article = document.createElement('article');
+        article.className = `post-row post-row--accented ${m.accent}`;
+        article.innerHTML = `
+          <div class="post-row__tags">
+            <span class="tag ${m.tag}">${esc(m.label)}</span>
+            <span class="post-row__time">${relTime(post.createdAt)}</span>
+          </div>
+          <h4 class="post-row__title">${esc(post.title)}</h4>
+          <p class="post-row__excerpt">${esc((post.body ?? '').slice(0,100))}${(post.body?.length??0)>100?'…':''}</p>
+          <div class="post-row__footer">
+            <span class="post-row__author">${esc(post.authorName ?? 'BarangayConnect')}</span>
+            <div class="reaction-bar" style="margin-left:auto">
+              <button class="reaction-count reaction-count--comment">
+                <i data-lucide="message-circle"></i><span>${post.commentCount ?? 0}</span>
+              </button>
+            </div>
+          </div>`;
+
+        /* Insert before the view-all button */
+        const viewAll = rowsEl.querySelector('a.btn--dashed');
+        rowsEl.insertBefore(article, viewAll);
+        lucide.createIcons({ el: article });
+      });
+    });
+  });
+</script>
 
   <script src="../../js/features/home/home-animations.js" defer></script>
   <script type="module" src="../../js/features/profile/profile.js"></script>

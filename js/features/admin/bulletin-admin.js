@@ -70,6 +70,7 @@ import { auth, db }                                              from '../../cor
 import { userIndexDoc, userDoc, barangayId as toBid,
          announcementPhotoPath }                                 from '../../core/db-paths.js';
 import { uploadImage }                                           from '../../core/storage.js';
+import { showConfirm } from '/js/shared/confirm-modal.js';
 
 import {
   collection, onSnapshot, addDoc, where, updateDoc, deleteDoc,
@@ -191,6 +192,20 @@ onAuthStateChanged(auth, async (user) => {
       'communityPostsList',
     );
   });
+
+  /* Reported posts — drives the badge counter reactively */
+  onSnapshot(
+    query(
+      collection(db, 'barangays', toBid(_barangay), 'reportedPosts'),
+      where('status', '==', 'pending'),
+    ),
+    s => {
+      const badge = document.getElementById('reportedPostsBadge');
+      if (!badge) return;
+      badge.textContent   = s.size;
+      badge.style.display = s.size > 0 ? 'inline' : 'none';
+    }
+  );
 
   renderForm(null);
 });
@@ -1135,7 +1150,7 @@ function renderPostList(posts, containerId) {
                       border:        1px solid #e5e7eb;
                       cursor:        pointer;
                     "
-                    onclick="window.eventOpenViewer?.(['${imgs.map(u => esc(u)).join("','")}'],${i},'${esc(ev.title)}','${esc(ev.id)}')" />`).join('')}
+                    onclick="window.eventOpenViewer?.(['${imgs.map(u => esc(u)).join("','")}'],${i},'${esc(p.title)}','${esc(p.id)}')" />`).join('')}
               </div>` : ''}
             <p style="font-size:.72rem;color:#9ca3af;margin:0;">
               ♡ ${reactions} &nbsp;·&nbsp; 💬 ${p.commentCount ?? 0}
@@ -1245,3 +1260,4 @@ function showAnnouncementToast(msg, type = 'success') {
   lucide.createIcons({ el: t });
   setTimeout(() => t.remove(), 3500);
 }
+

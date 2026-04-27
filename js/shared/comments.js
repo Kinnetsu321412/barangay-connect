@@ -56,6 +56,8 @@
 import { db }              from '../core/firebase-config.js';
 import { sendNotification } from './notifications.js';
 
+import { showConfirm } from '/js/shared/confirm-modal.js';
+
 import {
   collection, addDoc, deleteDoc, getDocs,
   doc as _doc, onSnapshot, query, where, orderBy,
@@ -819,8 +821,10 @@ if (!ok) return;
     const comRef  = _doc(db, 'barangays', _barangayId, resolvedCol, postId, 'comments', commentId);
     await deleteDoc(comRef);
     await updateDoc(annoRef, { commentCount: increment(-1) });
+    _showCommentReportToast('Comment deleted.', 'error');
   } catch (err) {
     console.error('[comments] delete error:', err);
+    _showCommentReportToast('Could not delete comment. Try again.', 'error');
   }
 };
 

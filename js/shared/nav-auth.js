@@ -63,12 +63,12 @@ import { barangayId as toBid } from '../core/db-paths.js';
 export function initNavAuth({ onResolved } = {}) {
 
   /* Apply cached role instantly while auth resolves */
-  const cached = sessionStorage.getItem('bc_role');
+  const cached = localStorage.getItem('bc_role');
   if (cached) _applyRole(cached);
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
-      sessionStorage.removeItem('bc_role');
+      localStorage.removeItem('bc_role');
       document.body.removeAttribute('data-role-init');
       return;
     }
@@ -78,7 +78,7 @@ export function initNavAuth({ onResolved } = {}) {
       const role     = snap.exists() ? (snap.data().role || 'resident') : 'resident';
       const barangay = snap.data().barangay;
 
-      sessionStorage.setItem('bc_role', role);
+      localStorage.setItem('bc_role', role);
       _applyRole(role);
 
       /* Inject barangay name into community hero eyebrow if present */

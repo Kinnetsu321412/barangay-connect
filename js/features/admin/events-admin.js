@@ -159,8 +159,6 @@ onAuthStateChanged(auth, async (user) => {
     }
   );
 
-  _renderEventsList();
-  _renderForm(null);
 });
 
 /* Auto-delete completed events past the configured threshold */
@@ -183,6 +181,10 @@ onAuthStateChanged(auth, async (user) => {
       console.warn('[events-admin] auto-delete check failed:', err.message);
     }
   })();
+
+  
+  _renderEventsList();
+  _renderForm(null);
 
 // ================================================
 // FILTER SWITCHER
