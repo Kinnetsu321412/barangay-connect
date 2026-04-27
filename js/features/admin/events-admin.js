@@ -753,8 +753,9 @@ window.eventAdminSave = async function () {
 
   /* ── Safety checks and status reason (before disabling button so user can cancel) ── */
   let statusReason = '';
+  let origEv = null;
   if (_editId) {
-    const origEv = [..._official, ..._community].find(e => e.id === _editId);
+    origEv = [..._official, ..._community].find(e => e.id === _editId);
     if (origEv) {
       const currentAttendees = origEv.attendees?.length ?? 0;
       const currentWaitlist  = origEv.waitlist?.length  ?? 0;
