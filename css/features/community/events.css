@@ -431,6 +431,25 @@
   margin: 0;
 }
 
+/* ================================================
+   BADGE SLOT VARIANTS
+================================================ */
+
+.badge-slots--registered {
+  background: var(--green-100);
+  color: var(--green-800);
+  font-weight: var(--fw-bold);
+}
+
+.badge-slots--waitlist {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-slots--full {
+  background: var(--red-50);
+  color: var(--red);
+}
 
 /* ================================================
    9. SKELETON LOADER

@@ -57,10 +57,12 @@
 // ================================================
 
 import { db, auth } from '/js/core/firebase-config.js';
-import { eventsCol, eventDoc, userIndexDoc, barangayId as toBid } from '/js/core/db-paths.js';
+import { eventsCol, eventDoc, eventRsvpsCol, userIndexDoc, barangayId as toBid } from '/js/core/db-paths.js';
 
 import {
-  onSnapshot, query, where, orderBy, getDoc,
+  onSnapshot, query, where, orderBy, getDoc, getDocs, addDoc, Timestamp,
+  runTransaction, arrayUnion, arrayRemove,
+  setDoc, updateDoc, serverTimestamp, doc,
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 import {
@@ -97,7 +99,8 @@ let _barangayId       = null;
 let _uid              = null;
 let _role             = 'resident';
 let _allEvents        = [];       // live snapshot cache
-let _userRsvps        = new Set(); // eventIds the user has RSVP'd (Phase 3)
+let _userRsvps        = new Set(); // eventIds the user is attending
+let _userName         = '';
 let _unsub            = null;
 
 /* Filter state */
@@ -105,6 +108,8 @@ let _activeCategory   = 'all';
 let _activeSource     = 'all';   // 'all' | 'official' | 'community'
 let _activeAvail      = 'all';   // 'all' | 'open' | 'walkin'
 let _myEventsOnly     = false;
+
+let _proposeFiles     = [];       // files staged in Propose form
 
 /* Pagination */
 const PAGE_SIZE       = 9;
@@ -135,7 +140,10 @@ export async function initEvents(barangayId, uid, role) {
   /* Show Propose button for logged-in users */
   if (_uid) {
     const proposeBtn = document.getElementById('proposeEventBtn');
-    if (proposeBtn) proposeBtn.style.display = '';
+    if (proposeBtn) {
+      proposeBtn.style.display = '';
+      proposeBtn.addEventListener('click', _openProposeForm);
+    }
   }
 
   /* Show My Events toggle for logged-in users */
@@ -168,8 +176,21 @@ function _subscribe(grid) {
 
   _unsub = onSnapshot(q, snap => {
     _allEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (_uid) {
+      _userRsvps = new Set(
+        snap.docs
+          .filter(d => (d.data().attendees ?? []).includes(_uid))
+          .map(d => d.id)
+      );
+    }
     _currentPage = 0;
     _renderEvents(grid);
+    /* If detail modal is open, refresh it so RSVP state stays current */
+    const openModal = document.getElementById('eventDetailModal');
+    const openId    = openModal?.dataset.openEventId;
+    if (openModal?.classList.contains('is-open') && openId) {
+      window.openEventDetail(openId);
+    }
     /* Keep calendar in sync if it's currently visible */
     if (window.updateEventsCalendar
         && document.getElementById('eventsCalendarView')?.style.display !== 'none') {
@@ -177,6 +198,68 @@ function _subscribe(grid) {
     }
   }, err => {
     console.error('[events] subscription error', err);
+  });
+}
+
+// ================================================
+// RSVP WRITES
+// ================================================
+
+async function _rsvpRegister(eventId) {
+  const eventRef = eventDoc(_barangayId, eventId);
+  const rsvpRef  = doc(eventRsvpsCol(_barangayId, eventId), _uid);
+  await runTransaction(db, async tx => {
+    const snap = await tx.get(eventRef);
+    if (!snap.exists()) throw new Error('Event not found.');
+    const data = snap.data();
+    if ((data.attendees ?? []).includes(_uid)) return;
+    const taken     = (data.attendees ?? []).length;
+    const slotsLeft = data.totalSlots == null ? Infinity : data.totalSlots - taken;
+    if (slotsLeft > 0) {
+      tx.update(eventRef, { attendees: arrayUnion(_uid), updatedAt: serverTimestamp() });
+      tx.set(rsvpRef, { uid: _uid, name: _userName, registeredAt: serverTimestamp(), status: 'registered' });
+    } else if (data.waitlistEnabled) {
+      tx.update(eventRef, { waitlist: arrayUnion(_uid), updatedAt: serverTimestamp() });
+      tx.set(rsvpRef, { uid: _uid, name: _userName, registeredAt: serverTimestamp(), status: 'waitlisted' });
+    }
+  });
+}
+
+async function _rsvpCancel(eventId) {
+  const eventRef = eventDoc(_barangayId, eventId);
+  const rsvpRef  = doc(eventRsvpsCol(_barangayId, eventId), _uid);
+  await runTransaction(db, async tx => {
+    const snap = await tx.get(eventRef);
+    if (!snap.exists()) return;
+    const waitlist = snap.data().waitlist ?? [];
+    tx.update(eventRef, { attendees: arrayRemove(_uid), updatedAt: serverTimestamp() });
+    tx.set(rsvpRef, { status: 'cancelled' }, { merge: true });
+    /* Auto-promote first waitlisted user */
+    if (waitlist.length > 0) {
+      const promoted = waitlist[0];
+      tx.update(eventRef, { waitlist: arrayRemove(promoted), attendees: arrayUnion(promoted), updatedAt: serverTimestamp() });
+    }
+  });
+}
+
+async function _rsvpJoinWaitlist(eventId) {
+  const eventRef = eventDoc(_barangayId, eventId);
+  const rsvpRef  = doc(eventRsvpsCol(_barangayId, eventId), _uid);
+  await runTransaction(db, async tx => {
+    const snap = await tx.get(eventRef);
+    if (!snap.exists()) return;
+    if ((snap.data().waitlist ?? []).includes(_uid)) return;
+    tx.update(eventRef, { waitlist: arrayUnion(_uid), updatedAt: serverTimestamp() });
+    tx.set(rsvpRef, { uid: _uid, name: _userName, registeredAt: serverTimestamp(), status: 'waitlisted' }, { merge: true });
+  });
+}
+
+async function _rsvpLeaveWaitlist(eventId) {
+  const eventRef = eventDoc(_barangayId, eventId);
+  const rsvpRef  = doc(eventRsvpsCol(_barangayId, eventId), _uid);
+  await runTransaction(db, async tx => {
+    tx.update(eventRef, { waitlist: arrayRemove(_uid), updatedAt: serverTimestamp() });
+    tx.set(rsvpRef, { status: 'cancelled' }, { merge: true });
   });
 }
 
@@ -287,7 +370,7 @@ function _buildEventCard(ev) {
           <i data-lucide="map-pin" style="width:13px;height:13px;"></i> ${esc(ev.location)}
         </p>` : ''}
         <div class="event-card__footer">
-          ${_buildSlotsBadge(ev)}
+          ${_buildSlotsBadge(ev, _userRsvps.has(ev.id))}
           <button class="btn btn--green btn--sm"
             onclick="openEventDetail('${esc(ev.id)}')">
             View Details
@@ -297,7 +380,12 @@ function _buildEventCard(ev) {
     </article>`;
 }
 
-function _buildSlotsBadge(ev) {
+function _buildSlotsBadge(ev, isRsvpd = false) {
+  if (isRsvpd) {
+    return `<span class="badge-slots badge-slots--registered">
+      <i data-lucide="check-circle"></i> Registered
+    </span>`;
+  }
   if (ev.isWalkIn) {
     return `<span class="badge-slots" style="background:var(--green-100);color:var(--green-800);">
       <i data-lucide="check-circle"></i> Walk-in
@@ -385,6 +473,48 @@ window._eventsPage = function (dir) {
   }
 };
 
+window._rsvpAction = async function (eventId, action) {
+  const btn = document.getElementById('rsvpActionBtn');
+  const originalText = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+
+  try {
+    if      (action === 'register')      await _rsvpRegister(eventId);
+    else if (action === 'cancel')        await _rsvpCancel(eventId);
+    else if (action === 'waitlist')      await _rsvpJoinWaitlist(eventId);
+    else if (action === 'leaveWaitlist') await _rsvpLeaveWaitlist(eventId);
+
+    /* Optimistic local state + patch cache so modal re-renders correct slots */
+    const cachedIdx = _allEvents.findIndex(e => e.id === eventId);
+    if (cachedIdx !== -1) {
+      const ev = { ..._allEvents[cachedIdx] };
+      if (action === 'register') {
+        ev.attendees = [...(ev.attendees ?? []), _uid];
+        _userRsvps.add(eventId);
+      } else if (action === 'cancel') {
+        ev.attendees = (ev.attendees ?? []).filter(u => u !== _uid);
+        _userRsvps.delete(eventId);
+      } else if (action === 'waitlist') {
+        ev.waitlist = [...(ev.waitlist ?? []), _uid];
+      } else if (action === 'leaveWaitlist') {
+        ev.waitlist = (ev.waitlist ?? []).filter(u => u !== _uid);
+      }
+      _allEvents[cachedIdx] = ev;
+    }
+
+    if (action === 'cancel' || action === 'leaveWaitlist') {
+      /* Close modal — snapshot will update card badge; reopening shows fresh data */
+      document.getElementById('eventDetailModal')?.classList.remove('is-open');
+      _showToast('Registration removed.', 'error');
+    } else {
+      await window.openEventDetail(eventId);
+      _showToast('Registered successfully!');
+    }
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = originalText; }
+    _showToast(err.message || 'Something went wrong.', 'error');
+  }
+};
 
 // ================================================
 // EVENT DETAIL MODAL
@@ -397,6 +527,7 @@ window.openEventDetail = async function (eventId) {
   if (!modal || !bodyEl) return;
 
   modal.classList.add('is-open');
+  modal.dataset.openEventId = eventId;
 
   /* Try cache first, fall back to Firestore */
   let ev = _allEvents.find(e => e.id === eventId);
@@ -491,22 +622,32 @@ window.openEventDetail = async function (eventId) {
 
   /* ── Footer — RSVP stub (Phase 3) ── */
   if (footerEl) {
-    const canRsvp  = ev.status === 'active' && _uid;
-    const isFull   = ev.totalSlots != null
-      && taken >= ev.totalSlots
-      && !ev.waitlistEnabled;
+    const isRsvpd      = _userRsvps.has(ev.id);
+    const isWaitlisted = (ev.waitlist ?? []).includes(_uid);
+    const isFull       = remaining !== null && remaining <= 0;
+    const notActive    = ev.status && ev.status !== 'active';
 
     let actionBtn;
     if (!_uid) {
       actionBtn = `<span style="font-size:var(--text-sm);color:var(--gray-400);">Sign in to RSVP</span>`;
+    } else if (notActive) {
+      actionBtn = `<button class="btn btn--outline btn--full" disabled>Event ${STATUS_LABELS[ev.status] ?? ev.status}</button>`;
     } else if (ev.isWalkIn) {
       actionBtn = `<button class="btn btn--green btn--full" disabled>Walk-in Welcome — No RSVP Needed</button>`;
+    } else if (isRsvpd) {
+      actionBtn = `<button id="rsvpActionBtn" class="btn btn--outline btn--full"
+        onclick="window._rsvpAction('${esc(ev.id)}','cancel')">Cancel Registration</button>`;
+    } else if (isWaitlisted) {
+      actionBtn = `<button id="rsvpActionBtn" class="btn btn--outline btn--full"
+        onclick="window._rsvpAction('${esc(ev.id)}','leaveWaitlist')">Leave Waitlist</button>`;
+    } else if (isFull && ev.waitlistEnabled) {
+      actionBtn = `<button id="rsvpActionBtn" class="btn btn--orange btn--full"
+        onclick="window._rsvpAction('${esc(ev.id)}','waitlist')">Join Waitlist</button>`;
     } else if (isFull) {
       actionBtn = `<button class="btn btn--outline btn--full" disabled>Event Full</button>`;
-    } else if (ev.waitlistEnabled && remaining <= 0) {
-      actionBtn = `<button class="btn btn--orange btn--full" disabled>Join Waitlist — Coming Soon</button>`;
     } else {
-      actionBtn = `<button class="btn btn--green btn--full" disabled>RSVP — Coming Soon</button>`;
+      actionBtn = `<button id="rsvpActionBtn" class="btn btn--green btn--full"
+        onclick="window._rsvpAction('${esc(ev.id)}','register')">Register Now</button>`;
     }
 
     footerEl.innerHTML = `
@@ -640,6 +781,304 @@ function _showToast(msg, type = 'success') {
   setTimeout(() => t.remove(), 3500);
 }
 
+// ================================================
+// PROPOSE EVENT
+// ================================================
+
+function _openProposeForm() {
+  const body = document.getElementById('proposeEventBody');
+  if (!body) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  _proposeFiles = [];
+
+  body.innerHTML = `
+    <div style="padding:var(--space-lg);display:flex;flex-direction:column;gap:var(--space-md);">
+
+      <div class="form-group">
+        <label class="form-label">Title <span style="color:var(--red);">*</span></label>
+        <input type="text" id="pev-title" class="form-input" placeholder="Event title…" maxlength="100" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Category <span style="color:var(--red);">*</span></label>
+        <select id="pev-category" class="form-select">
+          <option value="">Select a category…</option>
+          <option value="youth">Youth &amp; Sports</option>
+          <option value="seniors">Seniors</option>
+          <option value="health">Health</option>
+          <option value="livelihood">Livelihood</option>
+          <option value="culture">Culture</option>
+          <option value="community">Community</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description <span style="color:var(--red);">*</span></label>
+        <textarea id="pev-desc" class="form-input" rows="3" maxlength="500"
+          placeholder="Tell residents what this event is about…"
+          oninput="document.getElementById('pev-desc-count').textContent=this.value.length+' / 500'"></textarea>
+        <span class="char-count" id="pev-desc-count">0 / 500</span>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Date Start <span style="color:var(--red);">*</span></label>
+          <input type="date" id="pev-date-start" class="form-input" min="${today}"
+            onchange="document.getElementById('pev-date-end').min=this.value" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date End <span style="color:var(--red);">*</span></label>
+          <input type="date" id="pev-date-end" class="form-input" min="${today}" />
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Time Start <span style="color:var(--red);">*</span></label>
+          <input type="time" id="pev-time-start" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Time End <span style="color:var(--red);">*</span></label>
+          <input type="time" id="pev-time-end" class="form-input" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Location <span style="color:var(--red);">*</span></label>
+        <input type="text" id="pev-location" class="form-input" placeholder="e.g. Barangay Hall" maxlength="100" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          Photos <span style="color:var(--gray-400);font-weight:400;font-size:.75rem;">(optional · up to 4)</span>
+        </label>
+        <label for="pev-photos"
+          style="display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;
+            border:1.5px dashed #d1d5db;border-radius:8px;cursor:pointer;
+            font-size:.82rem;color:#6b7280;background:#fafafa;transition:all .2s;"
+          onmouseover="this.style.borderColor='var(--green-dark)';this.style.color='var(--green-dark)'"
+          onmouseout="this.style.borderColor='#d1d5db';this.style.color='#6b7280'">
+          <i data-lucide="image" style="width:15px;height:15px;flex-shrink:0;"></i>
+          <span id="pev-photo-label">Tap to add photos (up to 4)</span>
+        </label>
+        <input type="file" id="pev-photos" accept="image/jpeg,image/png,image/webp" multiple
+          style="display:none;" onchange="window._proposePreviewImages(this)" />
+        <div id="pev-photo-previews" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;"></div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">
+            Total Slots <span style="color:var(--gray-400);font-weight:400;font-size:.75rem;">(blank = unlimited)</span>
+          </label>
+          <input type="number" id="pev-slots" class="form-input" min="1" placeholder="e.g. 50" />
+        </div>
+        <div class="form-group" style="display:flex;align-items:flex-end;padding-bottom:2px;">
+          <label class="events-my-toggle" style="display:flex;">
+            <input type="checkbox" id="pev-walkin" class="toggle-input" />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span style="font-size:var(--text-sm);font-weight:var(--fw-semibold);color:var(--gray-700);margin-left:var(--space-sm);">Walk-in welcome</span>
+          </label>
+        </div>
+      </div>
+
+      <p style="background:#f9fafb;border:1px solid var(--gray-100);border-radius:var(--radius-sm);
+        padding:var(--space-sm) var(--space-md);font-size:var(--text-xs);color:var(--gray-500);margin:0;">
+        <i data-lucide="info" style="width:12px;height:12px;display:inline;vertical-align:middle;margin-right:4px;"></i>
+        You may submit 1 event per day. Your submission will be reviewed before going live.
+      </p>
+
+      <div id="pev-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;
+        border-radius:var(--radius-sm);padding:var(--space-sm) var(--space-md);
+        font-size:var(--text-sm);color:var(--red);"></div>
+
+    </div>`;
+
+  const submitBtn = document.getElementById('proposeEventSubmitBtn');
+  if (submitBtn) {
+    submitBtn.disabled  = false;
+    submitBtn.onclick   = window._proposeSubmit;
+    submitBtn.innerHTML = '<i data-lucide="send"></i> Submit for Review';
+  }
+
+  if (typeof lucide !== 'undefined') lucide.createIcons({ el: body });
+  openModal('proposeEventModal');
+}
+
+
+window._proposePreviewImages = function (input) {
+  if (input.files?.length) {
+    Array.from(input.files).forEach(f => {
+      const dup = _proposeFiles.some(e => e.name === f.name && e.size === f.size);
+      if (!dup) _proposeFiles.push(f);
+    });
+  }
+  if (_proposeFiles.length > 4) _proposeFiles = _proposeFiles.slice(0, 4);
+
+  const container = document.getElementById('pev-photo-previews');
+  const label     = document.getElementById('pev-photo-label');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!_proposeFiles.length) {
+    if (label) label.textContent = 'Tap to add photos (up to 4)';
+    return;
+  }
+  if (label) label.textContent = `${_proposeFiles.length} photo${_proposeFiles.length > 1 ? 's' : ''} selected`;
+
+  _proposeFiles.forEach((file, idx) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;width:80px;height:60px;flex-shrink:0;';
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:80px;height:60px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;display:block;';
+      const rm = document.createElement('button');
+      rm.innerHTML = '×';
+      rm.style.cssText = 'position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:#dc2626;color:#fff;border:none;cursor:pointer;font-size:.75rem;line-height:1;display:flex;align-items:center;justify-content:center;';
+      rm.onclick = () => { _proposeFiles.splice(idx, 1); window._proposePreviewImages({ files: null }); };
+      wrap.appendChild(img);
+      wrap.appendChild(rm);
+      container.appendChild(wrap);
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+
+async function _checkDailyLimit() {
+  const today = new Date().toISOString().slice(0, 10);
+  const start = Timestamp.fromDate(new Date(today + 'T00:00:00'));
+  const end   = Timestamp.fromDate(new Date(today + 'T23:59:59'));
+  const snap  = await getDocs(query(
+    eventsCol(_barangayId),
+    where('submittedBy', '==', _uid),
+    where('createdAt',   '>=', start),
+    where('createdAt',   '<=', end),
+  ));
+  return snap.size >= 1;
+}
+
+
+window._proposeSubmit = async function () {
+  const errEl     = document.getElementById('pev-error');
+  const btn       = document.getElementById('proposeEventSubmitBtn');
+  const showErr   = msg => {
+    if (!errEl) return;
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  const title     = document.getElementById('pev-title')?.value.trim();
+  const category  = document.getElementById('pev-category')?.value;
+  const desc      = document.getElementById('pev-desc')?.value.trim();
+  const dateStart = document.getElementById('pev-date-start')?.value;
+  const dateEnd   = document.getElementById('pev-date-end')?.value;
+  const timeStart = document.getElementById('pev-time-start')?.value;
+  const timeEnd   = document.getElementById('pev-time-end')?.value;
+  const location  = document.getElementById('pev-location')?.value.trim();
+  const slots     = document.getElementById('pev-slots')?.value?.trim();
+  const walkin    = document.getElementById('pev-walkin')?.checked ?? false;
+  const today     = new Date().toISOString().slice(0, 10);
+
+  /* Validation */
+  if (!title)              return showErr('Please enter a title.');
+  if (!category)           return showErr('Please select a category.');
+  if (!desc)               return showErr('Please enter a description.');
+  if (!dateStart)          return showErr('Please select a start date.');
+  if (dateStart < today)   return showErr('Start date cannot be in the past.');
+  if (!dateEnd)            return showErr('Please select an end date.');
+  if (dateEnd < dateStart) return showErr('End date cannot be before start date.');
+  if (!timeStart)          return showErr('Please enter a start time.');
+  if (!timeEnd)            return showErr('Please enter an end time.');
+  if (!location)           return showErr('Please enter a location.');
+  if (slots !== '' && slots !== null && parseInt(slots, 10) < 1)
+                           return showErr('Total slots must be at least 1, or leave blank for unlimited.');
+  if (errEl) errEl.style.display = 'none';
+
+  btn.disabled    = true;
+  btn.textContent = 'Submitting…';
+
+  try {
+    /* Anti-spam */
+    if (await _checkDailyLimit()) {
+      showErr('You may only submit 1 event per day. Please try again tomorrow.');
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="send"></i> Submit for Review';
+      if (typeof lucide !== 'undefined') lucide.createIcons({ el: btn });
+      return;
+    }
+
+    /* Upload photos */
+    let imageURLs = [];
+    if (_proposeFiles.length) {
+      const { getStorage, ref, uploadBytes, getDownloadURL } =
+        await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js');
+      const storage = getStorage();
+      imageURLs = await Promise.all(
+        _proposeFiles.map(async file => {
+          const sRef = ref(storage, `barangays/${_barangayId}/events/${_uid}/${Date.now()}_${file.name}`);
+          await uploadBytes(sRef, file);
+          return getDownloadURL(sRef);
+        })
+      );
+    }
+
+    /* Write — isApproved: false so it won't appear in the public grid */
+    await addDoc(eventsCol(_barangayId), {
+      title,
+      description:       desc,
+      category,
+      dateStart,
+      dateEnd,
+      timeStart,
+      timeEnd,
+      location,
+      imageURLs,
+      imageURL:          imageURLs[0] ?? null,
+      totalSlots:        slots ? parseInt(slots, 10) : null,
+      isWalkIn:          walkin,
+      showSlotsPublicly: true,
+      waitlistEnabled:   !!slots,
+      submittedBy:       _uid,
+      submittedByName:   _userName,
+      authorRole:        'resident',
+      isApproved:        false,
+      status:            'active',
+      statusReason:      '',
+      isPinned:          false,
+      attendees:         [],
+      waitlist:          [],
+      createdAt:         serverTimestamp(),
+      updatedAt:         serverTimestamp(),
+    });
+
+    /* Notify officers/admins — wrapped; full wiring in Phase 7 */
+    try {
+      const { notifyAllInBarangay } =
+        await import('/js/features/community/notifications.js');
+      await notifyAllInBarangay(
+        _barangayId,
+        { type: 'event_pending', actorId: _uid, actorName: _userName, postId: '', postTitle: title },
+        { targetRoles: 'officials' },
+      );
+    } catch { /* non-fatal — Phase 7 will add a Cloud Function fallback */ }
+
+    _proposeFiles = [];
+    closeModal('proposeEventModal');
+    _showToast('Your event has been submitted and is awaiting review.');
+
+  } catch (err) {
+    console.error('[events] propose submit', err);
+    showErr(err.message || 'Something went wrong. Please try again.');
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="send"></i> Submit for Review';
+    if (typeof lucide !== 'undefined') lucide.createIcons({ el: btn });
+  }
+};
 
 // ================================================
 // BOOTSTRAP
@@ -673,6 +1112,7 @@ onAuthStateChanged(auth, async user => {
     const snap  = await getDoc(userIndexDoc(user.uid));
     if (!snap.exists()) return;
     const { barangay, role } = snap.data();
+    _userName = snap.data().displayName ?? snap.data().name ?? user.displayName ?? 'Resident';
 
     await initEvents(
       toBid(barangay),

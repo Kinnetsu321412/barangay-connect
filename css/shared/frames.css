@@ -255,7 +255,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-md);
-  overflow-y: auto;
+  overflow: hidden;
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--transition);
@@ -274,6 +274,7 @@
   max-width: 480px;
   max-height: 90vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
