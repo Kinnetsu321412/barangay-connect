@@ -70,6 +70,7 @@
   <link rel="stylesheet" href="/css/shared/frames.css" />
   <link rel="stylesheet" href="/css/features/home/home.css" />
   <link rel="stylesheet" href="/css/features/admin/admin.css" />
+  <link rel="stylesheet" href="/css/shared/image-viewer.css" />
 
 </head>
 
@@ -303,8 +304,11 @@
           <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('pets',this)">
             <i data-lucide="paw-print" style="width:14px;height:14px;"></i> Pets
           </button>
-          <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('services',this)">
-            <i data-lucide="briefcase" style="width:14px;height:14px;"></i> Services
+          <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('events',this)">
+            <i data-lucide="calendar-days" style="width:14px;height:14px;"></i> Events
+            <span id="eventsAdminPendingBadge"
+              style="display:none;background:rgba(255,255,255,0.22);border-radius:999px;
+              padding:0 6px;font-size:.68rem;font-weight:700;"></span>
           </button>
           <button class="community-sub-btn admin-subtab-btn" onclick="switchCommunitySubTab('polls',this)">
             <i data-lucide="bar-chart-2" style="width:14px;height:14px;"></i> Polls
@@ -442,15 +446,41 @@
         </div>
       </div>
 
-      <!-- Services sub-panel (placeholder) -->
-      <div id="community-sub-services" hidden>
-        <h1 class="panel-heading">Services</h1>
-        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
-                    color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-          <div style="font-size:2rem;margin-bottom:.5rem;"><i data-lucide="wrench"></i></div>
-          <p style="margin:0;font-size:.9rem;">Local services and listings will appear here.</p>
+      <!-- Events sub-panel — driven by events-admin.js -->
+      <div id="community-sub-events" hidden>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;
+          margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+          <h1 class="panel-heading" style="margin:0;">Events</h1>
         </div>
-      </div>
+
+        <!-- Filter row — mirrors bulletin section buttons -->
+        <div class="admin-subtab-row" style="padding-bottom:var(--space-md);border-bottom:2px solid var(--gray-100);">
+          <button class="events-filter-btn bulletin-section-btn admin-subtab-btn active"
+            onclick="window.setEventsAdminFilter('all',this)">
+            All Events
+          </button>
+          <button class="events-filter-btn bulletin-section-btn admin-subtab-btn"
+            onclick="window.setEventsAdminFilter('pending',this)">
+            Pending
+            <span id="eventsAdminPendingBadgeInner"
+              style="display:none;background:rgba(255,255,255,0.22);border-radius:999px;
+              padding:0 6px;font-size:.68rem;font-weight:700;margin-left:2px;"></span>
+          </button>
+          <button class="events-filter-btn bulletin-section-btn admin-subtab-btn"
+            onclick="window.setEventsAdminFilter('official',this)">
+            Official
+          </button>
+          <button class="events-filter-btn bulletin-section-btn admin-subtab-btn"
+            onclick="window.setEventsAdminFilter('community',this)">
+            Community
+          </button>
+        </div>
+
+        <div id="eventsAdminList" style="margin-bottom:1.5rem;margin-top:1.25rem;"></div>
+        <div id="eventsAdminForm"></div>
+
+      </div><!-- /community-sub-events -->
 
       <!-- Polls sub-panel — shell rendered by polls-admin.js on auth -->
       <div id="community-sub-polls" hidden></div>
@@ -632,7 +662,6 @@
       </div>
     </div><!-- /panel-settings -->
 
-
   </div><!-- /admin-content -->
 
 
@@ -765,6 +794,63 @@
   </div>
   <div class="profile-drawer-backdrop" id="drawerBackdrop"></div>
 
+  <!-- ═══════════════════════════════════════════════════════════════
+       EVENT DETAIL VIEWER MODAL — read-only, used for pending review
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="eventsDetailModal"
+    onclick="this.classList.remove('is-open')">
+    <div class="modal" style="max-width:560px;" onclick="event.stopPropagation()">
+      <div class="modal__header modal__header--green">
+        <div class="modal__header-icon"><i data-lucide="calendar-days"></i></div>
+        <div class="modal__header-content">
+          <p class="modal__header-label">Event Submission</p>
+          <h2 class="modal__header-title" id="eventsDetailTitle">Event Details</h2>
+          <p class="modal__header-sub" id="eventsDetailMeta"></p>
+        </div>
+        <button class="btn btn--close btn--sm modal__close"
+          onclick="document.getElementById('eventsDetailModal').classList.remove('is-open')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal__body" id="eventsDetailBody"
+        style="padding:var(--space-lg);max-height:60vh;overflow-y:auto;"></div>
+      <div class="modal__footer" id="eventsDetailFooter">
+        <button class="btn btn--outline"
+          onclick="document.getElementById('eventsDetailModal').classList.remove('is-open')">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       EVENTS ATTENDEE VIEWER MODAL — controlled by events-admin.js
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="eventsAttendeeModal"
+    onclick="this.classList.remove('is-open')">
+    <div class="modal" style="max-width:540px;" onclick="event.stopPropagation()">
+      <div class="modal__header modal__header--green">
+        <div class="modal__header-icon"><i data-lucide="users"></i></div>
+        <div class="modal__header-content">
+          <p class="modal__header-label">Events Admin</p>
+          <h2 class="modal__header-title" id="attendeeModalTitle">Attendees</h2>
+        </div>
+        <button class="btn btn--close btn--sm modal__close"
+          style="margin-left:auto;"
+          onclick="document.getElementById('eventsAttendeeModal').classList.remove('is-open')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal__body" id="eventsAttendeeBody"
+        style="padding:0;max-height:60vh;overflow-y:auto;"></div>
+      <div class="modal__footer">
+        <button class="btn btn--outline"
+          onclick="document.getElementById('eventsAttendeeModal').classList.remove('is-open')">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══════════════════════════════════════════════════════════════
        SIGN-OUT CONFIRM MODAL
@@ -926,6 +1012,7 @@
 
     /* Community Board sub-tabs */
     function switchCommunitySubTab(sub, btn) {
+      if (sub !== 'events') window.eventAdminCancelEdit?.();
       document.querySelectorAll('[id^="community-sub-"]').forEach(el => el.hidden = true);
       document.getElementById('community-sub-' + sub).hidden = false;
       document.querySelectorAll('.community-sub-btn').forEach(b => b.classList.remove('is-active'));
@@ -1080,6 +1167,7 @@
   <script type="module" src="js/features/admin/settings-admin.js"></script>
   <script type="module" src="js/features/admin/polls-admin.js"></script>
   <script type="module" src="js/features/admin/gallery-admin.js"></script>
+  <script type="module" src="js/features/admin/events-admin.js"></script>
 
   <!-- Tab state persistence — saves/restores across reloads -->
   <script>

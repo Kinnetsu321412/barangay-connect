@@ -336,10 +336,25 @@ function _buildEventCard(ev) {
        </span>`
     : '';
 
-  const statusBar = ev.status && ev.status !== 'active'
-    ? `<div class="event-card__status-bar event-card__status-bar--${esc(ev.status)}">
-         <i data-lucide="clock" style="width:12px;height:12px;"></i>
-         ${STATUS_LABELS[ev.status] ?? ev.status}
+  const _sbarMeta = {
+    postponed: { bg:'#fff8ed', color:'#92400e', border:'#fde68a', icon:'clock'        },
+    cancelled: { bg:'#fef2f2', color:'#991b1b', border:'#fecaca', icon:'x-circle'     },
+    completed: { bg:'#f0fdf4', color:'#14532d', border:'#bbf7d0', icon:'check-circle' },
+  };
+  const _sm = _sbarMeta[ev.status] ?? {};
+  const statusBar = ev.status && ev.status !== 'active' && STATUS_LABELS[ev.status]
+    ? `<div style="background:${_sm.bg};color:${_sm.color};border-bottom:1px solid ${_sm.border};
+         padding:.35rem .75rem;font-size:.7rem;font-weight:700;display:flex;
+         align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.04em;">
+         <i data-lucide="${_sm.icon}" style="width:12px;height:12px;flex-shrink:0;"></i>
+         ${STATUS_LABELS[ev.status]}
+       </div>`
+    : '';
+  const pinnedBar = ev.isPinned
+    ? `<div style="background:#fff8ed;color:#92400e;border-bottom:1px solid #fde68a;
+         padding:.35rem .75rem;font-size:.7rem;font-weight:700;display:flex;
+         align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.04em;">
+         <i data-lucide="pin" style="width:12px;height:12px;flex-shrink:0;"></i> Pinned
        </div>`
     : '';
 
@@ -352,7 +367,7 @@ function _buildEventCard(ev) {
 
   return `
     <article class="event-card" data-event-id="${esc(ev.id)}">
-      ${statusBar}
+      ${pinnedBar}${statusBar}
       <div class="event-card__img-wrap">
         ${imgHtml}
         ${categoryTag}
@@ -546,7 +561,8 @@ window.openEventDetail = async function (eventId) {
   }
 
   const cat     = EVENT_CATS[ev.category] ?? { label: ev.category, tagClass: 'tag--gray', icon: 'calendar' };
-  const dateStr = _formatDateRange(ev.dateStart, ev.dateEnd);
+  const dateStr     = _formatDateRange(ev.dateStart, ev.dateEnd);
+  const showDateTime = !ev.status || ev.status === 'active';
   const timeStr = ev.timeStart
     ? `${_fmt12(ev.timeStart)}${ev.timeEnd ? ` – ${_fmt12(ev.timeEnd)}` : ''}`
     : '';
@@ -601,11 +617,11 @@ window.openEventDetail = async function (eventId) {
     <div style="padding:var(--space-lg);display:flex;flex-direction:column;gap:var(--space-md);">
       ${statusHtml}
       <div style="display:flex;flex-direction:column;gap:var(--space-sm);">
-        <p class="modal-section-label">Date &amp; Time</p>
-        ${dateStr ? `<div style="display:flex;align-items:center;gap:.5rem;font-size:var(--text-sm);color:var(--gray-700);">
+        ${showDateTime ? `<p class="modal-section-label">Date &amp; Time</p>` : ''}
+        ${showDateTime && dateStr ? `<div style="display:flex;align-items:center;gap:.5rem;font-size:var(--text-sm);color:var(--gray-700);">
           <i data-lucide="calendar" style="width:14px;height:14px;flex-shrink:0;"></i> ${esc(dateStr)}
         </div>` : ''}
-        ${timeStr ? `<div style="display:flex;align-items:center;gap:.5rem;font-size:var(--text-sm);color:var(--gray-700);">
+        ${showDateTime && timeStr ? `<div style="display:flex;align-items:center;gap:.5rem;font-size:var(--text-sm);color:var(--gray-700);">
           <i data-lucide="clock" style="width:14px;height:14px;flex-shrink:0;"></i> ${esc(timeStr)}
         </div>` : ''}
         ${ev.location ? `<div style="display:flex;align-items:center;gap:.5rem;font-size:var(--text-sm);color:var(--gray-700);">
@@ -633,7 +649,7 @@ window.openEventDetail = async function (eventId) {
     } else if (notActive) {
       actionBtn = `<button class="btn btn--outline btn--full" disabled>Event ${STATUS_LABELS[ev.status] ?? ev.status}</button>`;
     } else if (ev.isWalkIn) {
-      actionBtn = `<button class="btn btn--green btn--full" disabled>Walk-in Welcome — No RSVP Needed</button>`;
+      actionBtn = `<button class="btn btn--green btn--full" disabled>Walk-in</button>`;
     } else if (isRsvpd) {
       actionBtn = `<button id="rsvpActionBtn" class="btn btn--outline btn--full"
         onclick="window._rsvpAction('${esc(ev.id)}','cancel')">Cancel Registration</button>`;
