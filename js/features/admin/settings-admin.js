@@ -393,6 +393,74 @@ function renderSettings(data) {
             Save
           </button>
         </div>
+
+      </div>
+    </div>
+
+    <!-- Events Settings -->
+    <div style="background:#fff;border-radius:12px;padding:1.5rem;
+      box-shadow:0 1px 4px rgba(0,0,0,.07);max-width:600px;margin-top:1rem;">
+
+      <h2 style="font-size:1rem;font-weight:700;margin:0 0 1.25rem;
+        display:flex;align-items:center;gap:.5rem;">
+        <i data-lucide="calendar-days" style="width:17px;height:17px;color:#1a3a1a;"></i>
+        Events
+      </h2>
+
+      <!-- Require event approval toggle -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;
+        gap:1rem;padding:1rem;border:1.5px solid #e5e7eb;border-radius:10px;margin-bottom:.75rem;">
+        <div>
+          <p style="font-weight:600;font-size:.9rem;margin:0 0 4px;">Require event approval</p>
+          <p style="font-size:.78rem;color:#6b7280;margin:0;line-height:1.5;">
+            When enabled, community-submitted events are held as
+            <strong>pending</strong> until an admin or officer approves them.
+            When off, submissions go live immediately.
+          </p>
+        </div>
+        <label style="flex-shrink:0;cursor:pointer;position:relative;
+          width:44px;height:24px;display:inline-block;">
+          <input type="checkbox" id="requireEventApprovalToggle"
+            ${data.requireEventApproval ?? true ? 'checked' : ''}
+            onchange="handleRequireEventApprovalToggle(this)"
+            style="opacity:0;width:0;height:0;position:absolute;" />
+          <span id="eventApprovalTrack" style="
+            position:absolute;inset:0;border-radius:999px;
+            background:${data.requireEventApproval ?? true ? '#1a3a1a' : '#d1d5db'};
+            transition:background .2s;cursor:pointer;">
+            <span style="
+              position:absolute;top:3px;
+              left:${data.requireEventApproval ?? true ? '23px' : '3px'};
+              width:18px;height:18px;border-radius:50%;
+              background:#fff;transition:left .2s;
+              box-shadow:0 1px 3px rgba(0,0,0,.2);">
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <!-- Auto-delete completed events -->
+      <div style="padding:1rem;border:1.5px solid #e5e7eb;border-radius:10px;">
+        <p style="font-weight:600;font-size:.9rem;margin:0 0 4px;">Auto-delete completed events after</p>
+        <p style="font-size:.78rem;color:#6b7280;margin:0 0 .75rem;line-height:1.5;">
+          Events marked as completed will be automatically deleted after this many days. Default is 1.
+        </p>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+          <input type="number" id="completedEventDeleteDaysInput" min="0" max="365"
+            value="${data.completedEventDeleteDays ?? 1}"
+            style="width:60px;padding:.4rem .6rem;border:1.5px solid #e0e0e0;border-radius:8px;
+              font-size:.88rem;text-align:center;outline:none;font-weight:600;" />
+          <span style="font-size:.78rem;color:#6b7280;">days after completing</span>
+          <button onclick="saveCompletedEventDeleteDays()"
+            style="padding:.4rem .9rem;border-radius:8px;background:#1a3a1a;
+              color:#fff;border:none;font-size:.78rem;font-weight:600;cursor:pointer;">
+            Save
+          </button>
+        </div>
+      </div>
+
+    </div>
+
       </div>
 
     </div>`;
@@ -573,6 +641,38 @@ window.savePollArchiveDays = async function () {
   showSettingsToast('Saving…');
   try {
     await setDoc(_settingsRef, { pollArchiveDays: val }, { merge: true });
+    showSettingsToast('Saved ✓', 'success');
+  } catch {
+    showSettingsToast('Failed to save. Try again.', 'error');
+  }
+};
+
+/* Saves the require-event-approval setting */
+window.handleRequireEventApprovalToggle = async function (checkbox) {
+  if (!_settingsRef) return;
+  const track = document.getElementById('eventApprovalTrack');
+  if (track) {
+    track.style.background                 = checkbox.checked ? '#1a3a1a' : '#d1d5db';
+    track.querySelector('span').style.left = checkbox.checked ? '23px' : '3px';
+  }
+  showSettingsToast('Saving…');
+  try {
+    await setDoc(_settingsRef, { requireEventApproval: checkbox.checked }, { merge: true });
+    showSettingsToast('Saved ✓', 'success');
+  } catch (err) {
+    console.error('[settings] save error:', err);
+    checkbox.checked = !checkbox.checked;
+  }
+};
+
+/* Saves the number of days before completed events are auto-deleted */
+window.saveCompletedEventDeleteDays = async function () {
+  if (!_settingsRef) return;
+  const val = parseInt(document.getElementById('completedEventDeleteDaysInput')?.value, 10);
+  if (isNaN(val) || val < 0 || val > 365) return;
+  showSettingsToast('Saving…');
+  try {
+    await setDoc(_settingsRef, { completedEventDeleteDays: val }, { merge: true });
     showSettingsToast('Saved ✓', 'success');
   } catch {
     showSettingsToast('Failed to save. Try again.', 'error');

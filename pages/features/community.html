@@ -320,26 +320,29 @@
               <button class="btn btn--filter" data-category="youth">
                 <i data-lucide="zap"></i> Youth
               </button>
+              <button class="btn btn--filter" data-category="seniors">
+                <i data-lucide="heart"></i> Seniors
+              </button>
+              <button class="btn btn--filter" data-category="community">
+                <i data-lucide="users"></i> Community
+              </button>
               <button class="btn btn--filter" data-category="livelihood">
                 <i data-lucide="briefcase"></i> Livelihood
               </button>
               <button class="btn btn--filter" data-category="culture">
                 <i data-lucide="sparkles"></i> Culture
               </button>
-              <button class="btn btn--filter" data-category="seniors">
-                <i data-lucide="heart"></i> Seniors
-              </button>
             </div>
             <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-              <div class="events-view-toggle" id="eventsViewToggle">
-                <button class="events-view-btn is-active" data-view="cards" aria-label="Cards view">
-                  <i data-lucide="layout-grid"></i> Cards
+              <div class="gallery-view-toggle" id="eventsViewToggle">
+                <button class="gallery-view-btn events-view-btn is-active" data-view="cards" title="Cards view">
+                  <i data-lucide="layout-grid"></i>
                 </button>
-                <button class="events-view-btn" data-view="calendar" aria-label="Calendar view">
-                  <i data-lucide="calendar"></i> Calendar
+                <button class="gallery-view-btn events-view-btn" data-view="calendar" title="Calendar view">
+                  <i data-lucide="calendar"></i>
                 </button>
               </div>
-            </div>
+          </div>
           </div>
 
           <!-- Row 2: Source + Availability + My Events -->
@@ -348,11 +351,11 @@
             <div style="display:flex;align-items:center;gap:.4rem;">
               <span class="events-filter-label">Source</span>
               <div class="events-seg-control">
-                <button class="events-seg-btn is-active" data-source="all">All</button>
-                <button class="events-seg-btn" data-source="official">
+                <button class="events-seg-btn bulletin-source-seg__btn is-active" data-source="all">All</button>
+                <button class="events-seg-btn bulletin-source-seg__btn" data-source="official">
                   <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
                 </button>
-                <button class="events-seg-btn" data-source="community">
+                <button class="events-seg-btn bulletin-source-seg__btn" data-source="community">
                   <i data-lucide="users" style="width:11px;height:11px;"></i> Community
                 </button>
               </div>
@@ -361,9 +364,9 @@
             <div style="display:flex;align-items:center;gap:.4rem;">
               <span class="events-filter-label">Slots</span>
               <div class="events-seg-control">
-                <button class="events-seg-btn is-active" data-avail="all">All</button>
-                <button class="events-seg-btn" data-avail="open">Open</button>
-                <button class="events-seg-btn" data-avail="walkin">Walk-in</button>
+                <button class="events-seg-btn bulletin-source-seg__btn is-active" data-avail="all">All</button>
+                <button class="events-seg-btn bulletin-source-seg__btn" data-avail="open">Open</button>
+                <button class="events-seg-btn bulletin-source-seg__btn" data-avail="walkin">Walk-in</button>
               </div>
             </div>
 

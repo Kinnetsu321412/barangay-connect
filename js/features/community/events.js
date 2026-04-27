@@ -194,7 +194,7 @@ function _subscribe(grid) {
     /* Keep calendar in sync if it's currently visible */
     if (window.updateEventsCalendar
         && document.getElementById('eventsCalendarView')?.style.display !== 'none') {
-      window.updateEventsCalendar(_allEvents);
+      window.updateEventsCalendar(_applyFilters(_allEvents));
     }
   }, err => {
     console.error('[events] subscription error', err);
@@ -228,10 +228,12 @@ async function _rsvpRegister(eventId) {
 async function _rsvpCancel(eventId) {
   const eventRef = eventDoc(_barangayId, eventId);
   const rsvpRef  = doc(eventRsvpsCol(_barangayId, eventId), _uid);
+  let _promoted  = null;
   await runTransaction(db, async tx => {
     const snap = await tx.get(eventRef);
     if (!snap.exists()) return;
     const waitlist = snap.data().waitlist ?? [];
+    if (waitlist.length > 0) _promoted = waitlist[0];
     tx.update(eventRef, { attendees: arrayRemove(_uid), updatedAt: serverTimestamp() });
     tx.set(rsvpRef, { status: 'cancelled' }, { merge: true });
     /* Auto-promote first waitlisted user */
@@ -240,6 +242,15 @@ async function _rsvpCancel(eventId) {
       tx.update(eventRef, { waitlist: arrayRemove(promoted), attendees: arrayUnion(promoted), updatedAt: serverTimestamp() });
     }
   });
+  if (_promoted) {
+    try {
+      const { sendNotification } = await import('/js/features/community/notifications.js');
+      await sendNotification(_barangayId, _promoted, {
+        type: 'waitlist_promo', actorId: 'system', actorName: 'BarangayConnect',
+        postId: eventId, postTitle: _allEvents.find(e => e.id === eventId)?.title ?? 'Event',
+      });
+    } catch { /* non-fatal */ }
+  }
 }
 
 async function _rsvpJoinWaitlist(eventId) {
@@ -331,9 +342,13 @@ function _buildEventCard(ev) {
   const categoryTag = `<span class="event-card__category-tag tag ${cat.tagClass}">${cat.label}</span>`;
 
   const sourceBadge = ev.authorRole === 'official'
-    ? `<span class="event-card__source-badge">
-         <i data-lucide="shield-check" style="width:10px;height:10px;"></i> Official
-       </span>`
+    ? `<span class="event-card__source-badge"><i data-lucide="shield-check" style="width:10px;height:10px;"></i> Official</span>`
+    : `<span class="event-card__source-badge event-card__source-badge--community"><i data-lucide="users" style="width:10px;height:10px;"></i> Community</span>`;
+
+  const pinnedBadge = ev.isPinned
+    ? `<div class="post-pin-bar" style="position:absolute;top:var(--space-sm);left:var(--space-sm);z-index:3;background:rgba(255,255,255,0.92);padding:2px 8px;border-radius:var(--radius-full);box-shadow:var(--shadow-sm);">
+         <i data-lucide="pin"></i> PINNED
+       </div>`
     : '';
 
   const _sbarMeta = {
@@ -343,18 +358,9 @@ function _buildEventCard(ev) {
   };
   const _sm = _sbarMeta[ev.status] ?? {};
   const statusBar = ev.status && ev.status !== 'active' && STATUS_LABELS[ev.status]
-    ? `<div style="background:${_sm.bg};color:${_sm.color};border-bottom:1px solid ${_sm.border};
-         padding:.35rem .75rem;font-size:.7rem;font-weight:700;display:flex;
-         align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.04em;">
-         <i data-lucide="${_sm.icon}" style="width:12px;height:12px;flex-shrink:0;"></i>
+    ? `<div class="event-card__status-bar event-card__status-bar--${esc(ev.status)}">
+         <i data-lucide="${_sm.icon}" style="width:12px;height:12px;"></i>
          ${STATUS_LABELS[ev.status]}
-       </div>`
-    : '';
-  const pinnedBar = ev.isPinned
-    ? `<div style="background:#fff8ed;color:#92400e;border-bottom:1px solid #fde68a;
-         padding:.35rem .75rem;font-size:.7rem;font-weight:700;display:flex;
-         align-items:center;gap:.4rem;text-transform:uppercase;letter-spacing:.04em;">
-         <i data-lucide="pin" style="width:12px;height:12px;flex-shrink:0;"></i> Pinned
        </div>`
     : '';
 
@@ -367,10 +373,11 @@ function _buildEventCard(ev) {
 
   return `
     <article class="event-card" data-event-id="${esc(ev.id)}">
-      ${pinnedBar}${statusBar}
+      ${statusBar}
       <div class="event-card__img-wrap">
         ${imgHtml}
         ${categoryTag}
+        ${pinnedBadge}
         ${sourceBadge}
       </div>
       <div class="event-card__body">
@@ -459,6 +466,8 @@ function _renderPagination(container, page, totalPages) {
   const existing = document.getElementById('eventsPagination');
   if (existing) existing.remove();
   if (!container || totalPages <= 1) return;
+  /* Don't show pagination while calendar is active */
+  if (document.getElementById('eventsCalendarView')?.style.display !== 'none') return;
 
   const nav = document.createElement('div');
   nav.id = 'eventsPagination';
@@ -531,6 +540,29 @@ window._rsvpAction = async function (eventId, action) {
   }
 };
 
+/* ── Event image viewer — populates accent bar with event info ── */
+window.eventOpenViewer = function(images, index, title, eventId) {
+  window.openImageViewer?.(images, index, title);
+  requestAnimationFrame(() => {
+    const accent = document.querySelector('#imgViewerOverlay .img-viewer__accent');
+    if (!accent || !eventId) return;
+    const ev  = _allEvents.find(e => e.id === eventId);
+    if (!ev) return;
+    const cat = EVENT_CATS[ev.category] ?? { label: 'Event', tagClass: 'tag--gray', icon: 'calendar' };
+    const _fmtD = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('en-PH',{ month:'short', day:'numeric', year:'numeric' }) : '';
+    accent.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <span class="tag ${esc(cat.tagClass)}" style="font-size:var(--text-2xs);padding:1px 7px;pointer-events:none;">${esc(cat.label)}</span>
+          <p style="font-family:var(--font-display);font-weight:700;color:#fff;margin:4px 0 0;font-size:var(--text-sm);">${esc(ev.title)}</p>
+          ${ev.location ? `<p style="font-size:var(--text-xs);color:rgba(255,255,255,0.5);margin:2px 0 0;display:flex;align-items:center;gap:3px;"><i data-lucide="map-pin" style="width:10px;height:10px;"></i>${esc(ev.location)}</p>` : ''}
+          ${ev.dateStart ? `<p style="font-size:var(--text-xs);color:rgba(255,255,255,0.5);margin:2px 0 0;">${_fmtD(ev.dateStart)}</p>` : ''}
+        </div>
+      </div>`;
+    if (typeof lucide !== 'undefined') lucide.createIcons({ el: accent });
+  });
+};
+
 // ================================================
 // EVENT DETAIL MODAL
 // ================================================
@@ -563,7 +595,8 @@ window.openEventDetail = async function (eventId) {
   const cat     = EVENT_CATS[ev.category] ?? { label: ev.category, tagClass: 'tag--gray', icon: 'calendar' };
   const dateStr     = _formatDateRange(ev.dateStart, ev.dateEnd);
   const showDateTime = !ev.status || ev.status === 'active';
-  const timeStr = ev.timeStart
+  const _hideTime = ev.status === 'postponed' || ev.status === 'cancelled';
+  const timeStr = !_hideTime && ev.timeStart
     ? `${_fmt12(ev.timeStart)}${ev.timeEnd ? ` – ${_fmt12(ev.timeEnd)}` : ''}`
     : '';
 
@@ -690,6 +723,7 @@ function _wireFilters() {
       _activeCategory = btn.dataset.category ?? 'all';
       _currentPage = 0;
       _renderEvents(document.getElementById('eventsCardsGrid'));
+      _maybeUpdateCalendar();
     });
   });
 
@@ -702,6 +736,7 @@ function _wireFilters() {
       _activeSource = btn.dataset.source ?? 'all';
       _currentPage = 0;
       _renderEvents(document.getElementById('eventsCardsGrid'));
+      _maybeUpdateCalendar();
     });
   });
 
@@ -714,6 +749,7 @@ function _wireFilters() {
       _activeAvail = btn.dataset.avail ?? 'all';
       _currentPage = 0;
       _renderEvents(document.getElementById('eventsCardsGrid'));
+      _maybeUpdateCalendar();
     });
   });
 
@@ -722,7 +758,16 @@ function _wireFilters() {
     _myEventsOnly = e.target.checked;
     _currentPage  = 0;
     _renderEvents(document.getElementById('eventsCardsGrid'));
+    _maybeUpdateCalendar();
   });
+}
+
+/* Keeps calendar in sync whenever filters change */
+function _maybeUpdateCalendar() {
+  if (window.updateEventsCalendar &&
+      document.getElementById('eventsCalendarView')?.style.display !== 'none') {
+    window.updateEventsCalendar(_applyFilters(_allEvents));
+  }
 }
 
 
@@ -741,8 +786,11 @@ function _wireViewToggle() {
       if (cardsView) cardsView.style.display = view === 'cards' ? '' : 'none';
       if (calView)   calView.style.display   = view === 'calendar' ? '' : 'none';
       /* Phase 2.5 — calendar module hook */
+      document.getElementById('eventsPagination')?.remove();
+      const _pag = document.getElementById('eventsPagination');
+      if (_pag) _pag.style.display = view === 'calendar' ? 'none' : '';
       if (view === 'calendar' && window.initEventsCalendar) {
-        window.initEventsCalendar(_allEvents, 'eventsCalContainer', 'eventsCalSidebarList', 'eventsCalSidebarTitle');
+        window.initEventsCalendar(_applyFilters(_allEvents), 'eventsCalContainer', 'eventsCalSidebarList', 'eventsCalSidebarTitle');
       }
     });
   });
@@ -920,6 +968,19 @@ function _openProposeForm() {
 
   if (typeof lucide !== 'undefined') lucide.createIcons({ el: body });
   openModal('proposeEventModal');
+  /* #7 — officer/admin notice */
+  if (_role === 'admin' || _role === 'officer') {
+    const _nb = document.getElementById('proposeEventBody');
+    if (_nb && !_nb.querySelector('.propose-role-notice')) {
+      const _ni = document.createElement('div');
+      _ni.className = 'propose-role-notice';
+      _ni.style.cssText = 'display:flex;align-items:flex-start;gap:.5rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.6rem .85rem;font-size:.78rem;color:#1e40af;margin-bottom:.75rem;';
+      _ni.innerHTML = `<i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;margin-top:1px;"></i>
+        <span>Submitting as <strong>${_role === 'admin' ? 'Admin' : 'Officer'}</strong> — this will be tagged as a <strong>Community</strong> event. To create an <strong>Official</strong> event, use the <a href="/admin.html" style="color:#1e40af;font-weight:700;text-decoration:underline;">Admin Panel</a> instead.</span>`;
+      _nb.prepend(_ni);
+      if (typeof lucide !== 'undefined') lucide.createIcons({ el: _ni });
+    }
+  }
 }
 
 
@@ -1028,6 +1089,13 @@ window._proposeSubmit = async function () {
       return;
     }
 
+    /* #10 — approval setting */
+    let _requireApproval = true;
+    try {
+      const _setSnap = await getDoc(doc(db, 'barangays', _barangayId, 'meta', 'settings'));
+      _requireApproval = _setSnap.data()?.requireEventApproval ?? true;
+    } catch { /* non-fatal */ }
+
     /* Upload photos */
     let imageURLs = [];
     if (_proposeFiles.length) {
@@ -1062,7 +1130,7 @@ window._proposeSubmit = async function () {
       submittedBy:       _uid,
       submittedByName:   _userName,
       authorRole:        'resident',
-      isApproved:        false,
+      isApproved:        !_requireApproval,
       status:            'active',
       statusReason:      '',
       isPinned:          false,

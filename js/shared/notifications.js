@@ -139,13 +139,19 @@ function renderDropdown(notifs, barangayId, uid) {
 
   /* Icon config per notification type */
   const ICONS = {
-    comment: { icon: 'message-circle',  bg: '#f0fdf4', color: '#15803d' },
-    reply:   { icon: 'corner-down-right', bg: '#f0fdf4', color: '#15803d' },
-    like:    { icon: 'heart',            bg: '#fef2f2', color: '#dc2626' },
-    poll_created:  { icon: 'bar-chart-2', bg: '#f0fdf4', color: '#15803d' },
-    poll_closed:   { icon: 'square',      bg: '#fef2f2', color: '#dc2626' },
-    poll_deadline: { icon: 'clock',       bg: '#fffbeb', color: '#92400e' },
-  };
+  comment: { icon: 'message-circle',   bg: '#f0fdf4', color: '#15803d' },
+  reply:   { icon: 'corner-down-right',bg: '#f0fdf4', color: '#15803d' },
+  like:    { icon: 'heart',            bg: '#fef2f2', color: '#dc2626' },
+  poll_created:   { icon: 'bar-chart-2',    bg: '#f0fdf4', color: '#15803d' },
+  poll_closed:    { icon: 'square',         bg: '#fef2f2', color: '#dc2626' },
+  poll_deadline:  { icon: 'clock',          bg: '#fffbeb', color: '#92400e' },
+  event_pending:  { icon: 'calendar-plus',  bg: '#fff8ed', color: '#92400e' },
+  event_approved: { icon: 'calendar-check', bg: '#f0fdf4', color: '#15803d' },
+  event_rejected: { icon: 'calendar-x',     bg: '#fef2f2', color: '#dc2626' },
+  status_change:  { icon: 'alert-circle',   bg: '#fef2f2', color: '#dc2626' },
+  waitlist_promo: { icon: 'arrow-up-circle',bg: '#f0fdf4', color: '#15803d' },
+  event_reminder: { icon: 'bell',           bg: '#eff6ff', color: '#2563eb' },
+};
 
   panel.innerHTML = `
     <!-- Header -->
@@ -183,11 +189,17 @@ function renderDropdown(notifs, barangayId, uid) {
         : notifs.map(n => {
             const meta = ICONS[n.type] ?? ICONS.comment;
             const msg =
-            n.type === 'like'          ? (n.commentId ? 'liked your comment on' : 'liked your post') :
-            n.type === 'reply'         ? 'replied to your comment on' :
-            n.type === 'poll_created'  ? 'A new community poll has been published:' :
-            n.type === 'poll_closed'   ? 'A community poll has been closed:' :
-            n.type === 'poll_deadline' ? 'A poll is closing within 24 hours:' :
+            n.type === 'like'           ? (n.commentId ? 'liked your comment on' : 'liked your post') :
+            n.type === 'reply'          ? 'replied to your comment on' :
+            n.type === 'poll_created'   ? 'A new community poll has been published:' :
+            n.type === 'poll_closed'    ? 'A community poll has been closed:' :
+            n.type === 'poll_deadline'  ? 'A poll is closing within 24 hours:' :
+            n.type === 'event_pending'  ? 'A new event needs your review:' :
+            n.type === 'event_approved' ? 'Your event has been approved:' :
+            n.type === 'event_rejected' ? 'Your event was not approved:' :
+            n.type === 'status_change'  ? 'An event status has changed:' :
+            n.type === 'waitlist_promo' ? "You're off the waitlist for:" :
+            n.type === 'event_reminder' ? 'Upcoming event reminder:' :
             'commented on your post';
 
             return `
@@ -209,7 +221,9 @@ function renderDropdown(notifs, barangayId, uid) {
               <div style="flex:1;min-width:0;padding-right:1.5rem;">
                 <p style="margin:0 0 2px;font-size:.82rem;color:#374151;line-height:1.4;
                   font-weight:${n.read ? '400' : '600'};">
-                  ${['poll_created','poll_closed','poll_deadline'].includes(n.type)
+                  ${['poll_created','poll_closed','poll_deadline',
+                  'event_pending','event_approved','event_rejected',
+                  'status_change','waitlist_promo','event_reminder'].includes(n.type)
                   ? `${msg} <em>"${esc(n.postTitle)}"</em>${n.description ? `<br><span style="color:#6b7280;font-size:.76rem;">${esc(n.description)}</span>` : ''}`
                   : `<strong>${esc(n.actorName)}</strong> ${msg} <em>"${esc(n.postTitle)}"</em>`
                 }
@@ -325,8 +339,10 @@ export async function sendNotification(barangayId, recipientUid, data) {
 
     document.getElementById('notif-panel').style.display = 'none';
 
-    const isPoll    = ['poll_created', 'poll_closed', 'poll_deadline'].includes(type);
-    const targetTab = isPoll ? 'polls' : 'bulletin';
+    const isPoll  = ['poll_created', 'poll_closed', 'poll_deadline'].includes(type);
+    const isEvent = ['event_pending','event_approved','event_rejected',
+                     'status_change','waitlist_promo','event_reminder'].includes(type);
+    const targetTab = isPoll ? 'polls' : isEvent ? 'events' : 'bulletin';
 
     // Detect community page by the presence of its root containers
     const onCommunity = !!(
@@ -349,6 +365,14 @@ export async function sendNotification(barangayId, recipientUid, data) {
         tabBtn.getAttribute('aria-selected') === 'true' ||
         tabBtn.dataset.active === 'true';
       if (!isActive) tabBtn.click();
+    }
+
+    /* Events — switch tab and open detail modal */
+    if (isEvent) {
+      const evTabBtn = document.querySelector('[data-tab="events"]');
+      if (evTabBtn) evTabBtn.click();
+      setTimeout(() => window.openEventDetail?.(postId), 400);
+      return;
     }
 
     // Then retry-scroll until the element renders (data may still be loading)

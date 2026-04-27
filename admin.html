@@ -454,27 +454,42 @@
           <h1 class="panel-heading" style="margin:0;">Events</h1>
         </div>
 
-        <!-- Filter row — mirrors bulletin section buttons -->
-        <div class="admin-subtab-row" style="padding-bottom:var(--space-md);border-bottom:2px solid var(--gray-100);">
-          <button class="events-filter-btn bulletin-section-btn admin-subtab-btn active"
-            onclick="window.setEventsAdminFilter('all',this)">
-            All Events
-          </button>
-          <button class="events-filter-btn bulletin-section-btn admin-subtab-btn"
-            onclick="window.setEventsAdminFilter('pending',this)">
-            Pending
-            <span id="eventsAdminPendingBadgeInner"
-              style="display:none;background:rgba(255,255,255,0.22);border-radius:999px;
-              padding:0 6px;font-size:.68rem;font-weight:700;margin-left:2px;"></span>
-          </button>
-          <button class="events-filter-btn bulletin-section-btn admin-subtab-btn"
-            onclick="window.setEventsAdminFilter('official',this)">
-            Official
-          </button>
-          <button class="events-filter-btn bulletin-section-btn admin-subtab-btn"
-            onclick="window.setEventsAdminFilter('community',this)">
-            Community
-          </button>
+        <!-- Filter row — two separate rows like bulletin -->
+        <div style="display:flex;flex-direction:column;gap:var(--space-sm);
+          padding-bottom:var(--space-md);border-bottom:2px solid var(--gray-100);">
+
+          <!-- Row 1: Section tabs -->
+          <div style="display:inline-flex;gap:var(--space-sm);">
+            <button class="events-filter-btn bulletin-section-btn admin-subtab-btn active"
+              onclick="window.setEventsAdminFilter('all',this)">
+              <i data-lucide="calendar-days" style="width:13px;height:13px;"></i> All Events
+            </button>
+            <button class="events-filter-btn bulletin-section-btn admin-subtab-btn"
+              onclick="window.setEventsAdminFilter('pending',this)">
+              <i data-lucide="clock" style="width:13px;height:13px;"></i> Pending
+              <span id="eventsAdminPendingBadgeInner"
+                style="display:none;background:rgba(255,255,255,0.22);border-radius:999px;
+                padding:0 6px;font-size:.68rem;font-weight:700;margin-left:2px;"></span>
+            </button>
+          </div>
+
+          <!-- Row 2: Source filter (hidden when Pending is active) -->
+          <div id="eventsAdminSourceRow" style="display:flex;align-items:center;gap:.4rem;">
+            <span style="font-size:.65rem;font-weight:700;text-transform:uppercase;color:#9ca3af;letter-spacing:.06em;flex-shrink:0;align-self:center;">Source</span>
+            <div style="display:inline-flex;background:var(--alpha-ink-07);border-radius:var(--radius-full);padding:3px;gap:2px;">
+              <button class="events-source-btn bulletin-view-btn admin-subtab-btn is-active"
+                onclick="window.setEventsAdminSource('all',this)">All</button>
+              <button class="events-source-btn bulletin-view-btn admin-subtab-btn"
+                onclick="window.setEventsAdminSource('official',this)">
+                <i data-lucide="shield-check" style="width:11px;height:11px;"></i> Official
+              </button>
+              <button class="events-source-btn bulletin-view-btn admin-subtab-btn"
+                onclick="window.setEventsAdminSource('community',this)">
+                <i data-lucide="users" style="width:11px;height:11px;"></i> Community
+              </button>
+            </div>
+          </div>
+
         </div>
 
         <div id="eventsAdminList" style="margin-bottom:1.5rem;margin-top:1.25rem;"></div>
@@ -853,6 +868,45 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════
+       STATUS REASON MODAL — reason shown publicly on event cards
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="eventsStatusReasonModal"
+    onclick="this.classList.remove('is-open')">
+    <div class="modal" style="max-width:480px;" onclick="event.stopPropagation()">
+      <div class="modal__header modal__header--green">
+        <div class="modal__header-icon"><i data-lucide="alert-triangle"></i></div>
+        <div class="modal__header-content">
+          <p class="modal__header-label">Status Change</p>
+          <h2 class="modal__header-title" id="statusReasonModalTitle">Reason Required</h2>
+          <p class="modal__header-sub">This reason will appear publicly on the event card.</p>
+        </div>
+      </div>
+      <div class="modal__body" style="padding:var(--space-lg);display:flex;flex-direction:column;gap:var(--space-sm);">
+        <p style="font-size:var(--text-sm);color:var(--gray-600);margin:0;">
+          Residents and officers will see this reason on the event card. Be clear and concise.
+        </p>
+        <textarea id="statusReasonInput" rows="3"
+          style="width:100%;padding:.55rem .75rem;border:1.5px solid #e0e0e0;border-radius:8px;
+            font-size:.875rem;outline:none;resize:vertical;box-sizing:border-box;"
+          placeholder="e.g. Postponed due to inclement weather. New date TBA."></textarea>
+        <p id="statusReasonError" style="display:none;font-size:var(--text-xs);color:var(--red);margin:0;">
+          Please enter a reason before confirming.
+        </p>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--outline"
+          onclick="document.getElementById('eventsStatusReasonModal').classList.remove('is-open');window._statusReasonReject?.()">
+          Cancel
+        </button>
+        <button class="btn btn--green" id="statusReasonConfirmBtn"
+          onclick="window._statusReasonConfirm?.()">
+          Confirm Change
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
        SIGN-OUT CONFIRM MODAL
   ══════════════════════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="signoutModal" onclick="this.classList.remove('is-open')">
@@ -1150,8 +1204,16 @@
 
   <!-- Image viewer utility -->
   <script type="module">
-    import { openImageViewer } from './js/shared/image-viewer.js';
+    import { openImageViewer } from '/js/shared/image-viewer.js';
     window.openImageViewer = openImageViewer;
+  </script>
+
+  <script type="module">
+    import { openImageViewer } from '/js/shared/image-viewer.js';
+    window.openImageViewer = openImageViewer;
+    window.eventOpenViewer = function(images, index, title, eventId) {
+      openImageViewer(images, index, title);
+    };
   </script>
 
   <!-- 5. Admin feature modules -->

@@ -1135,8 +1135,7 @@ function renderPostList(posts, containerId) {
                       border:        1px solid #e5e7eb;
                       cursor:        pointer;
                     "
-                    onclick="window.openImageViewer?.(['${imgs.map(u => esc(u)).join("','")}'],${i},'${esc(p.title)}')" />
-                `).join('')}
+                    onclick="window.eventOpenViewer?.(['${imgs.map(u => esc(u)).join("','")}'],${i},'${esc(ev.title)}','${esc(ev.id)}')" />`).join('')}
               </div>` : ''}
             <p style="font-size:.72rem;color:#9ca3af;margin:0;">
               ♡ ${reactions} &nbsp;·&nbsp; 💬 ${p.commentCount ?? 0}

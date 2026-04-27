@@ -76,7 +76,8 @@ let _official   = [];   // authorRole: 'official', isApproved: true
 let _community  = [];   // authorRole: 'resident', isApproved: true
 let _editId     = null;
 let _formVisible = false;
-let _activeFilter = 'all';
+let _activeFilter = 'all';  // 'all' | 'pending'
+let _activeSource = 'all';  // 'all' | 'official' | 'community'
 let _barangay   = null;
 let _uid        = null;
 let _userName   = 'Admin';
@@ -88,12 +89,12 @@ let _imageFiles = [];
 // ================================================
 
 const CATS = {
+  health:     'Health',
   sports:     'Sports',
   youth:      'Youth',
-  seniors:    'Seniors',
-  health:     'Health',
   livelihood: 'Livelihood',
   culture:    'Culture',
+  seniors:    'Seniors',
   community:  'Community',
 };
 
@@ -162,6 +163,26 @@ onAuthStateChanged(auth, async (user) => {
   _renderForm(null);
 });
 
+/* Auto-delete completed events past the configured threshold */
+  (async () => {
+    try {
+      const settingsSnap = await getDoc(doc(db, 'barangays', toBid(_barangay), 'meta', 'settings'));
+      const deleteDays   = settingsSnap.data()?.completedEventDeleteDays ?? 1;
+      const cutoff       = new Date();
+      cutoff.setDate(cutoff.getDate() - deleteDays);
+
+      const q = query(eventsCol(_barangay), where('status', '==', 'completed'));
+      const snap = await getDocs(q);
+      snap.docs.forEach(async d => {
+        const updated = d.data().updatedAt?.toDate?.() ?? d.data().createdAt?.toDate?.();
+        if (updated && updated < cutoff) {
+          await deleteDoc(eventDoc(_barangay, d.id));
+        }
+      });
+    } catch (err) {
+      console.warn('[events-admin] auto-delete check failed:', err.message);
+    }
+  })();
 
 // ================================================
 // FILTER SWITCHER
@@ -169,13 +190,22 @@ onAuthStateChanged(auth, async (user) => {
 
 window.setEventsAdminFilter = function (filter, btn) {
   _activeFilter = filter;
-
   document.querySelectorAll('.events-filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
+  /* Hide source row when showing pending (pending are always community submissions) */
+  const sourceRow = document.getElementById('eventsAdminSourceRow');
+  if (sourceRow) sourceRow.style.display = filter === 'pending' ? 'none' : '';
+
   _renderEventsList();
-  /* Form renders below list — always visible so admin can create official events */
   if (!_editId && !_formVisible) _renderForm(null);
+};
+
+window.setEventsAdminSource = function (source, btn) {
+  _activeSource = source;
+  document.querySelectorAll('.events-source-btn').forEach(b => b.classList.remove('is-active'));
+  if (btn) btn.classList.add('is-active');
+  _renderEventsList();
 };
 
 
@@ -193,12 +223,16 @@ function _renderEventsList() {
   if (!el) return;
 
   let events;
-  if (_activeFilter === 'pending')   events = _pending;
-  else if (_activeFilter === 'official')  events = _official;
-  else if (_activeFilter === 'community') events = _community;
-  else events = [..._official, ..._community].sort((a, b) =>
-    (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
-  );
+  if (_activeFilter === 'pending') {
+    events = _pending;
+  } else {
+    const all = [..._official, ..._community].sort((a, b) =>
+      (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
+    );
+    if (_activeSource === 'official')  events = _official;
+    else if (_activeSource === 'community') events = _community;
+    else events = all;
+  }
 
   if (!events.length) {
     el.innerHTML = _emptyState(
@@ -293,22 +327,22 @@ function _buildRow(ev) {
           color:#555;font-size:.78rem;font-weight:500;transition:all .15s;"
         onmouseover="this.style.background='#f4f6f9'"
         onmouseout="this.style.background='#fff'">
-        <i data-lucide="eye" style="width:13px;height:13px;"></i> View
+        <i data-lucide="eye" style="width:13px;height:13px;"></i>
       </button>
       <button onclick="window.approveEvent('${esc(ev.id)}')"
         title="Approve"
-        style="display:inline-flex;align-items:center;gap:.3rem;padding:5px 10px;
+        style="display:inline-flex;align-items:center;padding:5px 8px;
           border-radius:7px;border:1.5px solid #bbf7d0;background:#f0fdf4;cursor:pointer;
-          color:#14532d;font-size:.78rem;font-weight:500;transition:all .15s;"
+          color:#14532d;transition:all .15s;"
         onmouseover="this.style.background='#dcfce7'"
         onmouseout="this.style.background='#f0fdf4'">
         <i data-lucide="check" style="width:13px;height:13px;"></i> Approve
       </button>
       <button onclick="window.rejectEvent('${esc(ev.id)}')"
         title="Reject"
-        style="display:inline-flex;align-items:center;gap:.3rem;padding:5px 10px;
+        style="display:inline-flex;align-items:center;padding:5px 8px;
           border-radius:7px;border:1.5px solid #fecaca;background:#fff;cursor:pointer;
-          color:#dc2626;font-size:.78rem;font-weight:500;transition:all .15s;"
+          color:#dc2626;transition:all .15s;"
         onmouseover="this.style.background='#fef2f2'"
         onmouseout="this.style.background='#fff'">
         <i data-lucide="x" style="width:13px;height:13px;"></i> Reject
@@ -323,16 +357,16 @@ function _buildRow(ev) {
           color:#555;font-size:.78rem;font-weight:500;transition:all .15s;"
         onmouseover="this.style.background='#f4f6f9'"
         onmouseout="this.style.background='#fff'">
-        <i data-lucide="eye" style="width:13px;height:13px;"></i> View
+        <i data-lucide="eye" style="width:13px;height:13px;"></i>
       </button>
       <button onclick="window.viewEventAttendees('${esc(ev.id)}')"
         title="View attendees"
-        style="display:inline-flex;align-items:center;gap:.3rem;padding:5px 10px;
-          border-radius:7px;border:1.5px solid #bfdbfe;background:#eff6ff;cursor:pointer;
-          color:#1e3a5f;font-size:.78rem;font-weight:500;transition:all .15s;"
-        onmouseover="this.style.background='#dbeafe'"
-        onmouseout="this.style.background='#eff6ff'">
-        <i data-lucide="users" style="width:13px;height:13px;"></i> Attendees
+        style="display:inline-flex;align-items:center;padding:5px 8px;
+          border-radius:7px;border:1.5px solid #e0e0e0;background:#fff;cursor:pointer;
+          color:#555;transition:all .15s;"
+        onmouseover="this.style.background='#f4f6f9'"
+        onmouseout="this.style.background='#fff'">
+        <i data-lucide="users" style="width:13px;height:13px;"></i>
       </button>
       ${isOfficial ? `
       <button onclick="window.editEventAdmin('${esc(ev.id)}')"
@@ -407,6 +441,9 @@ window._eaOnStatusChange = function (status) {
 function _renderForm(prefill) {
   const el = document.getElementById('eventsAdminForm');
   if (!el) return;
+
+  /* Hide create button entirely when viewing pending submissions */
+  if (_activeFilter === 'pending') { el.innerHTML = ''; return; }
 
   if (!_formVisible && !_editId) {
     el.innerHTML = `
@@ -541,7 +578,7 @@ function _renderForm(prefill) {
           <input type="hidden" id="eaCurrentImageURL" value="${esc(d.imageURL || '')}" />
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <div id="eaSlotsRow" style="display:${d.isWalkIn ? 'none' : 'grid'};grid-template-columns:1fr 1fr;gap:1rem;">
           <div>
             <label style="${LS}">Total Slots (blank = unlimited)</label>
             <input id="eaSlots" type="number" min="1"
@@ -555,7 +592,7 @@ function _renderForm(prefill) {
           ${_checkField('eaPinned',    'pin',       '#c2410c', 'Pin to top',              d.isPinned)}
           ${_checkField('eaShowSlots', 'eye',       '#2563eb', 'Show slot count publicly', d.showSlotsPublicly ?? true)}
           ${_checkField('eaWaitlist',  'list',      '#1a3a1a', 'Enable waitlist',          d.waitlistEnabled)}
-          ${_checkField('eaWalkin',    'door-open', '#1a3a1a', 'Walk-in welcome',          d.isWalkIn)}
+          ${_checkField('eaWalkin',    'door-open', '#1a3a1a', 'Walk-in welcome',          d.isWalkIn, 'window._eaOnWalkinChange(this)')}
         </div>
 
         <div style="display:flex;gap:.6rem;margin-top:.25rem;flex-wrap:wrap;align-items:center;">
@@ -585,11 +622,22 @@ function _renderForm(prefill) {
   if (d.status && d.status !== 'active') window._eaOnStatusChange?.(d.status);
 }
 
-function _checkField(id, icon, color, label, checked) {
+window._eaOnWalkinChange = function (checkbox) {
+  const row = document.getElementById('eaSlotsRow');
+  if (!row) return;
+  row.style.display = checkbox.checked ? 'none' : 'grid';
+  if (checkbox.checked) {
+    const slotsEl = document.getElementById('eaSlots');
+    if (slotsEl) slotsEl.value = '';
+  }
+};
+
+function _checkField(id, icon, color, label, checked, onchange = '') {
   return `
     <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;
       font-size:.82rem;font-weight:600;color:#555;">
       <input type="checkbox" id="${id}" ${checked ? 'checked' : ''}
+        ${onchange ? `onchange="${onchange}"` : ''}
         style="width:15px;height:15px;accent-color:${color};cursor:pointer;" />
       <i data-lucide="${icon}" style="width:14px;height:14px;color:${color};"></i>
       ${label}
@@ -635,6 +683,43 @@ window.editEventAdmin = async function (id) {
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 };
 
+/* Returns a Promise that resolves with the typed reason, or rejects on cancel */
+function _promptStatusReason(newStatus) {
+  return new Promise((resolve, reject) => {
+    const modal   = document.getElementById('eventsStatusReasonModal');
+    const titleEl = document.getElementById('statusReasonModalTitle');
+    const inputEl = document.getElementById('statusReasonInput');
+    const errEl   = document.getElementById('statusReasonError');
+    if (!modal || !inputEl) { resolve(window.prompt(`Reason for ${newStatus}?`) ?? ''); return; }
+
+    if (titleEl) titleEl.textContent = `Reason for marking as ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`;
+    inputEl.value = '';
+    if (errEl) errEl.style.display = 'none';
+    inputEl.style.borderColor = '#e0e0e0';
+    modal.classList.add('is-open');
+    lucide.createIcons({ el: modal });
+
+    window._statusReasonConfirm = () => {
+      const reason = inputEl.value.trim();
+      if (!reason) {
+        inputEl.style.borderColor = '#dc2626';
+        if (errEl) errEl.style.display = '';
+        return;
+      }
+      modal.classList.remove('is-open');
+      window._statusReasonConfirm = null;
+      window._statusReasonReject  = null;
+      resolve(reason);
+    };
+    window._statusReasonReject = () => {
+      modal.classList.remove('is-open');
+      window._statusReasonConfirm = null;
+      window._statusReasonReject  = null;
+      reject(new Error('cancelled'));
+    };
+  });
+}
+
 
 // ================================================
 // FORM — Save (Create / Update)
@@ -663,6 +748,51 @@ window.eventAdminSave = async function () {
   if (!dateEnd)   return _showToast('Please select an end date.', 'error');
   if (!timeStart) return _showToast('Please enter a start time.', 'error');
   if (!location)  return _showToast('Please enter a location.', 'error');
+
+  /* ── Safety checks and status reason (before disabling button so user can cancel) ── */
+  let statusReason = '';
+  if (_editId) {
+    const origEv = [..._official, ..._community].find(e => e.id === _editId);
+    if (origEv) {
+      const currentAttendees = origEv.attendees?.length ?? 0;
+      const currentWaitlist  = origEv.waitlist?.length  ?? 0;
+      const newSlots = slotsRaw ? parseInt(slotsRaw, 10) : null;
+
+      /* Prevent reducing slots below registered count */
+      if (newSlots !== null && newSlots < currentAttendees) {
+        return _showToast(`Cannot reduce slots to ${newSlots} — ${currentAttendees} people are already registered.`, 'error');
+      }
+      /* Warn if disabling waitlist while people are queued */
+      if (!waitlist && origEv.waitlistEnabled && currentWaitlist > 0) {
+        const ok = await showConfirm({
+          title: 'Disable Waitlist?',
+          body: `${currentWaitlist} ${currentWaitlist === 1 ? 'person is' : 'people are'} currently on the waitlist. They will remain but won't be auto-promoted if a slot opens.`,
+          confirm: 'Disable Anyway', cancel: 'Keep Waitlist', variant: 'warning',
+        });
+        if (!ok) return;
+      }
+      /* Warn if enabling walk-in while registrations exist */
+      if (walkin && !origEv.isWalkIn && currentAttendees > 0) {
+        const ok = await showConfirm({
+          title: 'Enable Walk-in?',
+          body: `${currentAttendees} people are already registered. Enabling walk-in removes slot restrictions — existing registrations are unaffected.`,
+          confirm: 'Enable Anyway', cancel: 'Cancel', variant: 'warning',
+        });
+        if (!ok) return;
+      }
+
+      /* Status reason prompt */
+      const origStatus = origEv.status ?? 'active';
+      if ((status === 'postponed' || status === 'cancelled') && status !== origStatus) {
+        try { statusReason = await _promptStatusReason(status); }
+        catch { return; } /* user cancelled */
+      } else if (status === 'active') {
+        statusReason = ''; /* clear reason when restoring to active */
+      } else {
+        statusReason = origEv.statusReason ?? ''; /* keep existing reason for completed, etc. */
+      }
+    }
+  }
 
   const saveBtn = document.querySelector('#eventsAdminForm button[onclick="window.eventAdminSave()"]');
   if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Saving…'; }
@@ -693,7 +823,7 @@ window.eventAdminSave = async function () {
 
     const payload = {
       title, category, description: desc, dateStart, dateEnd,
-      timeStart, timeEnd, location, status,
+      timeStart, timeEnd, location, status, statusReason,
       totalSlots:        slotsRaw ? parseInt(slotsRaw, 10) : null,
       isPinned,
       showSlotsPublicly: showSlots,
@@ -707,6 +837,16 @@ window.eventAdminSave = async function () {
     if (_editId) {
       await updateDoc(eventDoc(_barangay, _editId), payload);
       _showToast('Event updated.');
+      if (origEv && (status === 'postponed' || status === 'cancelled')
+          && status !== (origEv.status ?? 'active')) {
+        try {
+          const { sendNotification: _sn } = await import('/js/features/community/notifications.js');
+          await Promise.all((origEv.attendees ?? []).map(aUid =>
+            _sn(_barangay, aUid, { type: 'status_change', actorId: 'system',
+              actorName: 'BarangayConnect', postId: _editId, postTitle: payload.title })
+          ));
+        } catch { /* non-fatal */ }
+      }
     } else {
       await addDoc(eventsCol(_barangay), {
         ...payload,
@@ -756,6 +896,13 @@ window.approveEvent = async function (id) {
       isApproved: true, updatedAt: serverTimestamp(),
     });
     _showToast('Event approved and is now live.');
+    try {
+      const { sendNotification } = await import('/js/features/community/notifications.js');
+      await sendNotification(_barangay, ev?.submittedBy, {
+        type: 'event_approved', actorId: 'system', actorName: 'BarangayConnect',
+        postId: id, postTitle: ev?.title ?? 'Your event',
+      });
+    } catch { /* non-fatal */ }
   } catch {
     _showToast('Could not approve. Try again.', 'error');
   }
@@ -774,6 +921,13 @@ window.rejectEvent = async function (id) {
   try {
     await deleteDoc(eventDoc(_barangay, id));
     _showToast('Submission rejected and removed.', 'error');
+    try {
+      const { sendNotification } = await import('/js/features/community/notifications.js');
+      await sendNotification(_barangay, ev?.submittedBy, {
+        type: 'event_rejected', actorId: 'system', actorName: 'BarangayConnect',
+        postId: id, postTitle: ev?.title ?? 'Your event',
+      });
+    } catch { /* non-fatal */ }
   } catch {
     _showToast('Could not reject. Try again.', 'error');
   }
@@ -800,6 +954,21 @@ window.deleteEventAdmin = async function (id, title) {
   } catch {
     _showToast('Could not delete. Try again.', 'error');
   }
+};
+
+/* ── Quick status manager — prompts for reason on non-active transitions ── */
+window.updateEventStatus = async function(eventId, newStatus) {
+  const evRef = eventDoc(_barangay, eventId);
+  try {
+    if (newStatus !== 'active') {
+      const reason = prompt(`Reason for marking as ${newStatus}?`);
+      if (!reason) return;
+      await updateDoc(evRef, { status: newStatus, statusReason: reason, updatedAt: serverTimestamp() });
+    } else {
+      await updateDoc(evRef, { status: 'active', statusReason: '', updatedAt: serverTimestamp() });
+    }
+    _showToast(`Status changed to ${newStatus}.`);
+  } catch { _showToast('Could not update status.', 'error'); }
 };
 
 
@@ -853,7 +1022,7 @@ window.viewEventAdminDetail = async function (id) {
           <img src="${esc(url)}" alt="Event photo ${i + 1}"
             style="width:80px;height:60px;object-fit:cover;border-radius:8px;
               border:1px solid #e5e7eb;cursor:pointer;"
-            onclick="window.openImageViewer?.(['${imgs.map(u => esc(u)).join("','")}'],${i},'${esc(ev.title)}')" />`
+            onclick="window.eventOpenViewer(['${imgs.map(u => esc(u)).join("','")}'],${i},'${esc(ev.title)}','${esc(ev.id)}')" />`
         ).join('')}
       </div>
     </div>` : '';

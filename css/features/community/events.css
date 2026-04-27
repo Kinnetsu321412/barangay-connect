@@ -656,3 +656,26 @@
 .modal-overlay.is-open {
   display: flex;
 }
+
+/* ── Pinned corner badge (replaces full-width pinned bar) ── */
+.event-card__pinned-badge {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff8ed;
+  color: #c2410c;
+  border: 1.5px solid #fde68a;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Community source badge variant ── */
+.event-card__source-badge--community {
+  background: rgba(55,65,81,0.82);
+}
