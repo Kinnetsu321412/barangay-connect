@@ -85,8 +85,18 @@ export function initNavAuth({ onResolved } = {}) {
       const _heroNameEl = document.getElementById('heroBarangayName');
       if (_heroNameEl && barangay) _heroNameEl.textContent = barangay.toUpperCase();
 
+      /* Expose barangay + user globally so feature modules can read them */
+      window._communityBid           = toBid(barangay);
+      window._currentUid             = user.uid;
+      window._currentUserRole        = role;
+      window._communityBarangayName  = barangay;
+      window._currentUserName = snap.data().fullName || snap.data().name || snap.data().displayName || '';
+
       initNotifications(toBid(barangay), user.uid);
       onResolved?.({ user, role, barangay });
+
+      /* Signal all feature modules that auth + barangay are ready */
+      window.dispatchEvent(new Event('bc:auth-ready'));
 
     } catch (_) {
       /* Non-fatal — body class and navbar may remain at cached state */

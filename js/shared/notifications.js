@@ -151,6 +151,12 @@ function renderDropdown(notifs, barangayId, uid) {
   status_change:  { icon: 'alert-circle',   bg: '#fef2f2', color: '#dc2626' },
   waitlist_promo: { icon: 'arrow-up-circle',bg: '#f0fdf4', color: '#15803d' },
   event_reminder: { icon: 'bell',           bg: '#eff6ff', color: '#2563eb' },
+  pet_contact:  { icon: 'paw-print',    bg: '#f0fdf4', color: '#15803d' },
+  pet_pending:  { icon: 'clock',        bg: '#fffbeb', color: '#92400e' },
+  pet_approved: { icon: 'check-circle', bg: '#f0fdf4', color: '#15803d' },
+  pet_rejected: { icon: 'x-circle',     bg: '#fef2f2', color: '#dc2626' },
+  pet_resolved: { icon: 'heart',        bg: '#f0fdf4', color: '#15803d' },
+  pet_linked:   { icon: 'link',         bg: '#f0fdf4', color: '#15803d' },
 };
 
   panel.innerHTML = `
@@ -187,6 +193,7 @@ function renderDropdown(notifs, barangayId, uid) {
              No notifications yet.
            </p>`
         : notifs.map(n => {
+            const isPet = n.type?.startsWith('pet_');
             const meta = ICONS[n.type] ?? ICONS.comment;
             const msg =
             n.type === 'like'           ? (n.commentId ? 'liked your comment on' : 'liked your post') :
@@ -200,6 +207,13 @@ function renderDropdown(notifs, barangayId, uid) {
             n.type === 'status_change'  ? 'An event status has changed:' :
             n.type === 'waitlist_promo' ? "You're off the waitlist for:" :
             n.type === 'event_reminder' ? 'Upcoming event reminder:' :
+            n.type === 'pet_pending'    ? 'A new pet report needs your review:' :
+            n.type === 'pet_linked'     ? 'thinks they found your missing pet:' :
+            n.type === 'pet_contact'    ? 'sent you a message about your pet report:' :
+            n.type === 'pet_pending'    ? 'A new pet report needs your review:' :
+            n.type === 'pet_approved'   ? 'Your pet report has been approved:' :
+            n.type === 'pet_rejected'   ? 'Your pet report was not approved:' :
+            n.type === 'pet_resolved'   ? 'Your pet report has been resolved:' :
             'commented on your post';
 
             return `
@@ -224,6 +238,10 @@ function renderDropdown(notifs, barangayId, uid) {
                   ${['poll_created','poll_closed','poll_deadline',
                   'event_pending','event_approved','event_rejected',
                   'status_change','waitlist_promo','event_reminder'].includes(n.type)
+                  ? `${msg} <em>"${esc(n.postTitle)}"</em>${n.description ? `<br><span style="color:#6b7280;font-size:.76rem;">${esc(n.description)}</span>` : ''}`
+                  : (n.type === 'pet_linked' || n.type === 'pet_contact')
+                  ? `<strong>${esc(n.actorName)}</strong> ${msg} <em>"${esc(n.postTitle)}"</em>${n.description ? `<br><span style="color:#6b7280;font-size:.76rem;">${esc(n.description)}</span>` : ''}`
+                  : isPet
                   ? `${msg} <em>"${esc(n.postTitle)}"</em>${n.description ? `<br><span style="color:#6b7280;font-size:.76rem;">${esc(n.description)}</span>` : ''}`
                   : `<strong>${esc(n.actorName)}</strong> ${msg} <em>"${esc(n.postTitle)}"</em>`
                 }
@@ -310,14 +328,15 @@ export async function sendNotification(barangayId, recipientUid, data) {
   await addDoc(
     _col(db, 'barangays', barangayId, 'users', recipientUid, 'notifications'),
     {
-      type:      data.type,         // 'comment' | 'reply' | 'like'
-      actorId:   data.actorId,
-      actorName: data.actorName,
-      postId:    data.postId,
-      postTitle: data.postTitle,
-      commentId: data.commentId ?? null,
-      read:      false,
-      createdAt: _ts(),
+      type:        data.type,
+      actorId:     data.actorId,
+      actorName:   data.actorName,
+      postId:      data.postId,
+      postTitle:   data.postTitle,
+      commentId:   data.commentId   ?? null,
+      description: data.description ?? null,
+      read:        false,
+      createdAt:   _ts(),
     }
   );
 }
@@ -339,10 +358,12 @@ export async function sendNotification(barangayId, recipientUid, data) {
 
     document.getElementById('notif-panel').style.display = 'none';
 
-    const isPoll  = ['poll_created', 'poll_closed', 'poll_deadline'].includes(type);
-    const isEvent = ['event_pending','event_approved','event_rejected',
-                     'status_change','waitlist_promo','event_reminder'].includes(type);
-    const targetTab = isPoll ? 'polls' : isEvent ? 'events' : 'bulletin';
+    const isPoll    = ['poll_created', 'poll_closed', 'poll_deadline'].includes(type);
+    const isEvent   = ['event_pending','event_approved','event_rejected',
+                       'status_change','waitlist_promo','event_reminder'].includes(type);
+    const isPetLink = type === 'pet_linked';
+    const isPet     = type?.startsWith('pet_');
+    const targetTab = isPoll ? 'polls' : isEvent ? 'events' : isPet ? 'pets' : 'bulletin';
 
     // Detect community page by the presence of its root containers
     const onCommunity = !!(
@@ -372,6 +393,29 @@ export async function sendNotification(barangayId, recipientUid, data) {
       const evTabBtn = document.querySelector('[data-tab="events"]');
       if (evTabBtn) evTabBtn.click();
       setTimeout(() => window.openEventDetail?.(postId), 400);
+      return;
+    }
+
+    /* Pet notifications (non-link) — just switch to pets tab */
+    if (isPet && !isPetLink) {
+      const petsTabBtn = document.querySelector('[data-tab="pets"]');
+      if (petsTabBtn) petsTabBtn.click();
+      return;
+    }
+
+    /* Pet linked — switch to pets tab, scroll to the missing report card */
+    if (isPetLink) {
+      const petsTabBtn = document.querySelector('[data-tab="pets"]');
+      if (petsTabBtn) petsTabBtn.click();
+      setTimeout(() => {
+        const card = document.querySelector(`[data-report-id="${postId}"]`);
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          card.style.transition = 'box-shadow .3s';
+          card.style.boxShadow  = '0 0 0 2px var(--green-dark)';
+          setTimeout(() => { card.style.boxShadow = ''; }, 1800);
+        }
+      }, 600);
       return;
     }
 

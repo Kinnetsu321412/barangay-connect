@@ -154,7 +154,7 @@ function buildPendingRow(p) {
         ${p.imageURLs.map((url, i) => `
           <div style="cursor:zoom-in;border-radius:8px;overflow:hidden;flex-shrink:0;
             border:1px solid #e5e7eb;background:#f3f4f6;"
-            onclick="window.openImageViewer(JSON.parse(decodeURIComponent('${imgsJson}')),${i},'${esc(p.title)}')">
+            />` : ''}
             <img src="${esc(url)}"
               style="width:120px;height:88px;object-fit:contain;display:block;" />
           </div>`).join('')}

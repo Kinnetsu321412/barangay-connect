@@ -69,7 +69,9 @@
   <link rel="stylesheet" href="/css/shared/components.css" />
   <link rel="stylesheet" href="/css/shared/frames.css" />
   <link rel="stylesheet" href="/css/features/home/home.css" />
-  <link rel="stylesheet" href="/css/features/admin/admin.css" />
+  <link rel="stylesheet" href="/css/features/community/community.css" />
+<link rel="stylesheet" href="/css/features/community/gallery.css" />
+<link rel="stylesheet" href="/css/features/admin/admin.css" />
 
 </head>
 
@@ -436,14 +438,50 @@
         </div>
       </div><!-- /community-sub-comments -->
 
-      <!-- Pets sub-panel (placeholder) -->
+      <!-- Pets sub-panel — driven by pets-admin.js -->
       <div id="community-sub-pets" hidden>
-        <h1 class="panel-heading">Pets</h1>
-        <div style="background:white;border-radius:12px;padding:3rem;text-align:center;
-                    color:#aaa;box-shadow:0 1px 4px rgba(0,0,0,0.07);">
-          <div style="font-size:2rem;margin-bottom:.5rem;"><i data-lucide="paw-print"></i></div>
-          <p style="margin:0;font-size:.9rem;">Registered pets and lost/found listings will appear here.</p>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;
+          margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+          <h1 class="panel-heading" style="margin:0;">Pet Board</h1>
         </div>
+
+        <!-- Section tabs — mirrors bulletin section tabs -->
+        <div class="admin-subtab-row">
+          <button class="pets-admin-sub-btn bulletin-section-btn admin-subtab-btn active"
+            onclick="window.setPetsAdminSubTab('pending',this)">
+            <i data-lucide="clock" style="width:11px;height:11px;"></i> Pending
+            <span id="petsAdminPendingBadge"
+              style="display:none;background:rgba(255,255,255,0.22);border-radius:999px;
+              padding:0 6px;font-size:.68rem;font-weight:700;margin-left:2px;"></span>
+          </button>
+          <button class="pets-admin-sub-btn bulletin-section-btn admin-subtab-btn"
+            onclick="window.setPetsAdminSubTab('active',this)">
+            <i data-lucide="paw-print" style="width:11px;height:11px;"></i> Active
+          </button>
+          <button class="pets-admin-sub-btn bulletin-section-btn admin-subtab-btn"
+            onclick="window.setPetsAdminSubTab('resolved',this)">
+            <i data-lucide="check-circle" style="width:11px;height:11px;"></i> Resolved
+          </button>
+          <button class="pets-admin-sub-btn bulletin-section-btn admin-subtab-btn"
+            onclick="window.setPetsAdminSubTab('archive',this)">
+            <i data-lucide="archive" style="width:11px;height:11px;"></i> Archive
+          </button>
+        </div>
+
+        <div id="pets-admin-sub-pending" style="margin-top:1.25rem;">
+          <div id="petsAdminPendingList" style="display:flex;flex-direction:column;gap:.75rem;"></div>
+        </div>
+        <div id="pets-admin-sub-active" hidden style="margin-top:1.25rem;">
+          <div id="petsAdminActiveList" style="display:flex;flex-direction:column;gap:.75rem;"></div>
+        </div>
+        <div id="pets-admin-sub-resolved" hidden style="margin-top:1.25rem;">
+          <div id="petsAdminResolvedList" style="display:flex;flex-direction:column;gap:.75rem;"></div>
+        </div>
+        <div id="pets-admin-sub-archive" hidden style="margin-top:1.25rem;">
+          <div id="petsAdminArchiveList" style="display:flex;flex-direction:column;gap:.75rem;"></div>
+        </div>
+
       </div>
 
       <!-- Events sub-panel — driven by events-admin.js -->
@@ -907,6 +945,35 @@
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════
+       PET DETAIL MODAL — admin read-only viewer
+  ══════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="petsAdminDetailModal"
+    onclick="this.classList.remove('is-open')">
+    <div class="modal" style="max-width:540px;" onclick="event.stopPropagation()">
+      <div class="modal__header modal__header--green">
+        <div class="modal__header-icon"><i data-lucide="paw-print"></i></div>
+        <div class="modal__header-content">
+          <p class="modal__header-label" id="petsAdminDetailLabel">Pet Board</p>
+          <h2 class="modal__header-title" id="petsAdminDetailName">—</h2>
+          <p class="modal__header-sub"   id="petsAdminDetailSub">—</p>
+        </div>
+        <button class="btn btn--close btn--sm modal__close"
+          onclick="document.getElementById('petsAdminDetailModal').classList.remove('is-open')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal__body" id="petsAdminDetailBody"
+        style="padding:var(--space-lg);max-height:60vh;overflow-y:auto;"></div>
+      <div class="modal__footer">
+        <button class="btn btn--outline"
+          onclick="document.getElementById('petsAdminDetailModal').classList.remove('is-open')">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
        SIGN-OUT CONFIRM MODAL
   ══════════════════════════════════════════════════════════════════ -->
   <div class="modal-overlay" id="signoutModal" onclick="this.classList.remove('is-open')">
@@ -1230,6 +1297,7 @@
   <script type="module" src="js/features/admin/polls-admin.js"></script>
   <script type="module" src="js/features/admin/gallery-admin.js"></script>
   <script type="module" src="js/features/admin/events-admin.js"></script>
+  <script type="module" src="js/features/admin/pets-admin.js"></script>
 
   <!-- Tab state persistence — saves/restores across reloads -->
   <script>

@@ -427,7 +427,7 @@ export async function initBulletin() {
   if (!BARANGAY_ID) return;
 
   initComments(BARANGAY_ID, _currentUid, _currentUserName, _currentUserRole);
-  initNotifications(BARANGAY_ID, _currentUid);
+  /* initNotifications already called globally by nav-auth.js — skip here */
   initCommunityPosts(BARANGAY_ID, _currentUid, _currentUserName, _currentUserRole);
 
   /* Expose barangay and role for cross-module use */

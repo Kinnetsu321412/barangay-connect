@@ -336,17 +336,16 @@ function buildListRow(a) {
 
   const urgentBadge = a.isUrgent ? `<span class="admin-badge admin-badge--urgent"><i data-lucide="alert-circle"></i> Urgent</span>` : '';
 
-  const thumbSection = a.imageURL ? `
-    <div style="margin-top:5px;">
-      <img src="${esc(a.imageURL)}" alt=""
-        style="
-          width:         44px;
-          height:        30px;
-          object-fit:    cover;
-          border-radius: 4px;
-          border:        1px solid #e5e7eb;
-          display:       block;
-        " />
+  const _thumbImgs  = a.imageURLs?.length ? a.imageURLs : (a.imageURL ? [a.imageURL] : []);
+const _thumbEnc   = encodeURIComponent(JSON.stringify(_thumbImgs));
+const thumbSection = _thumbImgs.length ? `
+    <div style="display:flex;gap:.3rem;flex-wrap:wrap;margin-top:5px;">
+      ${_thumbImgs.slice(0,3).map((url, i) => `
+        <img src="${esc(url)}" alt=""
+          style="width:44px;height:30px;object-fit:cover;border-radius:4px;
+            border:1px solid #e5e7eb;display:block;cursor:pointer;"
+          onclick="window.openImageViewer(JSON.parse(decodeURIComponent('${_thumbEnc}')),${i},'${esc(a.title)}')" />`
+      ).join('')}
     </div>` : '';
 
   return `

@@ -327,8 +327,7 @@ function _renderFeatured(el) {
               display:flex;align-items:center;justify-content:center;">
             ${_sel ? `<i data-lucide="check" style="width:11px;height:11px;color:#fff;pointer-events:none;"></i>` : ''}
           </div>
-          ${cover ? `<img src="${esc(cover)}" style="width:72px;height:56px;object-fit:cover;
-              border-radius:8px;flex-shrink:0;border:1px solid #e5e7eb;" />` : ''}
+          ${cover ? (() => { const _imgs = p.imageURLs?.length ? p.imageURLs : (cover ? [cover] : []); const _enc = encodeURIComponent(JSON.stringify(_imgs)); return `<img src="${esc(cover)}" style="width:72px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0;border:1px solid #e5e7eb;cursor:pointer;" onclick="window.openImageViewer(JSON.parse(decodeURIComponent('${_enc}')),0,'${esc(p.title ?? '')}')" />`; })() : ''}
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;margin-bottom:2px;">
             <span style="font-weight:700;font-size:.9rem;">${esc(p.title ?? '')}</span>

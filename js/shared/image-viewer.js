@@ -153,11 +153,16 @@ function _openViewer(images, index, title) {
   if (_acc) _acc.innerHTML = '';
   document.getElementById('imgViewerOverlay').classList.add('is-open');
   document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
 }
 
 function _closeViewer() {
   document.getElementById('imgViewerOverlay')?.classList.remove('is-open');
-  document.body.style.overflow = '';
+  /* Only unlock scroll if no modal is still open behind the viewer */
+  if (!document.querySelector('.modal-overlay.is-open')) {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  }
   /* Clear gallery-injected accent elements so they don't bleed to other viewers */
   document.querySelector('#imgViewerOverlay .img-viewer__accent')
     ?.querySelectorAll('.gallery-viewer-link,.gallery-viewer-meta,.gallery-viewer-album,.gallery-viewer-add-album')

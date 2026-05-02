@@ -228,3 +228,16 @@ export function eventRsvpsCol(barangay, eventId) {
 export function eventPhotoPath(barangay, uid, fileName) {
   return `barangays/${barangayId(barangay)}/events/${uid}/${fileName}`;
 }
+
+/* barangays/{barangayId}/pets */
+export function petsCol(barangay) {
+  return collection(db, 'barangays', barangayId(barangay), 'pets');
+}
+/* barangays/{barangayId}/pets/{reportId} */
+export function petDoc(barangay, reportId) {
+  return doc(db, 'barangays', barangayId(barangay), 'pets', reportId);
+}
+/* barangays/{barangayId}/pets/{reportId}/contacts */
+export function petContactsCol(barangay, reportId) {
+  return collection(db, 'barangays', barangayId(barangay), 'pets', reportId, 'contacts');
+}

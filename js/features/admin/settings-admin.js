@@ -397,6 +397,109 @@ function renderSettings(data) {
       </div>
     </div>
 
+    <!-- Pet Board Settings -->
+    <div style="background:#fff;border-radius:12px;padding:1.5rem;
+      box-shadow:0 1px 4px rgba(0,0,0,.07);max-width:600px;margin-top:1rem;">
+
+      <h2 style="font-size:1rem;font-weight:700;margin:0 0 1.25rem;
+        display:flex;align-items:center;gap:.5rem;">
+        <i data-lucide="paw-print" style="width:17px;height:17px;color:#1a3a1a;"></i>
+        Pet Board
+      </h2>
+
+      <!-- Require photo approval -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;
+        gap:1rem;padding:1rem;border:1.5px solid #e5e7eb;border-radius:10px;margin-bottom:.75rem;">
+        <div>
+          <p style="font-weight:600;font-size:.9rem;margin:0 0 4px;">Require approval for pet reports</p>
+          <p style="font-size:.78rem;color:#6b7280;margin:0;line-height:1.5;">
+            When enabled, all submitted pet reports go to a pending queue before appearing publicly.
+            When off, reports go live immediately after submission.
+          </p>
+        </div>
+        <label style="flex-shrink:0;cursor:pointer;position:relative;
+          width:44px;height:24px;display:inline-block;">
+          <input type="checkbox" id="requirePetApprovalToggle"
+            ${data.requirePetApproval ?? true ? 'checked' : ''}
+            onchange="handleRequirePetApprovalToggle(this)"
+            style="opacity:0;width:0;height:0;position:absolute;" />
+          <span id="petApprovalTrack" style="
+            position:absolute;inset:0;border-radius:999px;
+            background:${data.requirePetApproval ?? true ? '#1a3a1a' : '#d1d5db'};
+            transition:background .2s;cursor:pointer;">
+            <span style="
+              position:absolute;top:3px;
+              left:${data.requirePetApproval ?? true ? '23px' : '3px'};
+              width:18px;height:18px;border-radius:50%;
+              background:#fff;transition:left .2s;
+              box-shadow:0 1px 3px rgba(0,0,0,.2);">
+            </span>
+          </span>
+        </label>
+      </div>
+
+      <!-- Auto-delete resolved/found reports -->
+      <div style="padding:1rem;border:1.5px solid #e5e7eb;border-radius:10px;margin-bottom:.75rem;">
+        <p style="font-weight:600;font-size:.9rem;margin:0 0 4px;">Auto-delete resolved reports after</p>
+        <p style="font-size:.78rem;color:#6b7280;margin:0 0 .75rem;line-height:1.5;">
+          Resolved and expired pet reports will be automatically deleted after this many days. Default is 3. Set to 0 to disable.
+        </p>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+          <input type="number" id="petResolvedDeleteDaysInput" min="0" max="30"
+            value="${data.petResolvedDeleteDays ?? 3}"
+            style="width:60px;padding:.4rem .6rem;border:1.5px solid #e0e0e0;border-radius:8px;
+              font-size:.88rem;text-align:center;outline:none;font-weight:600;" />
+          <span style="font-size:.78rem;color:#6b7280;">days after resolving</span>
+          <button onclick="savePetResolvedDeleteDays()"
+            style="padding:.4rem .9rem;border-radius:8px;background:#1a3a1a;
+              color:#fff;border:none;font-size:.78rem;font-weight:600;cursor:pointer;">
+            Save
+          </button>
+        </div>
+      </div>
+
+      <!-- Max contact messages per sender per report -->
+      <div style="padding:1rem;border:1.5px solid #e5e7eb;border-radius:10px;margin-bottom:.75rem;">
+        <p style="font-weight:600;font-size:.9rem;margin:0 0 4px;">Max messages per sender per report</p>
+        <p style="font-size:.78rem;color:#6b7280;margin:0 0 .75rem;line-height:1.5;">
+          How many contact messages one person can send to a single pet report. Default is 3.
+        </p>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+          <input type="number" id="petContactLimitInput" min="1" max="20"
+            value="${data.maxPetContactsPerSender ?? 3}"
+            style="width:60px;padding:.4rem .6rem;border:1.5px solid #e0e0e0;border-radius:8px;
+              font-size:.88rem;text-align:center;outline:none;font-weight:600;" />
+          <span style="font-size:.78rem;color:#6b7280;">messages per report</span>
+          <button onclick="savePetContactLimit()"
+            style="padding:.4rem .9rem;border-radius:8px;background:#1a3a1a;
+              color:#fff;border:none;font-size:.78rem;font-weight:600;cursor:pointer;">
+            Save
+          </button>
+        </div>
+      </div>
+
+      <!-- Daily pet report limit -->
+      <div style="padding:1rem;border:1.5px solid #e5e7eb;border-radius:10px;">
+        <p style="font-weight:600;font-size:.9rem;margin:0 0 4px;">Daily pet report limit per resident</p>
+        <p style="font-size:.78rem;color:#6b7280;margin:0 0 .75rem;line-height:1.5;">
+          Maximum pet reports a resident can submit per day. Default is 3.
+        </p>
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+          <input type="number" id="petReportDailyLimitInput" min="1" max="20"
+            value="${data.petReportDailyLimit ?? 3}"
+            style="width:60px;padding:.4rem .6rem;border:1.5px solid #e0e0e0;border-radius:8px;
+              font-size:.88rem;text-align:center;outline:none;font-weight:600;" />
+          <span style="font-size:.78rem;color:#6b7280;">reports per day</span>
+          <button onclick="savePetReportDailyLimit()"
+            style="padding:.4rem .9rem;border-radius:8px;background:#1a3a1a;
+              color:#fff;border:none;font-size:.78rem;font-weight:600;cursor:pointer;">
+            Save
+          </button>
+        </div>
+      </div>
+
+    </div>
+
     <!-- Events Settings -->
     <div style="background:#fff;border-radius:12px;padding:1.5rem;
       box-shadow:0 1px 4px rgba(0,0,0,.07);max-width:600px;margin-top:1rem;">
@@ -673,6 +776,66 @@ window.saveCompletedEventDeleteDays = async function () {
   showSettingsToast('Saving…');
   try {
     await setDoc(_settingsRef, { completedEventDeleteDays: val }, { merge: true });
+    showSettingsToast('Saved ✓', 'success');
+  } catch {
+    showSettingsToast('Failed to save. Try again.', 'error');
+  }
+};
+
+/* Toggles whether pet reports require admin/officer approval before going live */
+window.handleRequirePetApprovalToggle = async function (checkbox) {
+  if (!_settingsRef) return;
+  const track = document.getElementById('petApprovalTrack');
+  if (track) {
+    track.style.background                 = checkbox.checked ? '#1a3a1a' : '#d1d5db';
+    track.querySelector('span').style.left = checkbox.checked ? '23px' : '3px';
+  }
+  showSettingsToast('Saving…');
+  try {
+    await setDoc(_settingsRef, { requirePetApproval: checkbox.checked }, { merge: true });
+    showSettingsToast('Saved ✓', 'success');
+  } catch (err) {
+    console.error('[settings] save error:', err);
+    checkbox.checked = !checkbox.checked;
+  }
+};
+
+/* Saves the auto-delete delay for resolved/expired pet reports */
+window.savePetResolvedDeleteDays = async function () {
+  if (!_settingsRef) return;
+  const val = parseInt(document.getElementById('petResolvedDeleteDaysInput')?.value, 10);
+  if (isNaN(val) || val < 0 || val > 30) return;
+  showSettingsToast('Saving…');
+  try {
+    await setDoc(_settingsRef, { petResolvedDeleteDays: val }, { merge: true });
+    showSettingsToast('Saved ✓', 'success');
+  } catch {
+    showSettingsToast('Failed to save. Try again.', 'error');
+  }
+};
+
+/* Saves the max contact messages per sender per report */
+window.savePetContactLimit = async function () {
+  if (!_settingsRef) return;
+  const val = parseInt(document.getElementById('petContactLimitInput')?.value, 10);
+  if (isNaN(val) || val < 1 || val > 20) return;
+  showSettingsToast('Saving…');
+  try {
+    await setDoc(_settingsRef, { maxPetContactsPerSender: val }, { merge: true });
+    showSettingsToast('Saved ✓', 'success');
+  } catch {
+    showSettingsToast('Failed to save. Try again.', 'error');
+  }
+};
+
+/* Saves the daily pet report limit per resident */
+window.savePetReportDailyLimit = async function () {
+  if (!_settingsRef) return;
+  const val = parseInt(document.getElementById('petReportDailyLimitInput')?.value, 10);
+  if (isNaN(val) || val < 1 || val > 20) return;
+  showSettingsToast('Saving…');
+  try {
+    await setDoc(_settingsRef, { petReportDailyLimit: val }, { merge: true });
     showSettingsToast('Saved ✓', 'success');
   } catch {
     showSettingsToast('Failed to save. Try again.', 'error');
