@@ -47,51 +47,120 @@
 
   <link rel="stylesheet" href="css/shared/main.css" />
   <link rel="stylesheet" href="css/shared/components.css" />
-  <link rel="stylesheet" href="css/features/auth/auth.css" />
+  <link rel="stylesheet" href="/css/features/auth/register.css" />
 </head>
 <body class="register-page">
 
 
   <!-- ═══════════════════════════════════════════════════════════════
-       NAVBAR
-       ───────────────────────────────────────────────────────────────
-       Minimal top bar for the registration flow.
-       Logo links back to home; right side prompts existing users
-       to sign in instead.
+       LEFT PANEL — hero, features, live signups
   ══════════════════════════════════════════════════════════════════ -->
-  <nav class="register-nav">
-    <a href="index.html" class="register-nav__logo">
-      <div class="register-nav__logo-icon">
-        <img src="assets/images/logo.svg" alt="BarangayConnect Logo" class="auth-logo__img" />
-      </div>
-      BarangayConnect
+  <div class="reg-left">
+
+    <a href="/" class="reg-logo">
+      <img src="/assets/images/logo.svg" alt="BarangayConnect" class="reg-logo__img" />
+      <span class="reg-logo__text">BarangayConnect</span>
     </a>
-    <p class="register-nav__signin">
-      Already have an account? <a href="index.html">Sign in</a>
-    </p>
-  </nav>
+
+    <div class="reg-hero">
+
+      <div class="reg-badge">
+        <i data-lucide="map-pin"></i>
+        <span>Join Your Community</span>
+      </div>
+
+      <h1 class="reg-hero__heading">
+        Your barangay,<br>
+        <span class="reg-hero__accent">in your hands.</span>
+      </h1>
+      <p class="reg-hero__sub">
+        Request documents, report concerns, get real-time alerts, and stay connected with your community.
+      </p>
+
+      <div class="reg-features">
+        <div class="reg-feature">
+          <div class="reg-feature__icon"><i data-lucide="flag"></i></div>
+          <div>
+            <p class="reg-feature__title">Report a Concern</p>
+            <p class="reg-feature__sub">Submit complaints with photos and track their resolution in real-time.</p>
+          </div>
+        </div>
+        <div class="reg-feature">
+          <div class="reg-feature__icon"><i data-lucide="bell"></i></div>
+          <div>
+            <p class="reg-feature__title">Real-Time Alerts</p>
+            <p class="reg-feature__sub">Emergency and weather alerts from your barangay the moment they're issued.</p>
+          </div>
+        </div>
+        <div class="reg-feature">
+          <div class="reg-feature__icon"><i data-lucide="users"></i></div>
+          <div>
+            <p class="reg-feature__title">Community Hub</p>
+            <p class="reg-feature__sub">Join discussions, vote on decisions, and stay involved in local matters.</p>
+          </div>
+        </div>
+        <div class="reg-feature">
+          <div class="reg-feature__icon"><i data-lucide="shield"></i></div>
+          <div>
+            <p class="reg-feature__title">Verified &amp; Secure</p>
+            <p class="reg-feature__sub">Identity-verified accounts with encrypted data you can trust.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="reg-signups">
+        <div class="reg-signups__header">
+          <span class="reg-signups__dot"></span>
+          LIVE SIGNUPS
+        </div>
+        <div class="reg-signup-item">
+          <div class="reg-signup-item__avatar" style="background:#2d5a3d;">K</div>
+          <div>
+            <p class="reg-signup-item__name">Kristine M.</p>
+            <p class="reg-signup-item__sub">just joined · Brgy. Payatas</p>
+          </div>
+          <span class="reg-signup-item__check"><i data-lucide="check"></i></span>
+        </div>
+        <div class="reg-signup-item">
+          <div class="reg-signup-item__avatar" style="background:#1e6b6b;">C</div>
+          <div>
+            <p class="reg-signup-item__name">Carlo R.</p>
+            <p class="reg-signup-item__sub">just joined · Brgy. Ugong</p>
+          </div>
+          <span class="reg-signup-item__check"><i data-lucide="check"></i></span>
+        </div>
+        <div class="reg-signup-item">
+          <div class="reg-signup-item__avatar" style="background:#6b3a2d;">L</div>
+          <div>
+            <p class="reg-signup-item__name">Liza A.</p>
+            <p class="reg-signup-item__sub">just joined · Brgy. Ususan</p>
+          </div>
+          <span class="reg-signup-item__check"><i data-lucide="check"></i></span>
+        </div>
+        <div class="reg-signups__footer">
+          <div class="reg-signups__avatars">
+            <div class="reg-signups__ava">K</div>
+            <div class="reg-signups__ava">C</div>
+            <div class="reg-signups__ava">L</div>
+          </div>
+          125,000+ residents already connected
+        </div>
+      </div>
+
+    </div><!-- /reg-hero -->
+
+  </div><!-- /reg-left -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════
-       MAIN REGISTRATION BODY
-       ───────────────────────────────────────────────────────────────
-       Contains the page header, step indicator, all three step
-       form cards, and the post-submit success screen.
-       JS shows and hides each step card as the user progresses.
+       RIGHT PANEL — step indicator + form cards + success screen
   ══════════════════════════════════════════════════════════════════ -->
-  <main class="register-body">
+  <div class="reg-right">
+    <div class="reg-right__inner">
 
+      <p class="reg-signin">Already have an account? <a href="/login.html">Sign in</a></p>
 
-    <!-- ─────────────────────────────────────────────
-         PAGE HEADER — title and "Register" badge
-    ───────────────────────────────────────────────── -->
-    <div class="register-header">
-      <h1 class="register-header__title">Create your account</h1>
-      <div class="register-header__badge">
-        <i data-lucide="shield-check"></i>
-        <span>Register</span>
-      </div>
-    </div>
+      <h1 class="reg-title">Create your account</h1>
 
 
     <!-- ─────────────────────────────────────────────
@@ -461,14 +530,15 @@
         You'll be able to log in once your account is approved.
         This usually takes 1–2 business days.
       </p>
-      <a href="index.html" class="btn btn--primary">
+      <a href="/login.html" class="btn btn--primary">
         <i data-lucide="log-in"></i>
         Back to Sign In
       </a>
     </div><!-- /successScreen -->
 
 
-  </main><!-- /register-body -->
+  </div><!-- /reg-right__inner -->
+  </div><!-- /reg-right -->
 
 
   <!-- ═══════════════════════════════════════════════════════════════

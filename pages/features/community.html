@@ -65,6 +65,7 @@
   <link rel="stylesheet" href="../../css/features/community/polls.css" />
   <link rel="stylesheet" href="../../css/features/community/gallery.css" />
   <link rel="stylesheet" href="../../css/features/community/events.css" />
+  <link rel="stylesheet" href="../../css/features/community/pets.css" />
 
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
   <script type="module" src="../../js/shared/nav-auth.js"></script>
@@ -597,88 +598,59 @@
     <section class="tab-panel tab-panel--pets" id="tab-pets" role="tabpanel">
       <div class="community-panel-inner">
 
-        <!-- Toolbar: filter pills + post action -->
+        <!-- ── TOOLBAR ── -->
         <div class="pets-toolbar">
-          <div class="pets-filters">
-            <button class="btn btn--filter is-active">All</button>
-            <button class="btn btn--filter">Missing</button>
-            <button class="btn btn--filter">Found</button>
-            <button class="btn btn--filter">For Adoption</button>
-          </div>
-          <button class="btn btn--orange" onclick="openModal('petReportModal')">
+
+          <div class="pets-toolbar__left">
+
+            <!-- Type filter pills -->
+            <div class="pets-filters" id="petsTypeFilters">
+              <button class="btn btn--filter is-active" data-pet-type="all">All</button>
+              <button class="btn btn--filter" data-pet-type="missing">
+                <i data-lucide="search"></i> Missing
+              </button>
+              <button class="btn btn--filter" data-pet-type="found">
+                <i data-lucide="map-pin"></i> Found Stray
+              </button>
+              <button class="btn btn--filter" data-pet-type="adoption">
+                <i data-lucide="heart"></i> For Adoption
+              </button>
+            </div>
+
+            <!-- Species dropdown -->
+            <div class="pets-species-wrap">
+              <select class="pets-species-select form-select" id="petsSpeciesFilter">
+                <option value="all">All Species</option>
+                <option value="Dog">Dogs</option>
+                <option value="Cat">Cats</option>
+                <option value="Bird">Birds</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <!-- My Reports toggle — shown by JS after login -->
+            <label class="pets-my-toggle" id="petsMyReportsToggle" style="display:none;">
+              <input type="checkbox" id="petsMyReportsCheck" class="toggle-input" />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span style="font-size:var(--text-sm);font-weight:var(--fw-semibold);
+                color:var(--gray-700);white-space:nowrap;">My Reports</span>
+            </label>
+
+          </div><!-- /pets-toolbar__left -->
+
+          <button class="btn btn--orange" id="postPetReportBtn"
+            onclick="openModal('petReportModal')">
             <i data-lucide="paw-print"></i> Post a Pet Report
           </button>
-        </div>
 
-        <!-- 4-column pet card grid — .pets-grid from community.css -->
-        <div class="pets-grid">
+        </div><!-- /pets-toolbar -->
 
-          <div class="pet-card">
-            <div class="pet-card__img-wrap">
-              <img src="../../assets/images/pets/brownie.jpg" alt="Brownie" class="pet-card__img" />
-              <span class="pet-status pet-status--missing">Missing</span>
-            </div>
-            <div class="pet-card__body">
-              <h3 class="pet-card__name">Brownie</h3>
-              <p class="pet-card__meta">Dog · Male · 2 years</p>
-              <p class="pet-card__desc">Brown Aspin, last seen near Rizal Street. Has a red collar. Very friendly.</p>
-              <button class="btn btn--green btn--full btn--sm">
-                <i data-lucide="phone"></i> Contact Owner
-              </button>
-            </div>
-          </div><!-- /pet-card -->
-
-          <div class="pet-card">
-            <div class="pet-card__img-wrap">
-              <img src="../../assets/images/pets/mango.jpg" alt="Mango" class="pet-card__img" />
-              <span class="pet-status pet-status--adoption">For Adoption</span>
-            </div>
-            <div class="pet-card__body">
-              <h3 class="pet-card__name">Mango</h3>
-              <p class="pet-card__meta">Cat · Female · 6 months</p>
-              <p class="pet-card__desc">Orange tabby kitten, playful and healthy. All vaccinations up to date.</p>
-              <button class="btn btn--green btn--full btn--sm">
-                <i data-lucide="phone"></i> Contact Owner
-              </button>
-            </div>
-          </div><!-- /pet-card -->
-
-          <div class="pet-card">
-            <div class="pet-card__img-wrap">
-              <img src="../../assets/images/pets/whitey.jpg" alt="Whitey" class="pet-card__img" />
-              <span class="pet-status pet-status--found">Found</span>
-            </div>
-            <div class="pet-card__body">
-              <h3 class="pet-card__name">Whitey</h3>
-              <p class="pet-card__meta">Dog · Unknown · Adult</p>
-              <p class="pet-card__desc">White Shih Tzu found in the park. Wearing a blue bow. Owner please contact us.</p>
-              <!-- .btn--located from buttons.css: muted, disabled state -->
-              <button class="btn btn--located btn--full btn--sm" disabled>
-                <i data-lucide="map-pin"></i> Location Reported
-              </button>
-            </div>
-          </div><!-- /pet-card -->
-
-          <div class="pet-card">
-            <div class="pet-card__img-wrap">
-              <img src="../../assets/images/pets/angel.jpg" alt="Angel" class="pet-card__img" />
-              <span class="pet-status pet-status--adoption">For Adoption</span>
-            </div>
-            <div class="pet-card__body">
-              <h3 class="pet-card__name">Angel</h3>
-              <p class="pet-card__meta">Dog · Male · 1 year</p>
-              <p class="pet-card__desc">Black and white mixed breed. Very gentle, good with kids. House-trained.</p>
-              <button class="btn btn--green btn--full btn--sm">
-                <i data-lucide="phone"></i> Contact Owner
-              </button>
-            </div>
-          </div><!-- /pet-card -->
-
-        </div><!-- /pets-grid -->
+        <!-- ── GRID — injected by pets.js ── -->
+        <div class="pets-grid" id="petsGrid"></div>
 
       </div><!-- /community-panel-inner -->
-    </section><!-- /tab-panel--pets -->
 
+    </section><!-- /tab-panel--pets -->
 
   </main><!-- /community-main -->
 
@@ -744,74 +716,148 @@
        Report type: .report-type-toggle + .report-type-toggle__btn--*
        Close:       .btn .btn--close .btn--sm .modal__close from buttons.css.
   ══════════════════════════════════════════════════════════════════ -->
+  <!-- PET REPORT SUBMISSION MODAL -->
   <div class="modal-overlay" id="petReportModal" onclick="closeOnBackdrop(event)">
     <div class="modal">
 
       <div class="modal__header modal__header--green">
-        <div class="modal__header-icon">
-          <i data-lucide="paw-print"></i>
-        </div>
+        <div class="modal__header-icon"><i data-lucide="paw-print"></i></div>
         <div class="modal__header-content">
           <p class="modal__header-label">Community Pet Board</p>
           <h2 class="modal__header-title">Post a Pet Report</h2>
-          <p class="modal__header-sub">Report a missing pet or one available for adoption</p>
+          <p class="modal__header-sub">Help reunite pets with their families</p>
         </div>
-        <button class="btn btn--close btn--sm modal__close" aria-label="Close" onclick="closeModal('petReportModal')">
+        <button class="btn btn--close btn--sm modal__close" aria-label="Close"
+          onclick="closeModal('petReportModal')">
           <i data-lucide="x"></i>
         </button>
       </div>
 
+      <!-- Anti-spam warning injected by JS -->
+      <div id="petSpamWarning" style="display:none;"></div>
+
       <div class="modal__body">
 
+        <!-- MISSING REPORT MATCHER -->
+        <div id="petMatcherSection" style="display:none;padding:0 0 var(--space-sm);flex-shrink:0;">
+          <p class="modal-section-label" style="display:flex;align-items:center;gap:.4rem;margin-bottom:2px;">
+            <i data-lucide="search" style="width:14px;height:14px;"></i>
+            Does this match a missing pet?
+          </p>
+          <p style="font-size:.72rem;color:var(--gray-400);margin-bottom:var(--space-sm);margin-top:0;">
+            If you recognize one of these, select it — the owner will get notified automatically.
+          </p>
+          <div id="petMatcherList"></div>
+          <p id="petMatcherEmpty" style="display:none;font-size:var(--text-sm);color:var(--gray-400);">
+            No matching missing reports found for this species.
+          </p>
+        </div>
+
         <p class="modal-section-label">Report Type</p>
-        <div class="report-type-toggle">
-          <button class="btn report-type-toggle__btn report-type-toggle__btn--missing is-active">
+        <div class="report-type-toggle" id="petTypeToggle">
+          <button class="btn report-type-toggle__btn report-type-toggle__btn--missing is-active"
+            data-pet-type="missing" onclick="selectPetType('missing', this)">
             <i data-lucide="search"></i> Missing
           </button>
-          <button class="btn report-type-toggle__btn report-type-toggle__btn--adoption">
-            <i data-lucide="heart"></i> For Adoption
+          <button class="btn report-type-toggle__btn report-type-toggle__btn--found"
+            data-pet-type="found" onclick="selectPetType('found', this)">
+            <i data-lucide="map-pin"></i> Found Stray
           </button>
-          <button class="btn report-type-toggle__btn report-type-toggle__btn--found">
-            <i data-lucide="map-pin"></i> Found
+          <button class="btn report-type-toggle__btn report-type-toggle__btn--adoption"
+            data-pet-type="adoption" onclick="selectPetType('adoption', this)">
+            <i data-lucide="heart"></i> For Adoption
           </button>
         </div>
 
-        <div class="form-group">
+        <!-- Hidden for "Found" type by JS -->
+        <div class="form-group" id="petNameGroup">
           <label class="form-label">Pet Name</label>
-          <input type="text" class="form-input" placeholder="e.g. Brownie" />
+          <input type="text" id="petNameInput" class="form-input"
+            placeholder="e.g. Brownie, Mango..." maxlength="50" />
         </div>
 
         <div class="form-grid-2">
           <div class="form-group">
             <label class="form-label">Species</label>
-            <select class="form-select">
-              <option>Dog</option>
-              <option>Cat</option>
-              <option>Other</option>
+            <select id="petSpeciesInput" class="form-select">
+              <option value="Dog">Dog</option>
+              <option value="Cat">Cat</option>
+              <option value="Bird">Bird</option>
+              <option value="Other">Other</option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">Age</label>
-            <input type="text" class="form-input" placeholder="e.g. 2 years" />
+            <label class="form-label">Breed
+              <span style="color:#9ca3af;font-size:.75rem;">(optional)</span>
+            </label>
+            <input type="text" id="petBreedInput" class="form-input"
+              placeholder="e.g. Aspin, Shih Tzu, Puspin" maxlength="50" />
           </div>
+        </div>
+
+        <!-- Shown only when species = "Other" -->
+        <div class="form-group" id="petSpeciesOtherGroup" style="display:none;">
+          <label class="form-label">Specify Animal Type</label>
+          <input type="text" id="petSpeciesOtherInput" class="form-input"
+            placeholder="e.g. Rabbit, Turtle, Hamster..." maxlength="40" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Age
+            <span style="color:#9ca3af;font-size:.75rem;">(optional)</span>
+          </label>
+          <input type="text" id="petAgeInput" class="form-input"
+            placeholder="e.g. 2 years, Puppy, Adult" maxlength="30" />
+        </div>
+
+        <div class="form-group">
+          <!-- Label text changed by JS based on type -->
+          <label class="form-label" id="petLocationLabel">Last Seen Location</label>
+          <input type="text" id="petLocationInput" class="form-input"
+            placeholder="e.g. Near Rizal Street Basketball Court" maxlength="100" />
         </div>
 
         <div class="form-group">
           <label class="form-label">Description</label>
-          <textarea class="form-input" rows="3" placeholder="Color, markings, last seen location..."></textarea>
-          <span class="char-count">0 / 300</span>
+          <textarea id="petDescInput" class="form-input" rows="3"
+            placeholder="Color, markings, collar, identifying features..."
+            maxlength="300"
+            oninput="document.getElementById('petDescCount').textContent =
+              this.value.length + ' / 300'"></textarea>
+          <span class="char-count" id="petDescCount">0 / 300</span>
         </div>
 
+        <!-- Photo upload — REQUIRED -->
         <div class="form-group">
-          <label class="form-label">Upload Photo</label>
-          <input type="file" class="form-input" accept="image/*" />
+          <label class="form-label">
+            Photos <span style="color:var(--red);font-size:.75rem;">* Required</span>
+          </label>
+          <div id="petPhotoRequired"
+            style="display:none;font-size:.75rem;color:var(--red);margin-bottom:.25rem;">
+            At least 1 photo is required to help identify the pet.
+          </div>
+          <label for="petImageInput"
+            style="display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;
+              border:1.5px dashed #d1d5db;border-radius:8px;cursor:pointer;
+              font-size:.82rem;color:#6b7280;background:#fafafa;transition:all .2s;"
+            onmouseover="this.style.borderColor='#1a3a1a';this.style.color='#1a3a1a'"
+            onmouseout="this.style.borderColor='#d1d5db';this.style.color='#6b7280'">
+            <i data-lucide="camera" style="width:15px;height:15px;flex-shrink:0;"></i>
+            <span id="petImageLabel">Tap to add photos (up to 3)</span>
+          </label>
+          <input type="file" id="petImageInput"
+            accept="image/jpeg,image/png,image/webp" multiple
+            style="display:none;" onchange="previewPetImages(this)" />
+          <div id="petImagePreviews"
+            style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem;"></div>
         </div>
 
       </div><!-- /modal__body -->
 
       <div class="modal__footer">
         <button class="btn btn--outline" onclick="closeModal('petReportModal')">Cancel</button>
-        <button class="btn btn--orange btn--full">
+        <!-- Disabled until ≥1 photo uploaded -->
+        <button class="btn btn--green btn--full" id="petReportSubmitBtn" disabled>
           <i data-lucide="paw-print"></i> Post Pet Report
         </button>
       </div>
@@ -819,6 +865,199 @@
     </div><!-- /modal -->
   </div><!-- /petReportModal -->
 
+
+  <!-- CONTACT BRIDGE MODAL -->
+  <div class="modal-overlay" id="petContactModal" onclick="closeOnBackdrop(event)">
+    <div class="modal">
+      <div class="modal__header modal__header--green">
+        <div class="modal__header-icon"><i data-lucide="phone"></i></div>
+        <div class="modal__header-content">
+          <p class="modal__header-label" id="petContactModalLabel">Pet Board</p>
+          <h2 class="modal__header-title" id="petContactModalTitle">I Have Information</h2>
+          <p class="modal__header-sub" id="petContactModalSub">
+            Your message and contact info will be sent to the owner
+          </p>
+        </div>
+        <button class="btn btn--close btn--sm modal__close"
+          onclick="closeModal('petContactModal')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal__body">
+        <div class="form-group">
+          <label class="form-label">Your Message</label>
+          <textarea id="petContactMessage" class="form-input" rows="3"
+            placeholder="e.g. I saw your dog near the bakery on Rizal Street this morning."
+            maxlength="300"
+            oninput="document.getElementById('petContactMsgCount').textContent =
+              this.value.length + ' / 300'"></textarea>
+          <span class="char-count" id="petContactMsgCount">0 / 300</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">When did you see the pet?
+            <span style="color:#9ca3af;font-size:.75rem;">(optional)</span>
+          </label>
+          <input type="text" id="petContactWhen" class="form-input"
+            placeholder="e.g. This morning around 8AM, Yesterday afternoon"
+            maxlength="80" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Your Contact Info</label>
+          <input type="text" id="petContactInfo" class="form-input"
+            placeholder="e.g. 0917-123-4567 or fb.com/yourname" maxlength="100" />
+          <p style="font-size:.7rem;color:#9ca3af;margin-top:3px;">
+            Only the report owner can see this. Never shared publicly.
+          </p>
+        </div>
+            </div>
+      <div class="modal__footer">
+        <button class="btn btn--outline" id="petContactCancelBtn">Cancel</button>
+        <button class="btn btn--green btn--full" id="petContactSubmitBtn"
+          onclick="submitPetContact()">
+          <i data-lucide="send"></i> Send Message
+        </button>
+      </div>
+    </div>
+  </div><!-- /petContactModal -->
+
+
+  <!-- RESOLVE MODAL -->
+  <div class="modal-overlay" id="petResolveModal" onclick="closeOnBackdrop(event)">
+    <div class="modal modal--confirm">
+      <div class="modal-confirm__icon" style="background:#f0fdf4;border-color:#bbf7d0;">
+        <i data-lucide="check-circle" style="color:var(--green-dark);"></i>
+      </div>
+      <h2 class="modal-confirm__title" id="petResolveTitle">Mark as Resolved?</h2>
+      <p class="modal-confirm__body" id="petResolveBody">
+        Let the community know this has been resolved!
+      </p>
+      <div class="form-group" style="width:100%;text-align:left;margin-bottom:var(--space-md);">
+        <label class="form-label">Add a note
+          <span style="color:#9ca3af;font-size:.75rem;">(optional)</span>
+        </label>
+        <input type="text" id="petResolveNote" class="form-input"
+          placeholder="e.g. Found near the market! Thank you everyone!" maxlength="100" />
+      </div>
+      <div class="modal-confirm__footer" style="flex-direction:column;gap:.5rem;">
+        <button class="btn btn--green btn--full" id="petResolveConfirmBtn"
+          onclick="confirmPetResolve()">
+          <i data-lucide="check"></i> Yes, Mark Resolved
+        </button>
+        <button class="btn btn--outline btn--full" onclick="closeModal('petResolveModal')">Cancel</button>
+      </div>
+    </div>
+  </div><!-- /petResolveModal -->
+
+
+  <!-- REJECTION DETAIL MODAL -->
+  <div class="modal-overlay" id="petRejectionModal" onclick="closeOnBackdrop(event)">
+    <div class="modal modal--confirm modal--confirm-warning">
+      <div class="modal-confirm__icon">
+        <i data-lucide="alert-circle"></i>
+      </div>
+      <h2 class="modal-confirm__title">Report Not Approved</h2>
+      <p class="modal-confirm__body">
+        Your report for <strong id="petRejectedName">this pet</strong> was not approved:
+      </p>
+      <div style="width:100%;background:var(--red-50);border:1px solid var(--red-200);
+        border-radius:var(--radius-md);padding:var(--space-md);margin-bottom:var(--space-md);
+        font-size:var(--text-base-sm);color:var(--red-800);text-align:left;">
+        <strong>Reason:</strong> <span id="petRejectionReason">—</span>
+      </div>
+      <p class="modal-confirm__body" style="margin-bottom:var(--space-xl);">
+        Please edit your report and resubmit.
+      </p>
+      <div class="modal-confirm__footer">
+        <button class="btn btn--outline"
+          onclick="closeModal('petRejectionModal')">Close</button>
+        <button class="btn btn--orange btn--full"
+          onclick="editRejectedPetReport()">
+          <i data-lucide="pencil"></i> Edit &amp; Resubmit
+        </button>
+      </div>
+    </div>
+
+    </div><!-- /petRejectionModal -->
+
+
+  <!-- PET DETAIL MODAL -->
+  <div class="modal-overlay" id="petDetailModal" onclick="closeOnBackdrop(event)">
+    <div class="modal modal--pet-detail" style="max-width:560px;">
+
+      <div class="modal__header modal__header--green" id="petDetailHeader">
+        <div class="modal__header-icon"><i data-lucide="paw-print"></i></div>
+        <div class="modal__header-content">
+          <p class="modal__header-label" id="petDetailLabel">Pet Board</p>
+          <h2 class="modal__header-title" id="petDetailName">—</h2>
+          <p class="modal__header-sub" id="petDetailSub">—</p>
+        </div>
+        <button class="btn btn--close btn--sm modal__close"
+          onclick="closeModal('petDetailModal')">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal__body" style="padding:0;">
+
+        <!-- Photo strip — clickable, opens image viewer -->
+        <div id="petDetailPhotoStrip" style="position:relative;background:#111;cursor:pointer;">
+          <!-- injected by JS -->
+        </div>
+
+        <!-- Info grid -->
+        <div style="padding:var(--space-md) var(--space-lg);display:flex;flex-direction:column;gap:var(--space-md);">
+
+          <div class="form-grid-2" style="gap:var(--space-sm);">
+            <div>
+              <p style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;
+                letter-spacing:.06em;color:var(--gray-400);margin:0 0 2px;">Species</p>
+              <p id="petDetailSpecies" style="margin:0;font-size:var(--text-base-sm);
+                font-weight:600;color:var(--gray-800);">—</p>
+            </div>
+            <div>
+              <p style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;
+                letter-spacing:.06em;color:var(--gray-400);margin:0 0 2px;">Breed</p>
+              <p id="petDetailBreed" style="margin:0;font-size:var(--text-base-sm);
+                font-weight:600;color:var(--gray-800);">—</p>
+            </div>
+            <div>
+              <p style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;
+                letter-spacing:.06em;color:var(--gray-400);margin:0 0 2px;">Age</p>
+              <p id="petDetailAge" style="margin:0;font-size:var(--text-base-sm);
+                font-weight:600;color:var(--gray-800);">—</p>
+            </div>
+            <div>
+              <p style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;
+                letter-spacing:.06em;color:var(--gray-400);margin:0 0 2px;">Reported by</p>
+              <p id="petDetailReporter" style="margin:0;font-size:var(--text-base-sm);
+                font-weight:600;color:var(--gray-800);">—</p>
+            </div>
+          </div>
+
+          <div>
+            <p style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;
+              letter-spacing:.06em;color:var(--gray-400);margin:0 0 4px;">
+              <i data-lucide="map-pin" style="width:11px;height:11px;"></i> Location</p>
+            <p id="petDetailLocation" style="margin:0;font-size:var(--text-base-sm);
+              color:var(--gray-700);">—</p>
+          </div>
+
+          <div>
+            <p style="font-size:var(--text-xs);font-weight:700;text-transform:uppercase;
+              letter-spacing:.06em;color:var(--gray-400);margin:0 0 4px;">Description</p>
+            <p id="petDetailDesc" style="margin:0;font-size:var(--text-base-sm);
+              color:var(--gray-700);line-height:1.6;">—</p>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="modal__footer" id="petDetailFooter">
+        <!-- CTA buttons injected by JS -->
+      </div>
+
+    </div>
+  </div><!-- /petDetailModal -->
 
   <!-- ═══════════════════════════════════════════════════════════════
        MODAL — Bullying Report
@@ -1225,11 +1464,20 @@
     });
 
     /* 5. Modal helpers */
-    function openModal(id)  { document.getElementById(id)?.classList.add('is-open'); }
-    function closeModal(id) { document.getElementById(id)?.classList.remove('is-open'); }
-    function closeOnBackdrop(e) {
-      if (e.target === e.currentTarget) e.currentTarget.classList.remove('is-open');
+    function openModal(id)  {
+  document.getElementById(id)?.classList.add('is-open');
+  document.body.style.overflow = 'hidden';
+  }
+  function closeModal(id) {
+    document.getElementById(id)?.classList.remove('is-open');
+    if (!document.querySelector('.modal-overlay.is-open')) document.body.style.overflow = '';
+  }
+  function closeOnBackdrop(e) {
+    if (e.target === e.currentTarget) {
+      e.currentTarget.classList.remove('is-open');
+      if (!document.querySelector('.modal-overlay.is-open')) document.body.style.overflow = '';
     }
+  }
 
     /* 6. Generic filter pill toggle — Bulletin filters wired in bulletin.js */
     document.querySelectorAll('.pets-filters, .gallery-filters').forEach(group => {
@@ -1241,7 +1489,8 @@
       });
     });
 
-    /* 7. Report type toggle in pet modal */
+    /* 7. selectPetType — delegated to pets.js window.selectPetType (Phase 3) */
+
     document.querySelectorAll('.report-type-toggle__btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.report-type-toggle__btn').forEach(b => b.classList.remove('is-active'));
@@ -1272,12 +1521,14 @@
   <script type="module">
 
     import { initBulletin }       from '../../js/features/community/bulletin.js';
+    import { initPets }           from '../../js/features/community/pets.js';
     import { submitCommunityPost } from '../../js/features/community/community-posts.js';
     import { initGallery }        from '../../js/features/community/gallery.js';
 
-    let _selectedFiles = [];
+  let _selectedFiles = [];
 
-    document.addEventListener('DOMContentLoaded', initBulletin);
+  initBulletin();
+  initPets();
 
 
     /* ─── Toast helper ─── */
@@ -1516,6 +1767,7 @@
   <script type="module" src="../../js/features/community/gallery.js"></script>
   <script type="module" src="../../js/features/community/events.js"></script>
   <script type="module" src="../../js/features/community/events-calendar.js"></script>
+  <script type="module" src="../../js/features/community/pets.js"></script>
 
   <script>
     const _CK = 'communityTab';
